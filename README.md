@@ -4,7 +4,7 @@
 
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue?logo=python&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-571%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-417%20passing-brightgreen)
 ![Charts](https://img.shields.io/badge/chart%20types-29-orange)
 ![Status](https://img.shields.io/badge/status-active-success)
 
@@ -143,11 +143,11 @@ The app validates your spreadsheet layout before plotting and shows specific err
 Claude Prism is split into six focused modules with no circular dependencies.
 
 ```
-prism_barplot_app.py      ~7,800 lines   App class, PLOT_REGISTRY, sidebar, tabs
+prism_barplot_app.py      ~8,000 lines   App class, PLOT_REGISTRY, sidebar, tabs
 prism_widgets.py            ~950 lines   Design-system tokens, PButton/PEntry/etc.
-prism_validators.py         ~480 lines   Standalone spreadsheet validators
+prism_validators.py         ~520 lines   Standalone spreadsheet validators
 prism_results.py            ~390 lines   Results panel: populate / export / copy
-prism_functions.py        ~6,500 lines   29 Matplotlib chart functions
+prism_functions.py        ~6,400 lines   29 Matplotlib chart functions
 prism_canvas_renderer.py  ~1,700 lines   tk.Canvas live renderer (no Matplotlib)
 ```
 
@@ -186,21 +186,21 @@ prism_barplot_app.py
 
 ## Test Suite
 
-571 tests across 5 suites, running in ~52 seconds on a modern Mac.
+417 tests across 5 suites, running in ~52 seconds on a modern Mac.
 
 ```bash
 # Run everything
 python3 run_all.py
 
 # Run a specific suite
-python3 run_all.py comprehensive      # 309 tests — all 29 chart types
+python3 run_all.py comprehensive      # 175 tests — all 29 chart types
 python3 run_all.py canvas_renderer    # 109 tests — tk.Canvas renderer
 python3 run_all.py modular            #  53 tests — widgets / validators / results
-python3 run_all.py p1p2p3             #  80 tests — style parameter regressions
+python3 run_all.py p1p2p3             #  60 tests — style parameter regressions
 python3 run_all.py control            #  20 tests — control-group statistics
 ```
 
-All 571 tests must pass before any commit. If tests regress, fix them before doing anything else.
+All 417 tests must pass before any commit. If tests regress, fix them before doing anything else.
 
 ---
 

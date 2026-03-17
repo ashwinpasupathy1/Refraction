@@ -8,7 +8,7 @@ Built entirely by Claude (Anthropic) with Ashwin Pasupathy.
 ## The one rule before every commit
 
 ```bash
-python3 run_all.py   # must print 571/571 (or higher) with 0 failures
+python3 run_all.py   # must print 417/417 (or higher) with 0 failures
 ```
 
 Never commit if this fails. Never skip it. If tests regress, fix them before
@@ -19,14 +19,14 @@ doing anything else.
 ## Commands
 
 ```bash
-# Run the full test suite (571 tests across 5 suites, ~52 seconds)
+# Run the full test suite (417 tests across 5 suites, ~52 seconds)
 python3 run_all.py
 
 # Run a single suite
-python3 run_all.py comprehensive      # 309 tests — all 29 chart types
+python3 run_all.py comprehensive      # 175 tests — all 29 chart types
 python3 run_all.py canvas_renderer    # 109 tests — tk.Canvas renderer
 python3 run_all.py modular            # 53  tests — widgets/validators/results
-python3 run_all.py p1p2p3             # 80  tests — style params
+python3 run_all.py p1p2p3             # 60  tests — style params
 python3 run_all.py control            # 20  tests — control-group logic
 
 # Launch the app (macOS only — needs a display)
@@ -41,9 +41,9 @@ python3 -c "import prism_functions, prism_canvas_renderer, prism_widgets, prism_
 ## File map
 
 ```
-prism_barplot_app.py      7,834 lines   App class, PLOT_REGISTRY, icon helpers
+prism_barplot_app.py      7,907 lines   App class, PLOT_REGISTRY, icon helpers
 prism_widgets.py            952 lines   _DS tokens, PButton/PEntry/PCheckbox etc.
-prism_validators.py         483 lines   Standalone spreadsheet validators
+prism_validators.py         518 lines   Standalone spreadsheet validators
 prism_results.py            387 lines   Results panel: populate / export / copy
 prism_functions.py        6,468 lines   29 matplotlib chart functions
 prism_canvas_renderer.py  1,687 lines   tk.Canvas bar+grouped-bar live renderer
@@ -238,7 +238,7 @@ Add a test section to `test_comprehensive.py` following the existing pattern.
 At minimum: one test that renders without crashing, one that checks a specific
 visual property, one that tests the validator.
 
-Run `python3 run_all.py` — all existing 571 tests must still pass.
+Run `python3 run_all.py` — all existing 417 tests must still pass.
 
 ---
 
