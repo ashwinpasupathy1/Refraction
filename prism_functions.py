@@ -2124,7 +2124,10 @@ def normality_warning(groups: dict, test_type: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _cohens_d(a: np.ndarray, b: np.ndarray) -> float:
-    """Cohen's d for two independent groups (pooled SD)."""
+    """Cohen's d for two independent groups (pooled SD).
+
+    Cohen (1988) Statistical Power Analysis for the Behavioral Sciences, 2nd ed.
+    """
     n1, n2 = len(a), len(b)
     if n1 < 2 or n2 < 2:
         return float("nan")
@@ -2135,8 +2138,54 @@ def _cohens_d(a: np.ndarray, b: np.ndarray) -> float:
     return float((np.mean(a) - np.mean(b)) / pooled_sd)
 
 
+def _hedges_g(a: np.ndarray, b: np.ndarray) -> float:
+    """Hedges' g: small-sample bias-corrected Cohen's d.
+
+    Multiplies Cohen's d by the correction factor J(m) ≈ 1 − 3/(4m − 1),
+    where m = n1 + n2 − 2 (degrees of freedom).
+
+    Reference: Hedges (1981) Biometrics 37:149–164.
+    GraphPad Prism 9+ reports Hedges' g as the default effect size for
+    independent-samples comparisons.
+    """
+    d = _cohens_d(a, b)
+    if np.isnan(d):
+        return float("nan")
+    m = len(a) + len(b) - 2
+    if m <= 0:
+        return float("nan")
+    j = 1.0 - 3.0 / (4.0 * m - 1.0)   # correction factor
+    return float(d * j)
+
+
+def _rank_biserial_r(a: np.ndarray, b: np.ndarray) -> float:
+    """Rank-biserial correlation r for Mann-Whitney U.
+
+    r = (U₁ − U₂) / (n₁ × n₂), ranging from −1 to +1.
+    Equivalent to r = 1 − 2·U_min/(n₁·n₂) with appropriate sign.
+    Positive r means group a tends to have larger values.
+
+    Reference: Cureton (1956) Psychometrika 21:287–290.
+    GraphPad Prism reports this as the effect size for nonparametric
+    two-group comparisons.
+    """
+    n1, n2 = len(a), len(b)
+    if n1 < 1 or n2 < 1:
+        return float("nan")
+    # U1 = number of (a_i, b_j) pairs where a_i > b_j
+    # mannwhitneyu returns U for the first sample with alternative="greater"
+    # but for "two-sided" it returns the minimum. Use the definition directly:
+    U1 = float(np.sum(a[:, None] > b[None, :]))   # vectorised count
+    U2 = n1 * n2 - U1
+    return float((U1 - U2) / (n1 * n2))
+
+
 def _effect_label(d: float) -> str:
-    """Rough verbal label for Cohen's d magnitude."""
+    """Rough verbal label for Cohen's d / Hedges' g magnitude.
+
+    Cutoffs from Cohen (1988): <0.2 negligible, 0.2–0.5 small,
+    0.5–0.8 medium, ≥0.8 large.
+    """
     ad = abs(d)
     if ad < 0.2:  return "negligible"
     if ad < 0.5:  return "small"
@@ -2145,16 +2194,22 @@ def _effect_label(d: float) -> str:
 
 
 def add_effect_sizes(ax, sig_results, groups, x_positions, font_size=10):
-    """
-    Annotate a corner text box with Cohen's d for each significant pair.
-    Only used for 2-group comparisons or when explicitly requested.
+    """Annotate a corner text box with Hedges' g for each significant pair.
+
+    Uses Hedges' g (bias-corrected Cohen's d) as the effect size measure,
+    matching GraphPad Prism 9+ default behaviour.  For large samples
+    (n1+n2 ≥ 50) Cohen's d and Hedges' g are nearly identical.
     """
     lines = []
     for (a, b, p, stars) in sig_results:
         if a in groups and b in groups:
-            d = _cohens_d(groups[a], groups[b])
-            if not np.isnan(d):
-                lines.append(f"{a} vs {b}: d={d:.2f} ({_effect_label(d)})")
+            g = _hedges_g(groups[a], groups[b])
+            if not np.isnan(g):
+                n1, n2 = len(groups[a]), len(groups[b])
+                label = _effect_label(g)
+                # Show measure name so readers know which statistic is shown
+                measure = "g" if (n1 + n2) < 50 else "d"
+                lines.append(f"{a} vs {b}: {measure}={g:.2f} ({label})")
     if lines:
         ax.text(0.98, 0.98, "\n".join(lines),
                 transform=ax.transAxes,
@@ -3130,10 +3185,19 @@ def prism_heatmap(
 
 def _twoway_anova(df, dv, factor_a, factor_b):
     """
-    Compute two-way ANOVA (Type II SS) from a long-format DataFrame.
+    Compute two-way ANOVA (Type III SS) from a long-format DataFrame.
     Returns dict with keys: factor_a, factor_b, interaction, residual.
-    Each value: {SS, df, MS, F, p, eta2}.
+    Each value: {SS, df, MS, F, p, eta2, eta2_partial}.
     Works for balanced and unbalanced designs.
+
+    Type III SS (partial): each effect is tested after removing it from the
+    full model that still includes all other effects (including the
+    interaction term).  This matches the default in GraphPad Prism,
+    SPSS, and SAS PROC GLM.
+
+    eta2        = SS_effect / SS_total      (classical η²)
+    eta2_partial = SS_effect / (SS_effect + SS_error)  (partial ηp²,
+                   reported by Prism and most modern software)
     """
     from itertools import product as iproduct
 
@@ -3170,7 +3234,8 @@ def _twoway_anova(df, dv, factor_a, factor_b):
         resid = y - X @ beta
         return float(np.dot(resid, resid))
 
-    # Type II SS: each effect tested removing only that effect
+    # Type III SS: each effect tested after removing it from the *full* model
+    # (which includes all other main effects AND the interaction).
     rss_full   = _rss(_make_X(True,  True,  True))
     rss_no_a   = _rss(_make_X(False, True,  True))
     rss_no_b   = _rss(_make_X(True,  False, True))
@@ -3208,11 +3273,14 @@ def _twoway_anova(df, dv, factor_a, factor_b):
 
     return {
         factor_a:     {"SS": SS_A,  "df": df_A,  "MS": MS_A,  "F": F_A,  "p": p_A,
-                        "eta2": SS_A  / ss_total},
+                        "eta2": SS_A  / ss_total,
+                        "eta2_partial": SS_A  / (SS_A  + SS_err)},
         factor_b:     {"SS": SS_B,  "df": df_B,  "MS": MS_B,  "F": F_B,  "p": p_B,
-                        "eta2": SS_B  / ss_total},
+                        "eta2": SS_B  / ss_total,
+                        "eta2_partial": SS_B  / (SS_B  + SS_err)},
         "interaction": {"SS": SS_AB, "df": df_AB, "MS": MS_AB, "F": F_AB, "p": p_AB,
-                        "eta2": SS_AB / ss_total},
+                        "eta2": SS_AB / ss_total,
+                        "eta2_partial": SS_AB / (SS_AB + SS_err)},
         "residual":    {"SS": SS_err, "df": df_err, "MS": MS_err},
     }
 
@@ -3237,7 +3305,9 @@ def _twoway_posthoc(df, dv, factor_a, factor_b, correction="holm"):
             g1 = sub[sub[factor_a] == a1][dv].dropna().values
             g2 = sub[sub[factor_a] == a2][dv].dropna().values
             if len(g1) >= 2 and len(g2) >= 2:
-                _, p = stats.ttest_ind(g1, g2)
+                # Welch's t-test (equal_var=False) — consistent with Prism default
+                # and with all other parametric post-hoc tests in this codebase.
+                _, p = stats.ttest_ind(g1, g2, equal_var=False)
                 raw_ps.append(p)
                 pairs.append((b_val, a1, a2))
 

@@ -27,6 +27,7 @@ SUITES = {
     "control":         "test_control",
     "canvas_renderer": "test_canvas_renderer",
     "modular":         "test_modular",
+    "stats_verify":    "test_stats_verification",
 }
 
 
@@ -64,7 +65,8 @@ def run_suite(module_name: str, label: str) -> tuple[int, int, list]:
 def main():
     parser = argparse.ArgumentParser(description="Claude Prism unified test runner")
     parser.add_argument("suites", nargs="*",
-                        help="Suite name(s): comprehensive / p1p2p3 / control "
+                        help="Suite name(s): comprehensive / p1p2p3 / control / "
+                             "canvas_renderer / modular / stats_verify "
                              "(default: all)")
     args = parser.parse_args()
 
