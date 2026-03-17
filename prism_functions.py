@@ -194,6 +194,23 @@ def _calc_error_asymmetric(vals, error_type):
         return m, half, half
 
 
+def _draw_bar_errorbar(ax, x, vals, error_type, yscale, *,
+                       ecolor="black", elw=1.0, cap_size=4.0, zorder=4):
+    """Draw one error bar for a bar-chart bar and return the mean.
+
+    Handles both symmetric (linear scale) and asymmetric (log scale) cases so
+    callers don't have to duplicate the if/else branch themselves.
+    """
+    if yscale == "log":
+        m, lo, hi = _calc_error_asymmetric(vals, error_type)
+        ax.errorbar(x, m, yerr=[[lo], [hi]], fmt="none", ecolor=ecolor,
+                    elinewidth=elw, capsize=cap_size, capthick=elw, zorder=zorder)
+    else:
+        m, half = _calc_error(vals, error_type)
+        ax.errorbar(x, m, yerr=half, fmt="none", ecolor=ecolor,
+                    elinewidth=elw, capsize=cap_size, capthick=elw, zorder=zorder)
+    return m
+
 
 # ---------------------------------------------------------------------------
 # Axis style / tick direction constants — used by _apply_prism_style
@@ -1314,18 +1331,8 @@ def prism_barplot(
     elw = _scale_errorbar_lw(bar_width)
     for g_idx, g in enumerate(group_order):
         vals = groups[g]
-        if yscale == "log":
-            m, lo, hi = _calc_error_asymmetric(vals, error)
-            ax.errorbar(g_idx, m, yerr=[[lo], [hi]],
-                        fmt="none", ecolor="black",
-                        elinewidth=elw, capsize=cap_size,
-                        capthick=elw, zorder=4)
-        else:
-            m, half = _calc_error(vals, error)
-            ax.errorbar(g_idx, m, yerr=half,
-                        fmt="none", ecolor="black",
-                        elinewidth=elw, capsize=cap_size,
-                        capthick=elw, zorder=4)
+        _draw_bar_errorbar(ax, g_idx, vals, error, yscale,
+                           elw=elw, cap_size=cap_size)
 
     # Optionally extend error bars below the bar (down to 0 or data min)
     if error_below_bar:
@@ -1782,20 +1789,18 @@ def prism_grouped_barplot(
                color=c, edgecolor="black", linewidth=0.8,
                label=sub, zorder=3)
 
-        # Use asymmetric error bars on log scale
+        # Draw error bars — per-bar for log scale (asymmetric), vectorised otherwise
         if yscale == "log":
             for xi, cat in zip(bar_xs, categories):
                 vals = _get_vals(cat, sub)
                 vals = vals[~np.isnan(vals)]
-                if len(vals) == 0: continue
-                m, lo, hi = _calc_error_asymmetric(vals, error)
-                ax.errorbar(xi, m, yerr=[[lo], [hi]],
-                            fmt="none", ecolor="black", elinewidth=1.0,
-                            capsize=4, capthick=1.0, zorder=4)
+                if len(vals) == 0:
+                    continue
+                _draw_bar_errorbar(ax, xi, vals, error, yscale, cap_size=cap_size)
         else:
             ax.errorbar(bar_xs, means, yerr=errs_list,
                         fmt="none", ecolor="black", elinewidth=1.0,
-                        capsize=4, capthick=1.0, zorder=4)
+                        capsize=cap_size, capthick=1.0, zorder=4)
 
         if show_points:
             for xi, cat in zip(bar_xs, categories):
@@ -3372,15 +3377,7 @@ def prism_two_way_anova(
             ax.bar(xi, m, width=bar_width * 0.9,
                    color=c, edgecolor=_darken_color(c),
                    linewidth=0.8, zorder=3)
-            if yscale == "log":
-                _, lo, hi = _calc_error_asymmetric(cell_data, error)
-                ax.errorbar(xi, m, yerr=[[lo], [hi]], fmt="none",
-                            color="black", linewidth=1.0,
-                            capsize=4, capthick=1.0, zorder=4)
-            else:
-                ax.errorbar(xi, m, yerr=err, fmt="none",
-                            color="black", linewidth=1.0,
-                            capsize=4, capthick=1.0, zorder=4)
+            _draw_bar_errorbar(ax, xi, cell_data, error, yscale, cap_size=4.0)
             bar_tops[(a_val, b_val)] = m + err
 
             if show_points and len(cell_data) > 0:

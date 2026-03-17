@@ -48,16 +48,30 @@ def populate_results(app, excel_path, sheet, plot_type, kw_snapshot):
         app._results_tsv_data = ""
 
         # ── Load data ────────────────────────────────────────────────────
-        df = pd.read_excel(excel_path, sheet_name=sheet, header=0)
-        numeric_cols = df.select_dtypes(include="number").columns.tolist()
-        if not numeric_cols:
-            tk.Label(app._results_inner, text="No numeric columns found.",
-                     bg="#f4f7fb", fg="#888888", font=("Helvetica Neue", 11)
-                     ).pack(anchor="w", padx=12, pady=8)
-            return
+        # Grouped/stacked bar charts have a two-row header (category, subgroup).
+        # Read with header=[0,1] to preserve that structure, then flatten the
+        # MultiIndex column labels into "Category / Subgroup" keys.
+        _two_row_types = ("grouped_bar", "stacked_bar")
+        if plot_type in _two_row_types:
+            df = pd.read_excel(excel_path, sheet_name=sheet, header=[0, 1])
+            groups = {}
+            for col in df.columns:
+                cat, sub = str(col[0]).strip(), str(col[1]).strip()
+                label = f"{cat} / {sub}"
+                vals = pd.to_numeric(df[col], errors="coerce").dropna().to_numpy(dtype=float)
+                if len(vals) > 0:
+                    groups[label] = vals
+        else:
+            df = pd.read_excel(excel_path, sheet_name=sheet, header=0)
+            numeric_cols = df.select_dtypes(include="number").columns.tolist()
+            if not numeric_cols:
+                tk.Label(app._results_inner, text="No numeric columns found.",
+                         bg="#f4f7fb", fg="#888888", font=("Helvetica Neue", 11)
+                         ).pack(anchor="w", padx=12, pady=8)
+                return
+            groups = {c: df[c].dropna().to_numpy(dtype=float)
+                      for c in numeric_cols if len(df[c].dropna()) > 0}
 
-        groups = {c: df[c].dropna().to_numpy(dtype=float)
-                  for c in numeric_cols if len(df[c].dropna()) > 0}
         if not groups:
             return
 
@@ -352,7 +366,7 @@ def populate_results(app, excel_path, sheet, plot_type, kw_snapshot):
 
 def export_results_csv(app):
     """Export the results table as a CSV file (replaces Copy TSV)."""
-    data = getattr(self, "_results_tsv_data", "")
+    data = getattr(app, "_results_tsv_data", "")
     if not data:
         app._set_status("No results to export yet  -  generate a plot first.", err=True)
         return
@@ -378,7 +392,7 @@ def export_results_csv(app):
 
 def copy_results_tsv(app):
     """Copy the results table as tab-separated text."""
-    data = getattr(self, "_results_tsv_data", "")
+    data = getattr(app, "_results_tsv_data", "")
     if data:
         app.clipboard_clear()
         app.clipboard_append(data)
