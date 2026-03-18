@@ -415,6 +415,52 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         self.after(250, self._watch_dock_icon)
         # Wire live-preview traces after the UI is fully built
         self.after(300, self._setup_live_preview)
+        # Session persistence: auto-save every 30 s, offer restore on launch
+        try:
+            from plotter_session import Session
+            self._session = Session()
+            self.after(500, self._session_restore_prompt)
+        except Exception:
+            self._session = None
+        self.protocol("WM_DELETE_WINDOW", self._on_quit)
+        self.after(30000, self._auto_save)
+
+    def _auto_save(self):
+        """Save session state to disk every 30 seconds."""
+        try:
+            if self._session is not None:
+                pt = self._plot_type.get() if hasattr(self, "_plot_type") else "bar"
+                state = self._session.capture(self._vars, pt, self.geometry())
+                self._session.save_to_disk(state)
+        except Exception:
+            pass
+        self.after(30000, self._auto_save)
+
+    def _session_restore_prompt(self):
+        """Offer to restore the previous session on startup."""
+        try:
+            if self._session is None:
+                return
+            saved = self._session.load_from_disk()
+            if not saved or not saved.get("vars"):
+                return
+            from tkinter import messagebox
+            if messagebox.askyesno("Restore Session",
+                                   "Restore your previous session?"):
+                self._session.restore(saved, self._vars)
+        except Exception:
+            pass
+
+    def _on_quit(self):
+        """Save session then destroy the window."""
+        try:
+            if self._session is not None:
+                pt = self._plot_type.get() if hasattr(self, "_plot_type") else "bar"
+                state = self._session.capture(self._vars, pt, self.geometry())
+                self._session.save_to_disk(state)
+        except Exception:
+            pass
+        self.destroy()
 
     def _set_tk_icon(self):
         photo = load_tk_icon()
