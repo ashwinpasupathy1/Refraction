@@ -18,9 +18,12 @@ import zipfile
 import json
 import csv
 import io
+import logging
 import os
 import time
 import tempfile
+
+_log = logging.getLogger(__name__)
 
 
 EXTENSION = ".cplot"
@@ -56,7 +59,7 @@ def save_project(path, app_vars, plot_type, excel_path,
             try:
                 state[key] = var.get()
             except Exception:
-                pass
+                _log.debug("save_project: could not read var %r", key, exc_info=True)
         zf.writestr("state.json", json.dumps(state, indent=2))
 
         # Plot type
@@ -203,5 +206,5 @@ def get_thumbnail(cplot_path):
             if "thumbnail.png" in zf.namelist():
                 return zf.read("thumbnail.png")
     except Exception:
-        pass
+        _log.debug("get_thumbnail: could not read thumbnail from %r", cplot_path, exc_info=True)
     return None

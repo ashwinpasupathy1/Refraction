@@ -33,7 +33,10 @@ Design notes
 """
 
 from __future__ import annotations
+import logging
 import numpy as np
+
+_log = logging.getLogger(__name__)
 
 def populate_results(app, excel_path, sheet, plot_type, kw_snapshot):
     """Compute and display per-group descriptive stats, statistical test,
@@ -269,7 +272,7 @@ def populate_results(app, excel_path, sheet, plot_type, kw_snapshot):
                 tsv_sections.append("\t".join(["Test", "Statistic", "df", "p-value", "Sig."]))
                 tsv_sections.append("\t".join(test_rows[0]))
             except Exception:
-                pass
+                _log.debug("populate_results: statistical test section failed", exc_info=True)
 
         # ════════════════════════════════════════════════════════════════
         # Section 3  -  Post-hoc Pairwise Comparisons (3+ groups only)
@@ -317,7 +320,7 @@ def populate_results(app, excel_path, sheet, plot_type, kw_snapshot):
                 for row in ph_rows:
                     tsv_sections.append("\t".join(row))
             except Exception:
-                pass
+                _log.debug("populate_results: post-hoc comparisons section failed", exc_info=True)
 
         # ════════════════════════════════════════════════════════════════
         # Section 4  -  Normality (Shapiro-Wilk)
@@ -338,7 +341,7 @@ def populate_results(app, excel_path, sheet, plot_type, kw_snapshot):
                 for row in norm_rows:
                     tsv_sections.append("\t".join(row))
             except Exception:
-                pass
+                _log.debug("populate_results: normality section failed", exc_info=True)
 
         # ── Store TSV for copy ────────────────────────────────────────────
         app._results_tsv_data = "\n".join(tsv_sections)
@@ -359,7 +362,8 @@ def populate_results(app, excel_path, sheet, plot_type, kw_snapshot):
             f"results panel updated")
 
     except Exception:
-        pass   # results panel is best-effort — never crash the plot
+        _log.debug("populate_results: unhandled error in results panel", exc_info=True)
+        # results panel is best-effort — never crash the plot
 
 
 

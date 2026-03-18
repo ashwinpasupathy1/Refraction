@@ -7,8 +7,11 @@ Edit events are posted back to the FastAPI /event endpoint.
 
 from __future__ import annotations
 import json
+import logging
 import threading
 import tkinter as tk
+
+_log = logging.getLogger(__name__)
 
 
 # HTML template served to pywebview
@@ -156,6 +159,7 @@ class PlotterWebView:
         except ImportError:
             return False
         except Exception:
+            _log.debug("PlotterWebView.show: failed to start webview", exc_info=True)
             return False
 
     def render(self, chart_type: str, kw: dict) -> bool:
@@ -168,6 +172,8 @@ class PlotterWebView:
             self._window.evaluate_js(js)
             return True
         except Exception:
+            _log.debug("PlotterWebView.render: evaluate_js failed for chart_type=%r",
+                       chart_type, exc_info=True)
             return False
 
     def destroy(self) -> None:
@@ -176,4 +182,4 @@ class PlotterWebView:
             if self._window is not None:
                 self._window.destroy()
         except Exception:
-            pass
+            _log.debug("PlotterWebView.destroy: window destroy failed", exc_info=True)

@@ -1,7 +1,10 @@
 """plotter_events.py — Lightweight publish/subscribe event bus for Claude Plotter."""
 
 import collections
+import logging
 import threading
+
+_log = logging.getLogger(__name__)
 
 # Canonical event name constants
 FILE_LOADED            = "file_loaded"
@@ -52,7 +55,8 @@ class EventBus:
             try:
                 handler(**kwargs)
             except Exception:
-                pass
+                _log.debug("EventBus handler raised an exception (event=%r, handler=%r)",
+                           event, handler, exc_info=True)
 
     def once(self, event: str, handler, priority: int = 0):
         """Subscribe handler to fire once, then auto-unsubscribe."""

@@ -1,8 +1,11 @@
 """plotter_presets.py — Style preset system for Claude Plotter."""
 
 import json
+import logging
 import os
 import time
+
+_log = logging.getLogger(__name__)
 
 PRESETS_DIR = os.path.expanduser(
     "~/Library/Application Support/Claude Plotter/presets/"
@@ -127,7 +130,7 @@ def apply_preset(preset_dict: dict, app_vars: dict) -> None:
             try:
                 var.set(value)
             except Exception:
-                pass
+                _log.debug("apply_preset: could not set var %r to %r", key, value, exc_info=True)
 
 
 def list_presets() -> list:
@@ -147,7 +150,7 @@ def list_presets() -> list:
                 ts = data.get("_timestamp")
                 results.append({"name": pname, "is_builtin": False, "timestamp": ts})
             except Exception:
-                pass
+                _log.debug("list_presets: could not read preset file %r", path, exc_info=True)
     return results
 
 

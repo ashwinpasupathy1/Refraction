@@ -2,9 +2,12 @@
 and receives edit events from the pywebview frontend."""
 
 import json
+import logging
 import os
 import threading
 from typing import Any, Optional
+
+_log = logging.getLogger(__name__)
 
 _server_thread: Optional[threading.Thread] = None
 _app_ref = None  # reference to the App instance, set during startup
@@ -180,4 +183,4 @@ def _set_var(app, key: str, value: str) -> None:
         if var is not None:
             app.after(0, lambda: var.set(value))
     except Exception:
-        pass
+        _log.debug("_set_var: could not set app var %r to %r", key, value, exc_info=True)

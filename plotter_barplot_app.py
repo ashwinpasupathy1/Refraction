@@ -16,7 +16,9 @@ prism_tabs.py         -- TabState, TabManager, TabBar (plot tab system)
 The App class imports from all four companion modules so each can be
 developed, tested, and documented independently.
 """
-import collections, json, math, os, threading, traceback, uuid
+import collections, json, logging, math, os, threading, traceback, uuid
+
+_log = logging.getLogger(__name__)
 
 _pd_module = None
 def _pd():
@@ -117,7 +119,7 @@ def _load_icon_nsimage():
             if img and img.isValid():
                 return img
     except Exception:
-        pass
+        _log.debug("_load_icon_nsimage: AppKit icon load failed", exc_info=True)
     return None
 
 
@@ -140,12 +142,12 @@ def set_dock_icon():
         try:
             app.setActivationPolicy_(NSApplicationActivationPolicyRegular)
         except Exception:
-            pass
+            _log.debug("set_dock_icon: setActivationPolicy_ failed", exc_info=True)
         img = _load_icon_nsimage()
         if img:
             app.setApplicationIconImage_(img)
     except Exception:
-        pass
+        _log.debug("set_dock_icon: AppKit dock icon setup failed", exc_info=True)
 
 
 def load_tk_icon():
@@ -159,6 +161,7 @@ def load_tk_icon():
             img = img.resize((256, 256), Image.LANCZOS)
         return ImageTk.PhotoImage(img)
     except Exception:
+        _log.debug("load_tk_icon: could not load Tk icon from %r", ICON_PNG, exc_info=True)
         return None
 
 
@@ -289,6 +292,7 @@ def _load_prefs():
         with open(PREFS_PATH) as f:
             return json.load(f)
     except Exception:
+        _log.debug("_load_prefs: could not load %r", PREFS_PATH, exc_info=True)
         return {}
 
 def _save_prefs(data):
@@ -297,7 +301,7 @@ def _save_prefs(data):
         with open(PREFS_PATH, "w") as f:
             json.dump(data, f, indent=2)
     except Exception:
-        pass
+        _log.debug("_save_prefs: could not write %r", PREFS_PATH, exc_info=True)
 
 def _add_recent(path):
     prefs = _load_prefs()
@@ -326,6 +330,7 @@ def _cached_sheets(path):
         _SHEET_CACHE[path] = (mtime, sheets)
         return sheets
     except Exception:
+        _log.debug("_cached_sheets: could not read sheets from %r", path, exc_info=True)
         return []
 
 def _cached_df(path, sheet):
@@ -421,6 +426,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             self._session = Session()
             self.after(500, self._session_restore_prompt)
         except Exception:
+            _log.debug("App.__init__: plotter_session import or init failed", exc_info=True)
             self._session = None
         self.protocol("WM_DELETE_WINDOW", self._on_quit)
         self.after(30000, self._auto_save)
@@ -431,6 +437,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             start_server(app_instance=self)
             self._web_server_running = True
         except Exception:
+            _log.debug("App.__init__: plotter_server start failed", exc_info=True)
             self._web_server_running = False
 
         # Phase 3: web view instances per tab
@@ -445,7 +452,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 state = self._session.capture(self._vars, pt, self.geometry())
                 self._session.save_to_disk(state)
         except Exception:
-            pass
+            _log.debug("App._auto_save: session auto-save failed", exc_info=True)
         self.after(30000, self._auto_save)
 
     def _session_restore_prompt(self):
@@ -461,7 +468,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                                    "Restore your previous session?"):
                 self._session.restore(saved, self._vars)
         except Exception:
-            pass
+            _log.debug("App._session_restore_prompt: session restore failed", exc_info=True)
 
     def _on_quit(self):
         """Save session then destroy the window."""
@@ -471,7 +478,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 state = self._session.capture(self._vars, pt, self.geometry())
                 self._session.save_to_disk(state)
         except Exception:
-            pass
+            _log.debug("App._on_quit: session save on quit failed", exc_info=True)
         self.destroy()
 
     def _set_tk_icon(self):
@@ -523,7 +530,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 widget.drop_target_register(DND_FILES)
                 widget.dnd_bind("<<Drop>>", _on_drop)
             except Exception:
-                pass
+                _log.debug("App._setup_dnd: DND binding failed for widget %r", widget, exc_info=True)
 
     def _import_functions(self):
         threading.Thread(target=self._do_import, daemon=True).start()
@@ -922,7 +929,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                     self.bind_all(f"<Control-Key-{num}>",
                                   lambda e, i=idx: self._jump_to_chart(i))
         except Exception:
-            pass
+            _log.debug("App._build_menubar: keyboard shortcut binding failed", exc_info=True)
 
     def _jump_to_chart(self, idx: int):
         """Switch to chart type by registry index (used by ⌘1–⌘9)."""
@@ -932,7 +939,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             if hasattr(self, "_sb_show_pane"):
                 self._sb_show_pane(idx)
         except Exception:
-            pass
+            _log.debug("App._jump_to_chart: failed to jump to chart index %d", idx, exc_info=True)
 
     def _build_toolbar(self):
         """Build the bottom status/button bar.
@@ -1375,7 +1382,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                     self._zoom_plot_factor(1.0 + e.delta)
             self.bind_all("<Magnify>", _on_magnify)
         except Exception:
-            pass
+            _log.debug("App._build: <Magnify> event binding failed (non-macOS?)", exc_info=True)
 
         self._tabs_built   = set()
         self._all_tabs_map = {spec.key: (spec, tabs)
@@ -1461,7 +1468,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                     self._section_anchors[key]["Axes"] = max(0.0, (axes_y - 10) / content_h)
                     self._section_anchors[key]["Statistics"] = max(0.0, (stats_y - 10) / content_h)
                 except Exception:
-                    pass
+                    _log.debug("App._build: _measure_anchors failed for key %r", key, exc_info=True)
             self.after(300, _measure_anchors)
 
         self._build_tab_content = _build_tab_content
@@ -2197,10 +2204,12 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                     hex_cols = ["#%02x%02x%02x" % (int(r*255), int(g_*255), int(b*255))
                                 for r, g_, b in pal]
                 except Exception:
+                    _log.debug("_update_swatches: seaborn palette %r failed, trying mcolors", pal_name, exc_info=True)
                     try:
                         c = _mcolors.to_hex(pal_name)
                         hex_cols = [c] * 5
                     except Exception:
+                        _log.debug("_update_swatches: mcolors fallback for %r failed", pal_name, exc_info=True)
                         hex_cols = ["#cccccc"] * 5
             for _sci, _sc in enumerate(_swatch_canvases):
                 _sc.delete("all")
@@ -2219,6 +2228,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             from plotter_presets import BUILT_IN_PRESETS
             _preset_names = ["— none —"] + list(BUILT_IN_PRESETS.keys())
         except Exception:
+            _log.debug("App._tab_data: plotter_presets import failed", exc_info=True)
             _preset_names = ["— none —"]
             BUILT_IN_PRESETS = {}
         if "preset" not in self._vars:
@@ -2618,6 +2628,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 "Permutation":   _scipy_summary(_st.permutation_test, 320),
             }
         except Exception:
+            _log.debug("App._tab_stats: scipy TEST_INFO build failed", exc_info=True)
             TEST_INFO = {
                 "Paired":         "Paired t-test (matched observations, same n per group).",
                 "Parametric":     "Welch's t-test (2 groups, unequal variance OK) or one-way ANOVA + Tukey HSD (3+ groups).",
@@ -5955,7 +5966,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                                        header=None, nrows=1)
                 groups = [str(c) for c in df_g.iloc[0].dropna().tolist()]
             except Exception:
-                pass
+                _log.debug("App._do_run: could not read group names from header row", exc_info=True)
 
             pt   = self._plot_type.get()
             spec = next((s for s in _REGISTRY_SPECS if s.key == pt), _REGISTRY_SPECS[0])
@@ -6054,6 +6065,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             self._plotly_views[id(plot_frame)] = pv
             return True
         except Exception:
+            _log.debug("App._try_webview_embed: webview embed failed for %r", chart_type, exc_info=True)
             return False
 
     def _embed_plot(self, fig, groups=None, kw=None, tab_id=None, job_id=None):
@@ -6124,7 +6136,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 fig.tight_layout(pad=1.2)
                 canvas.draw()
             except Exception:
-                pass
+                _log.debug("App._embed_plot: tight_layout failed", exc_info=True)
             canvas.get_tk_widget().pack(padx=8, pady=(2, 8))
             self._canvas_widget = canvas
             self._plot_frame    = target_frame   # keep self._plot_frame pointing at active tab
@@ -6272,7 +6284,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             try:
                 self.after_cancel(self._preview_after_id)
             except Exception:
-                pass
+                _log.debug("App._schedule_preview: after_cancel failed", exc_info=True)
         self._preview_after_id = self.after(400, self._live_preview_run)
 
     def _live_preview_run(self):
@@ -6580,7 +6592,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                     self._fig.savefig(buf, format="png", dpi=72, bbox_inches="tight")
                     thumbnail_bytes = buf.getvalue()
             except Exception:
-                pass
+                _log.debug("App._save_project: thumbnail capture failed", exc_info=True)
 
             save_project(
                 path=path,
@@ -6627,7 +6639,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                     try:
                         var.set(value)
                     except Exception:
-                        pass
+                        _log.debug("App._open_cplot: could not restore var %r to %r", key, value, exc_info=True)
 
             # Extract embedded Excel data and load it
             try:
@@ -6638,7 +6650,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                         ep_var.set(temp_path)
                     self._load_sheets(temp_path)
             except Exception:
-                pass
+                _log.debug("App._open_cplot: extract_to_temp_excel failed for %r", path, exc_info=True)
 
             self._set_status(f"Project loaded: {path}")
         except Exception as exc:

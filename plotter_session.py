@@ -1,8 +1,11 @@
 """plotter_session.py — Session persistence for Claude Plotter."""
 
 import json
+import logging
 import os
 import time
+
+_log = logging.getLogger(__name__)
 
 PREFS_PATH = os.path.expanduser(
     "~/Library/Preferences/claude_plotter_session.json"
@@ -25,7 +28,7 @@ class Session:
                 try:
                     state[key] = var.get()
                 except Exception:
-                    pass
+                    _log.debug("Session.capture: could not read var %r", key, exc_info=True)
         return state
 
     def restore(self, state: dict, app_vars: dict,
@@ -41,17 +44,19 @@ class Session:
                 try:
                     var.set(value)
                 except Exception:
-                    pass
+                    _log.debug("Session.restore: could not set var %r to %r", key, value, exc_info=True)
         if set_plot_type_fn is not None and "_plot_type" in state:
             try:
                 set_plot_type_fn(state["_plot_type"])
             except Exception:
-                pass
+                _log.debug("Session.restore: set_plot_type_fn failed for %r",
+                           state["_plot_type"], exc_info=True)
         if set_geometry_fn is not None and "_window_geometry" in state:
             try:
                 set_geometry_fn(state["_window_geometry"])
             except Exception:
-                pass
+                _log.debug("Session.restore: set_geometry_fn failed for %r",
+                           state["_window_geometry"], exc_info=True)
 
     def save_to_disk(self, state: dict) -> None:
         """Atomic JSON write of state to disk."""
@@ -69,6 +74,7 @@ class Session:
             with open(PREFS_PATH, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
+            _log.debug("Session.load_from_disk: could not load %r", PREFS_PATH, exc_info=True)
             return {}
 
     def clear(self) -> None:
