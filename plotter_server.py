@@ -2,9 +2,14 @@
 and receives edit events from the pywebview frontend."""
 
 import json
+import logging
 import os
+import tempfile
 import threading
+import uuid
 from typing import Any, Optional
+
+_log = logging.getLogger(__name__)
 
 _server_thread: Optional[threading.Thread] = None
 _app_ref = None  # reference to the App instance, set during startup
@@ -116,6 +121,27 @@ def _make_app():
     def health():
         return {"status": "ok"}
 
+    # ── File upload ──────────────────────────────────────────────
+    from fastapi import UploadFile, File as FastAPIFile
+
+    UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "claude-plotter-uploads")
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+    @api.post("/upload")
+    async def upload_file(file: UploadFile = FastAPIFile(...)):
+        """Accept .xlsx/.xls/.csv upload; return server-side path."""
+        ext = os.path.splitext(file.filename or "")[1].lower()
+        if ext not in (".xlsx", ".xls", ".csv"):
+            return {"ok": False, "error": f"Unsupported file type: {ext}"}
+        contents = await file.read()
+        if len(contents) > 10 * 1024 * 1024:  # 10 MB limit
+            return {"ok": False, "error": "File too large (max 10 MB)"}
+        safe_name = f"{uuid.uuid4().hex[:8]}_{os.path.basename(file.filename or 'data')}"
+        dest = os.path.join(UPLOAD_DIR, safe_name)
+        with open(dest, "wb") as f:
+            f.write(contents)
+        return {"ok": True, "path": dest, "filename": file.filename}
+
     # Serve React SPA static files if the build exists
     from fastapi.staticfiles import StaticFiles
     web_dist = os.path.join(os.path.dirname(__file__), "plotter_web", "dist")
@@ -125,22 +151,48 @@ def _make_app():
     return api
 
 
+_SPEC_BUILDERS: dict[str, tuple[str, str]] = {
+    "bar":                ("plotter_spec_bar",               "build_bar_spec"),
+    "grouped_bar":        ("plotter_spec_grouped_bar",       "build_grouped_bar_spec"),
+    "line":               ("plotter_spec_line",              "build_line_spec"),
+    "scatter":            ("plotter_spec_scatter",           "build_scatter_spec"),
+    "box":                ("plotter_spec_box",               "build_box_spec"),
+    "violin":             ("plotter_spec_violin",            "build_violin_spec"),
+    "histogram":          ("plotter_spec_histogram",         "build_histogram_spec"),
+    "dot_plot":           ("plotter_spec_dot_plot",          "build_dot_plot_spec"),
+    "raincloud":          ("plotter_spec_raincloud",         "build_raincloud_spec"),
+    "qq_plot":            ("plotter_spec_qq",                "build_qq_spec"),
+    "ecdf":               ("plotter_spec_ecdf",              "build_ecdf_spec"),
+    "before_after":       ("plotter_spec_before_after",      "build_before_after_spec"),
+    "repeated_measures":  ("plotter_spec_repeated_measures", "build_repeated_measures_spec"),
+    "subcolumn_scatter":  ("plotter_spec_subcolumn",         "build_subcolumn_spec"),
+    "stacked_bar":        ("plotter_spec_stacked_bar",       "build_stacked_bar_spec"),
+    "area_chart":         ("plotter_spec_area",              "build_area_spec"),
+    "lollipop":           ("plotter_spec_lollipop",          "build_lollipop_spec"),
+    "waterfall":          ("plotter_spec_waterfall",         "build_waterfall_spec"),
+    "pyramid":            ("plotter_spec_pyramid",           "build_pyramid_spec"),
+    "kaplan_meier":       ("plotter_spec_kaplan_meier",      "build_kaplan_meier_spec"),
+    "heatmap":            ("plotter_spec_heatmap",           "build_heatmap_spec"),
+    "bland_altman":       ("plotter_spec_bland_altman",      "build_bland_altman_spec"),
+    "forest_plot":        ("plotter_spec_forest_plot",       "build_forest_plot_spec"),
+    "bubble":             ("plotter_spec_bubble",            "build_bubble_spec"),
+    "curve_fit":          ("plotter_spec_curve_fit",         "build_curve_fit_spec"),
+    "column_stats":       ("plotter_spec_column_stats",      "build_column_stats_spec"),
+    "contingency":        ("plotter_spec_contingency",       "build_contingency_spec"),
+    "chi_square_gof":     ("plotter_spec_chi_square_gof",    "build_chi_square_gof_spec"),
+    "two_way_anova":      ("plotter_spec_two_way_anova",     "build_two_way_anova_spec"),
+}
+
+
 def _build_spec(chart_type: str, kw: dict) -> str:
-    """Route to the correct spec builder."""
-    if chart_type == "bar":
-        from plotter_spec_bar import build_bar_spec
-        return build_bar_spec(kw)
-    elif chart_type == "grouped_bar":
-        from plotter_spec_grouped_bar import build_grouped_bar_spec
-        return build_grouped_bar_spec(kw)
-    elif chart_type == "line":
-        from plotter_spec_line import build_line_spec
-        return build_line_spec(kw)
-    elif chart_type == "scatter":
-        from plotter_spec_scatter import build_scatter_spec
-        return build_scatter_spec(kw)
-    else:
+    """Route to the correct spec builder via lazy import."""
+    if chart_type not in _SPEC_BUILDERS:
         return json.dumps({"error": f"Unknown chart type: {chart_type}"})
+    module_name, fn_name = _SPEC_BUILDERS[chart_type]
+    import importlib
+    mod = importlib.import_module(module_name)
+    builder = getattr(mod, fn_name)
+    return builder(kw)
 
 
 def _dispatch_event(event: str, value: Any, extra: dict) -> None:
@@ -180,4 +232,4 @@ def _set_var(app, key: str, value: str) -> None:
         if var is not None:
             app.after(0, lambda: var.set(value))
     except Exception:
-        pass
+        _log.debug("_set_var: could not set app var %r to %r", key, value, exc_info=True)

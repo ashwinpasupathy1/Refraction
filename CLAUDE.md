@@ -8,33 +8,39 @@ Built entirely by Claude (Anthropic) with Ashwin Pasupathy.
 ## The one rule before every commit
 
 ```bash
-python3 run_all.py   # must print 438/438 (or higher) with 0 failures
+python3 run_all.py   # must print 0 failures — currently 531 total tests
 ```
 
-Never commit if this fails. Never skip it. If tests regress, fix them before
-doing anything else.
+Never commit if core tests fail. Never skip it. If tests regress, fix them
+before doing anything else.
+
+**Note:** 9 phase3_plotly tests require the `plotly` package and will fail if
+not installed. Canvas renderer tests (~109) require a display. Core suites
+(comprehensive, p1p2p3, control, modular, stats_verify) must always pass.
 
 ---
 
 ## Commands
 
 ```bash
-# Run the full test suite (438 tests across 6 suites, ~120 seconds)
+# Run the full test suite (531 tests across 7 suites, ~25 seconds)
 python3 run_all.py
 
 # Run a single suite
-python3 run_all.py comprehensive      # 175 tests — all chart types + stats engine
-python3 run_all.py canvas_renderer    #  109 tests — tk.Canvas renderer
-python3 run_all.py modular            #  74 tests — widgets/validators/results/tabs
-python3 run_all.py p1p2p3             #  60 tests — style params
+python3 run_all.py comprehensive      # 309 tests — all chart types + stats engine
+python3 run_all.py p1p2p3             #  80 tests — style params
 python3 run_all.py control            #  20 tests — control-group logic
+python3 run_all.py canvas_renderer    # 109 tests — tk.Canvas renderer (needs display)
+python3 run_all.py modular            #  74 tests — widgets/validators/results/tabs
+python3 run_all.py stats_verify       #  37 tests — statistical verification
+python3 run_all.py phase3_plotly      #  11 tests — Plotly specs + server (needs plotly)
 
 # Launch the app (needs a display — use xvfb-run on headless systems)
 python3 plotter_barplot_app.py
 # On headless CI:  xvfb-run python3 plotter_barplot_app.py
 
 # Quick syntax check of all modules
-python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plotter_results, plotter_registry, plotter_tabs, plotter_app_icons, plotter_presets, plotter_session, plotter_events, plotter_types, plotter_undo, plotter_errors, plotter_comparisons, plotter_project, plotter_import_pzfx, plotter_wiki_content, plotter_app_wiki; print('OK')"
+python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plotter_results, plotter_registry, plotter_tabs, plotter_app_icons, plotter_presets, plotter_session, plotter_events, plotter_types, plotter_undo, plotter_errors, plotter_comparisons, plotter_project, plotter_import_pzfx, plotter_wiki_content, plotter_app_wiki, plotter_server, plotter_webview, plotter_plotly_theme, plotter_spec_bar, plotter_spec_grouped_bar, plotter_spec_line, plotter_spec_scatter, plotter_web_server; print('OK')"
 ```
 
 ---
@@ -43,14 +49,14 @@ python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plott
 
 ```
 # ── Core application ──────────────────────────────────────────────
-plotter_barplot_app.py      6,688 lines   App class, PLOT_REGISTRY, icon helpers
-plotter_functions.py        6,553 lines   29+ matplotlib chart functions
+plotter_barplot_app.py      6,688 lines   App class, sidebar, all UI wiring
+plotter_functions.py        6,553 lines   29 matplotlib chart functions + stats
 plotter_widgets.py            952 lines   _DS tokens, PButton/PEntry/PCheckbox etc.
 plotter_validators.py         518 lines   Standalone spreadsheet validators
 plotter_results.py            401 lines   Results panel: populate / export / copy
 
 # ── Phase 2 infrastructure modules ────────────────────────────────
-plotter_registry.py           475 lines   PlotTypeConfig registry (moved from app)
+plotter_registry.py           475 lines   PlotTypeConfig registry (29 entries)
 plotter_tabs.py               532 lines   Multi-tab state (TabState, TabManager, TabBar)
 plotter_app_icons.py          352 lines   Sidebar icon drawing for all chart types
 plotter_presets.py            163 lines   Style preset load/save (.json)
@@ -65,14 +71,33 @@ plotter_import_pzfx.py        316 lines   GraphPad .pzfx file importer
 plotter_wiki_content.py     2,224 lines   Statistical wiki content (29 sections)
 plotter_app_wiki.py           522 lines   Wiki popup viewer (Tk UI)
 
+# ── Phase 3 — Plotly / FastAPI / Web ──────────────────────────────
+plotter_server.py             183 lines   FastAPI server + auth + endpoints
+plotter_webview.py            179 lines   pywebview wrapper for desktop mode
+plotter_plotly_theme.py        51 lines   Plotly theme constants (PRISM_TEMPLATE)
+plotter_spec_bar.py            67 lines   Bar chart Plotly spec builder
+plotter_spec_grouped_bar.py    57 lines   Grouped bar Plotly spec builder
+plotter_spec_line.py           55 lines   Line graph Plotly spec builder
+plotter_spec_scatter.py        58 lines   Scatter plot Plotly spec builder
+
+# ── Phase 4 — Deployment ──────────────────────────────────────────
+plotter_web_server.py          49 lines   Standalone web server entry point (no Tk)
+plotter_web/                              React SPA (Vite + TypeScript + Plotly.js)
+Dockerfile                                Docker deployment config
+requirements.txt                          Desktop dependencies
+requirements-web.txt                      Web-only dependencies (no Tk/matplotlib)
+
 # ── Test infrastructure ────────────────────────────────────────────
-plotter_test_harness.py       363 lines   Shared test bootstrap (imports once)
-run_all.py                    112 lines   6-suite unified test runner
-tests/test_comprehensive.py 1,341 lines   Main chart function tests
-tests/test_canvas_renderer.py 1,306 lines  Canvas renderer + GroupedCanvasRenderer
-tests/test_modular.py         599 lines   Widgets / validators / results / tabs
-tests/test_p1_p2_p3.py        796 lines   Style parameter regression tests
-tests/test_control.py         437 lines   Control-group statistics tests
+tests/plotter_test_harness.py 363 lines   Shared test bootstrap (imports once)
+run_all.py                    112 lines   7-suite unified test runner
+tests/test_comprehensive.py 1,341 lines   Main chart function tests (309 tests)
+tests/test_canvas_renderer.py 1,306 lines  Canvas renderer (109 tests, needs display)
+tests/test_modular.py       1,057 lines   Widgets / validators / results / tabs (74)
+tests/test_p1_p2_p3.py        796 lines   Style parameter regressions (80 tests)
+tests/test_control.py         437 lines   Control-group statistics (20 tests)
+test_stats_verification.py    733 lines   Statistical verification (37 tests)
+tests/test_phase3_plotly.py   156 lines   Plotly spec builders + server (11 tests)
+tests/visual_test.py          552 lines   Visual regression tests (manual)
 ```
 
 ---
@@ -390,13 +415,13 @@ is the single change needed.**
 | Dot Plot | `dot_plot` | `prism_dot_plot` |
 | Bland-Altman | `bland_altman` | `prism_bland_altman` |
 | Forest Plot | `forest_plot` | `prism_forest_plot` |
-| Area Chart | *(not yet in registry)* | `prism_area_chart` |
-| Raincloud | *(not yet in registry)* | `prism_raincloud` |
-| Q-Q Plot | *(not yet in registry)* | `prism_qq_plot` |
-| Lollipop | *(not yet in registry)* | `prism_lollipop` |
-| Waterfall | *(not yet in registry)* | `prism_waterfall` |
-| Pyramid | *(not yet in registry)* | `prism_pyramid` |
-| ECDF | *(not yet in registry)* | `prism_ecdf` |
+| Area Chart | `area_chart` | `plotter_area_chart` |
+| Raincloud | `raincloud` | `plotter_raincloud` |
+| Q-Q Plot | `qq_plot` | `plotter_qq_plot` |
+| Lollipop | `lollipop` | `plotter_lollipop` |
+| Waterfall | `waterfall` | `plotter_waterfall` |
+| Pyramid | `pyramid` | `plotter_pyramid` |
+| ECDF | `ecdf` | `plotter_ecdf` |
 
 ---
 
@@ -447,10 +472,9 @@ sys.exit(0 if _h.FAIL == 0 else 1)
 5. **`_bar_renderer` lifetime** — cleared to `None` before each new render.
    Check for `None` before using.
 
-6. **New chart types added to `plotter_functions.py` but NOT yet to registry**
-   (area_chart, raincloud, qq_plot, lollipop, waterfall, pyramid, ecdf) —
-   these functions exist and are tested in `test_comprehensive.py` but do not
-   appear in the app sidebar yet. To add them to the UI, follow Step 2 above.
+6. **All 29 chart types are now registered** — area_chart, raincloud, qq_plot,
+   lollipop, waterfall, pyramid, and ecdf were added to `plotter_registry.py`
+   and appear in the sidebar. This gotcha is resolved.
 
 7. **`ttk.Treeview` heading colours on macOS Aqua theme** — `ttk.Style.configure`
    heading background is ignored on Aqua. Headers appear in the system default
@@ -546,6 +570,38 @@ backward compatibility. All 438 tests pass.
     `plotter_barplot_app.py` imports the registry; do not add new chart types
     directly to `plotter_barplot_app.py`.
 
+## Phase 3 — Plotly / FastAPI / Web Rendering (March 2026)
+
+Phase 3 added interactive Plotly.js chart rendering and a FastAPI backend,
+enabling both desktop (pywebview) and web (browser) modes.
+
+### New modules
+
+| Module | Lines | Purpose |
+|---|---|---|
+| `plotter_server.py` | 183 | FastAPI server: `/health`, `/render`, auth middleware |
+| `plotter_webview.py` | 179 | `PlotterWebView` class wrapping pywebview for desktop |
+| `plotter_plotly_theme.py` | 51 | `PRISM_TEMPLATE` and `PRISM_PALETTE` for Plotly |
+| `plotter_spec_bar.py` | 67 | `build_bar_spec()` — bar chart Plotly JSON builder |
+| `plotter_spec_grouped_bar.py` | 57 | `build_grouped_bar_spec()` |
+| `plotter_spec_line.py` | 55 | `build_line_spec()` |
+| `plotter_spec_scatter.py` | 58 | `build_scatter_spec()` |
+
+### Phase 3 gotchas
+
+20. **Plotly is optional** — the `plotly` package is required only for
+    Phase 3 spec builders. Desktop matplotlib rendering works without it.
+
+21. **Spec builders read Excel directly** — each `build_*_spec()` function
+    reads the Excel file and returns a Plotly JSON dict. They do NOT go
+    through `plotter_functions.py`.
+
+22. **`plotter_server.py` vs `plotter_web_server.py`** — `plotter_server.py`
+    defines the FastAPI app and endpoints. `plotter_web_server.py` is a thin
+    entry point that imports and runs it for standalone web deployment.
+
+---
+
 ## Phase 4 — Deployment Readiness
 
 ### New files
@@ -590,3 +646,75 @@ Both modes:     same Python business logic, same FastAPI server
 
 19. **API key** — Set `PLOTTER_API_KEY` env var for non-local request auth.
     Local requests (127.0.0.1 / localhost) always bypass auth.
+
+---
+
+## Phase 5 — Full Web Migration (March 2026)
+
+Phase 5 expanded web mode from 4 chart types to all 29, rebuilt the React SPA
+with a full UI (sidebar, config panel, file upload), and hardened the FastAPI
+backend with input validation and upload support.
+
+### New Plotly spec builders (25 files)
+
+| Module | Function | Chart type |
+|---|---|---|
+| `plotter_spec_box.py` | `build_box_spec` | Box plot |
+| `plotter_spec_violin.py` | `build_violin_spec` | Violin plot |
+| `plotter_spec_histogram.py` | `build_histogram_spec` | Histogram |
+| `plotter_spec_dot_plot.py` | `build_dot_plot_spec` | Dot plot |
+| `plotter_spec_raincloud.py` | `build_raincloud_spec` | Raincloud |
+| `plotter_spec_qq.py` | `build_qq_spec` | Q-Q plot |
+| `plotter_spec_ecdf.py` | `build_ecdf_spec` | ECDF |
+| `plotter_spec_before_after.py` | `build_before_after_spec` | Before/After |
+| `plotter_spec_repeated_measures.py` | `build_repeated_measures_spec` | Repeated Measures |
+| `plotter_spec_subcolumn.py` | `build_subcolumn_spec` | Subcolumn scatter |
+| `plotter_spec_stacked_bar.py` | `build_stacked_bar_spec` | Stacked bar |
+| `plotter_spec_area.py` | `build_area_spec` | Area chart |
+| `plotter_spec_lollipop.py` | `build_lollipop_spec` | Lollipop |
+| `plotter_spec_waterfall.py` | `build_waterfall_spec` | Waterfall |
+| `plotter_spec_pyramid.py` | `build_pyramid_spec` | Pyramid |
+| `plotter_spec_kaplan_meier.py` | `build_kaplan_meier_spec` | Survival curve |
+| `plotter_spec_heatmap.py` | `build_heatmap_spec` | Heatmap |
+| `plotter_spec_bland_altman.py` | `build_bland_altman_spec` | Bland-Altman |
+| `plotter_spec_forest_plot.py` | `build_forest_plot_spec` | Forest plot |
+| `plotter_spec_bubble.py` | `build_bubble_spec` | Bubble chart |
+| `plotter_spec_curve_fit.py` | `build_curve_fit_spec` | Curve fit |
+| `plotter_spec_column_stats.py` | `build_column_stats_spec` | Column statistics |
+| `plotter_spec_contingency.py` | `build_contingency_spec` | Contingency |
+| `plotter_spec_chi_square_gof.py` | `build_chi_square_gof_spec` | Chi-Square GoF |
+| `plotter_spec_two_way_anova.py` | `build_two_way_anova_spec` | Two-Way ANOVA |
+
+### React SPA rebuild
+
+| File | Purpose |
+|---|---|
+| `plotter_web/src/App.tsx` | 3-column layout: Sidebar + Chart + ConfigPanel |
+| `plotter_web/src/App.css` | Full stylesheet with responsive breakpoints |
+| `plotter_web/src/Sidebar.tsx` | Chart type selector with 6 collapsible categories |
+| `plotter_web/src/ConfigPanel.tsx` | Data/Labels/Style panels + Generate button |
+| `plotter_web/src/FileUpload.tsx` | Drag-and-drop Excel upload → `/upload` endpoint |
+
+### Backend hardening
+
+- `/upload` POST endpoint — accepts `.xlsx`/`.xls`/`.csv`, validates size (10 MB limit), UUID-prefixed storage
+- `RequestSizeLimitMiddleware` — rejects oversized requests (20 MB) at the HTTP layer
+- `_SPEC_BUILDERS` dict — all 29 chart types mapped via `importlib.import_module` (lazy loading)
+- Input validation on `/render` and `/spec` — unknown chart types and missing files rejected early
+- `/chart-types` endpoint auto-synced with `_KNOWN_CHART_TYPES` set
+
+### Phase 5 gotchas
+
+23. **All 29 spec builders require `plotly`** — install with `pip install plotly`.
+    Without it, `/render` will return import errors for any chart type.
+
+24. **`/upload` stores files in `$TMPDIR/claude-plotter-uploads/`** — files are
+    UUID-prefixed to prevent collisions. Clean up periodically in production.
+
+25. **React SPA needs rebuild after changes** — `cd plotter_web && npm run build`.
+    The FastAPI server serves the built `dist/` directory as static files.
+
+26. **Spec builders are independent of `plotter_functions.py`** — they read Excel
+    directly and produce Plotly JSON. They do NOT share rendering code with the
+    matplotlib chart functions. Visual parity is maintained by using `PRISM_PALETTE`
+    and `PRISM_TEMPLATE` from `plotter_plotly_theme.py`.

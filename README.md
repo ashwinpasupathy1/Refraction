@@ -2,10 +2,11 @@
 
 > A GraphPad Prism-style scientific plotting application — built entirely by Claude (Anthropic) with Ashwin Pasupathy.
 
-![Tests](https://img.shields.io/badge/tests-531%20passing-brightgreen)
-![Python](https://img.shields.io/badge/python-3.12-blue)
+![Tests](https://img.shields.io/badge/tests-522%20passing-brightgreen)
+![Python](https://img.shields.io/badge/python-3.12+-blue)
 ![Charts](https://img.shields.io/badge/chart%20types-29-orange)
 ![Status](https://img.shields.io/badge/status-active-success)
+![Lines](https://img.shields.io/badge/lines%20of%20code-27%2C300+-lightgrey)
 
 ---
 
@@ -30,6 +31,7 @@ python3 plotter_barplot_app.py
 
 # Web server (no display required)
 pip install -r requirements-web.txt
+cd plotter_web && npm install && npm run build && cd ..
 python3 plotter_web_server.py
 # Open http://localhost:7331
 
@@ -72,7 +74,7 @@ docker run -p 7331:7331 claude-plotter
 
 ## Chart Types
 
-Claude Plotter supports 29 chart types across a wide range of scientific use cases.
+Claude Plotter supports **29 chart types** across a wide range of scientific use cases.
 
 ### Categorical / Distribution
 
@@ -158,43 +160,43 @@ Web mode:       Browser -> React SPA -> FastAPI (0.0.0.0:7331)
 Both modes:     same Python business logic, same FastAPI server
 ```
 
-Claude Plotter is split into 20+ focused modules with no circular dependencies.
+Claude Plotter is split into 27+ focused Python modules (~21,300 lines) with no circular dependencies.
 
 ```
-# Core
+# Core application
 plotter_barplot_app.py      6,688 lines   App class, sidebar, all UI
-plotter_functions.py        6,553 lines   29 Matplotlib chart functions
+plotter_functions.py        6,553 lines   29 Matplotlib chart functions + stats
 plotter_widgets.py            952 lines   Design-system tokens, PButton/PEntry/etc.
 plotter_validators.py         518 lines   Standalone spreadsheet validators
 plotter_results.py            401 lines   Results panel: populate / export / copy
 
-# Phase 2 infrastructure
+# Phase 2 — Infrastructure
 plotter_registry.py           475 lines   PlotTypeConfig chart registry
 plotter_tabs.py               532 lines   Multi-tab state management
-plotter_app_icons.py          352 lines   Sidebar icon drawing
+plotter_app_icons.py          352 lines   Sidebar icon drawing (29 chart types)
 plotter_presets.py            163 lines   Style preset system
 plotter_session.py             77 lines   Session persistence
 plotter_events.py              75 lines   EventBus pub/sub
-plotter_types.py              121 lines   Shared type definitions
+plotter_types.py              121 lines   Shared type definitions / dataclasses
 plotter_undo.py               131 lines   Undo/redo stack
 plotter_errors.py              99 lines   Structured error reporting
 plotter_comparisons.py        248 lines   Custom comparison builder
 plotter_project.py            207 lines   .cplot project files (ZIP)
 plotter_import_pzfx.py        316 lines   GraphPad .pzfx importer
-plotter_wiki_content.py     2,224 lines   Statistical wiki content
+plotter_wiki_content.py     2,224 lines   Statistical wiki content (29 sections)
 plotter_app_wiki.py           522 lines   Wiki popup viewer
 
-# Phase 3 — Plotly/FastAPI
-plotter_server.py                         FastAPI server + auth middleware
-plotter_webview.py                        pywebview wrapper for React SPA
-plotter_plotly_theme.py                   Plotly theme matching Prism style
-plotter_spec_bar.py                       Bar chart Plotly spec builder
-plotter_spec_grouped_bar.py               Grouped bar Plotly spec builder
-plotter_spec_line.py                      Line graph Plotly spec builder
-plotter_spec_scatter.py                   Scatter plot Plotly spec builder
+# Phase 3 — Plotly / FastAPI
+plotter_server.py             183 lines   FastAPI server + auth middleware
+plotter_webview.py            179 lines   pywebview wrapper for desktop mode
+plotter_plotly_theme.py        51 lines   Plotly theme matching Prism style
+plotter_spec_bar.py            67 lines   Bar chart Plotly spec builder
+plotter_spec_grouped_bar.py    57 lines   Grouped bar Plotly spec builder
+plotter_spec_line.py           55 lines   Line graph Plotly spec builder
+plotter_spec_scatter.py        58 lines   Scatter plot Plotly spec builder
 
 # Phase 4 — Deployment
-plotter_web_server.py                     Standalone web server (no Tk)
+plotter_web_server.py          49 lines   Standalone web server entry point
 plotter_web/                              React SPA (Vite + TypeScript + Plotly.js)
 Dockerfile                                Docker deployment config
 ```
@@ -210,16 +212,16 @@ Dockerfile                                Docker deployment config
 python3 run_all.py
 
 # Run a specific suite
-python3 run_all.py comprehensive      # 175 tests — all chart types + stats engine
-python3 run_all.py canvas_renderer    # 109 tests — tk.Canvas renderer
-python3 run_all.py modular            #  74 tests — widgets / validators / results / tabs
-python3 run_all.py p1p2p3             #  60 tests — style parameter regressions
+python3 run_all.py comprehensive      # 309 tests — all chart types + stats engine
+python3 run_all.py p1p2p3             #  80 tests — style parameter regressions
 python3 run_all.py control            #  20 tests — control-group statistics
-python3 run_all.py phase3             #  82 tests — Plotly spec builders + theme
-python3 run_all.py server             #  11 tests — FastAPI server endpoints
+python3 run_all.py canvas_renderer    # ~109 tests — tk.Canvas renderer (requires display)
+python3 run_all.py modular            #  74 tests — widgets / validators / results / tabs
+python3 run_all.py stats_verify       #  37 tests — statistical verification
+python3 run_all.py phase3_plotly      #  11 tests — Plotly spec builders + server
 ```
 
-All tests must pass before any commit.
+All core tests (comprehensive, p1p2p3, control, modular, stats_verify) must pass before any commit. Canvas renderer tests require a display. Phase3/plotly tests require the `plotly` package.
 
 ---
 

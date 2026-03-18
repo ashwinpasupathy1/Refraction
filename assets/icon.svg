@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Rounded-rectangle background -->
+  <rect x="0" y="0" width="64" height="64" rx="14" ry="14" fill="#2274A5"/>
+
+  <!-- Baseline rule -->
+  <rect x="8" y="49" width="44" height="2" fill="rgba(255,255,255,0.78)" rx="1"/>
+
+  <!-- Bar 1 (shortest, leftmost) -->
+  <rect x="10" y="35" width="8" height="14" fill="white" rx="2"/>
+
+  <!-- Bar 2 -->
+  <rect x="22" y="26" width="8" height="23" fill="white" rx="2"/>
+
+  <!-- Bar 3 (tallest) -->
+  <rect x="34" y="17" width="8" height="32" fill="white" rx="2"/>
+
+  <!-- Bar 4 -->
+  <rect x="46" y="29" width="8" height="20" fill="white" rx="2"/>
+</svg>
