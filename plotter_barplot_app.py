@@ -2127,6 +2127,39 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         _color_cb.bind("<<ComboboxSelected>>", _update_swatches)
         self.after(100, _update_swatches)
         r += 1
+
+        # ── Style Presets ──────────────────────────────────────────────────────
+        section_sep(g, r, "Style Presets"); r += 1
+        try:
+            from plotter_presets import BUILT_IN_PRESETS
+            _preset_names = ["— none —"] + list(BUILT_IN_PRESETS.keys())
+        except Exception:
+            _preset_names = ["— none —"]
+            BUILT_IN_PRESETS = {}
+        if "preset" not in self._vars:
+            self._vars["preset"] = tk.StringVar(value="— none —")
+        _preset_row = ttk.Frame(g)
+        _preset_row.grid(row=r, column=0, columnspan=3, sticky="ew", padx=PAD, pady=4)
+        _preset_cb = PCombobox(_preset_row, textvariable=self._vars["preset"],
+                               values=_preset_names, state="readonly", width=26,
+                               font=("Menlo", 12))
+        _preset_cb.pack(side="left")
+
+        def _apply_preset(*_):
+            name = self._vars["preset"].get()
+            preset = BUILT_IN_PRESETS.get(name, {})
+            for k, v in preset.items():
+                if k in self._vars:
+                    try:
+                        self._vars[k].set(v)
+                    except Exception:
+                        pass
+
+        PButton(_preset_row, text="Apply", style="ghost",
+                command=_apply_preset).pack(side="left", padx=(6, 0))
+        _preset_cb.bind("<<ComboboxSelected>>", _apply_preset)
+        r += 1
+
         section_sep(g, r, "Labels"); r += 1
 
         # Label fields  -  deliberately NO placeholder text.
