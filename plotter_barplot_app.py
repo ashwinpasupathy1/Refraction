@@ -1505,6 +1505,17 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
     def _open_wiki_popup(self):
         """Open the Reference Wiki in a floating popup window."""
+        try:
+            from plotter_app_wiki import open_wiki_popup
+            open_wiki_popup(self,
+                            track_popup_fn=self._track_popup,
+                            bind_scroll_fn=None)
+        except Exception as e:
+            from tkinter import messagebox
+            messagebox.showinfo("Wiki", f"Wiki unavailable: {e}")
+
+    def _open_wiki_popup_inline(self):
+        """Inline fallback wiki — kept for reference, not called directly."""
         dlg = tk.Toplevel(self)
         dlg.title("Reference Wiki")
         dlg.resizable(True, True)
