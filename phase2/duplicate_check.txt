@@ -1,0 +1,13 @@
+DUPLICATE DEFINITIONS FOUND:
+  def:_is_num (2x):
+    ./plotter_widgets.py:906
+    ./plotter_validators.py:55
+  def:_non_numeric_values (2x):
+    ./plotter_widgets.py:915
+    ./plotter_validators.py:64
+  def:_pd (2x):
+    ./plotter_validators.py:44
+    ./plotter_barplot_app.py:22
+  def:_scipy_summary (2x):
+    ./plotter_widgets.py:930
+    ./plotter_barplot_app.py:352

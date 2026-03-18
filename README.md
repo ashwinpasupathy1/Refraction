@@ -4,7 +4,7 @@
 
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue?logo=python&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-417%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-520%20passing-brightgreen)
 ![Charts](https://img.shields.io/badge/chart%20types-29-orange)
 ![Status](https://img.shields.io/badge/status-active-success)
 
@@ -25,8 +25,13 @@ The application is built on Python + Tkinter for the UI, Matplotlib for renderin
 - **Publication-ready output** — 144 DPI renders, open/closed/floating spine styles, configurable tick directions, gridlines, and font sizes
 - **Statistical overlays** — significance brackets, error bars (SEM, SD, 95% CI), jitter points, and posthoc corrections
 - **Excel-native data model** — paste data directly from Prism, Excel, or Numbers; the app validates your layout before plotting
+- **Multiple file formats** — `.xlsx`, `.xls` for data; `.cplot` project files; `.pzfx` GraphPad import
+- **Style presets** — 5 built-in presets (Classic, Publication, Presentation, Minimal, Dark) + save your own
+- **Session persistence** — settings saved automatically; resume exactly where you left off
+- **Undo/redo** — Cmd+Z / Cmd+Shift+Z for all plot parameter changes
+- **Statistical wiki** — built-in reference for all 29 chart types with formulas and citations
 - **Results panel** — summary statistics, exportable as CSV or copied as TSV for pasting into other apps
-- **Fully modular architecture** — six focused Python modules with zero circular dependencies
+- **Fully modular architecture** — 19 focused Python modules with zero circular dependencies
 
 ---
 
@@ -140,15 +145,31 @@ The app validates your spreadsheet layout before plotting and shows specific err
 
 ## Architecture
 
-Claude Plotter is split into six focused modules with no circular dependencies.
+Claude Plotter is split into 19 focused modules with no circular dependencies.
 
 ```
-plotter_barplot_app.py      ~8,000 lines   App class, PLOT_REGISTRY, sidebar, tabs
-plotter_widgets.py            ~950 lines   Design-system tokens, PButton/PEntry/etc.
-plotter_validators.py         ~520 lines   Standalone spreadsheet validators
-plotter_results.py            ~390 lines   Results panel: populate / export / copy
-plotter_functions.py        ~6,400 lines   29 Matplotlib chart functions
-plotter_canvas_renderer.py  ~1,700 lines   tk.Canvas live renderer (no Matplotlib)
+# Core
+plotter_barplot_app.py      6,637 lines   App class, sidebar, all UI
+plotter_functions.py        6,553 lines   29 Matplotlib chart functions
+plotter_widgets.py            952 lines   Design-system tokens, PButton/PEntry/etc.
+plotter_validators.py         518 lines   Standalone spreadsheet validators
+plotter_results.py            401 lines   Results panel: populate / export / copy
+
+# Phase 2 infrastructure
+plotter_registry.py           475 lines   PlotTypeConfig chart registry
+plotter_tabs.py               532 lines   Multi-tab state management
+plotter_app_icons.py          352 lines   Sidebar icon drawing
+plotter_presets.py            163 lines   Style preset system
+plotter_session.py             77 lines   Session persistence
+plotter_events.py              75 lines   EventBus pub/sub
+plotter_types.py              121 lines   Shared type definitions
+plotter_undo.py               131 lines   Undo/redo stack
+plotter_errors.py              99 lines   Structured error reporting
+plotter_comparisons.py        248 lines   Custom comparison builder
+plotter_project.py            207 lines   .cplot project files (ZIP)
+plotter_import_pzfx.py        316 lines   GraphPad .pzfx importer
+plotter_wiki_content.py     2,224 lines   Statistical wiki content
+plotter_app_wiki.py           522 lines   Wiki popup viewer
 ```
 
 ### Rendering pipeline
@@ -186,21 +207,21 @@ plotter_barplot_app.py
 
 ## Test Suite
 
-417 tests across 5 suites, running in ~52 seconds on a modern Mac.
+438 tests across 5 suites, running in ~52 seconds on a modern Mac.
 
 ```bash
 # Run everything
 python3 run_all.py
 
 # Run a specific suite
-python3 run_all.py comprehensive      # 175 tests — all 29 chart types
+python3 run_all.py comprehensive      # 175 tests — all 0 chart types
 python3 run_all.py canvas_renderer    # 109 tests — tk.Canvas renderer
-python3 run_all.py modular            #  53 tests — widgets / validators / results
+python3 run_all.py modular            #  74 tests — widgets / validators / results
 python3 run_all.py p1p2p3             #  60 tests — style parameter regressions
 python3 run_all.py control            #  20 tests — control-group statistics
 ```
 
-All 417 tests must pass before any commit. If tests regress, fix them before doing anything else.
+All 438 tests must pass before any commit. If tests regress, fix them before doing anything else.
 
 ---
 

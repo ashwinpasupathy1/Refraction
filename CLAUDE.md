@@ -8,7 +8,7 @@ Built entirely by Claude (Anthropic) with Ashwin Pasupathy.
 ## The one rule before every commit
 
 ```bash
-python3 run_all.py   # must print 417/417 (or higher) with 0 failures
+python3 run_all.py   # must print 520/520 (or higher) with 0 failures
 ```
 
 Never commit if this fails. Never skip it. If tests regress, fix them before
@@ -19,21 +19,22 @@ doing anything else.
 ## Commands
 
 ```bash
-# Run the full test suite (417 tests across 5 suites, ~52 seconds)
+# Run the full test suite (520 tests across 6 suites, ~120 seconds)
 python3 run_all.py
 
 # Run a single suite
-python3 run_all.py comprehensive      # 175 tests — all 29 chart types
-python3 run_all.py canvas_renderer    # 109 tests — tk.Canvas renderer
-python3 run_all.py modular            # 53  tests — widgets/validators/results
-python3 run_all.py p1p2p3             # 60  tests — style params
-python3 run_all.py control            # 20  tests — control-group logic
+python3 run_all.py comprehensive      # 309 tests — all chart types + stats engine
+python3 run_all.py canvas_renderer    #  80 tests — tk.Canvas renderer
+python3 run_all.py modular            #  74 tests — widgets/validators/results/tabs
+python3 run_all.py p1p2p3             #  37 tests — style params
+python3 run_all.py control            #  20 tests — control-group logic
 
-# Launch the app (macOS only — needs a display)
+# Launch the app (needs a display — use xvfb-run on headless systems)
 python3 plotter_barplot_app.py
+# On headless CI:  xvfb-run python3 plotter_barplot_app.py
 
 # Quick syntax check of all modules
-python3 -c "import plotter_functions, plotter_canvas_renderer, plotter_widgets, plotter_validators, plotter_results; print('OK')"
+python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plotter_results, plotter_registry, plotter_tabs, plotter_app_icons, plotter_presets, plotter_session, plotter_events, plotter_types, plotter_undo, plotter_errors, plotter_comparisons, plotter_project, plotter_import_pzfx, plotter_wiki_content, plotter_app_wiki; print('OK')"
 ```
 
 ---
@@ -41,19 +42,37 @@ python3 -c "import plotter_functions, plotter_canvas_renderer, plotter_widgets, 
 ## File map
 
 ```
-plotter_barplot_app.py      7,907 lines   App class, PLOT_REGISTRY, icon helpers
+# ── Core application ──────────────────────────────────────────────
+plotter_barplot_app.py      6,637 lines   App class, PLOT_REGISTRY, icon helpers
+plotter_functions.py        6,553 lines   29+ matplotlib chart functions
 plotter_widgets.py            952 lines   _DS tokens, PButton/PEntry/PCheckbox etc.
 plotter_validators.py         518 lines   Standalone spreadsheet validators
-plotter_results.py            387 lines   Results panel: populate / export / copy
-plotter_functions.py        6,468 lines   29 matplotlib chart functions
-plotter_canvas_renderer.py  1,687 lines   tk.Canvas bar+grouped-bar live renderer
+plotter_results.py            401 lines   Results panel: populate / export / copy
+
+# ── Phase 2 infrastructure modules ────────────────────────────────
+plotter_registry.py           475 lines   PlotTypeConfig registry (moved from app)
+plotter_tabs.py               532 lines   Multi-tab state (TabState, TabManager, TabBar)
+plotter_app_icons.py          352 lines   Sidebar icon drawing for all chart types
+plotter_presets.py            163 lines   Style preset load/save (.json)
+plotter_session.py             77 lines   Session persistence (last-used settings)
+plotter_events.py              75 lines   EventBus for decoupled pub/sub messaging
+plotter_types.py              121 lines   Shared type definitions and dataclasses
+plotter_undo.py               131 lines   UndoStack for undo/redo support
+plotter_errors.py              99 lines   ErrorReporter: structured error handling
+plotter_comparisons.py        248 lines   Custom comparison builder UI
+plotter_project.py            207 lines   .cplot project file save/open (ZIP format)
+plotter_import_pzfx.py        316 lines   GraphPad .pzfx file importer
+plotter_wiki_content.py     2,224 lines   Statistical wiki content (29 sections)
+plotter_app_wiki.py           522 lines   Wiki popup viewer (Tk UI)
+
+# ── Test infrastructure ────────────────────────────────────────────
 plotter_test_harness.py       363 lines   Shared test bootstrap (imports once)
-run_all.py                  108 lines   5-suite unified test runner
-test_comprehensive.py     1,341 lines   Main chart function tests
-test_canvas_renderer.py   1,306 lines   Canvas renderer + GroupedCanvasRenderer
-test_modular.py             599 lines   Widgets / validators / results modules
-test_p1_p2_p3.py            796 lines   Style parameter regression tests
-test_control.py             437 lines   Control-group statistics tests
+run_all.py                    111 lines   6-suite unified test runner
+tests/test_comprehensive.py 1,341 lines   Main chart function tests
+tests/test_canvas_renderer.py 1,306 lines  Canvas renderer + GroupedCanvasRenderer
+tests/test_modular.py         599 lines   Widgets / validators / results / tabs
+tests/test_p1_p2_p3.py        796 lines   Style parameter regression tests
+tests/test_control.py         437 lines   Control-group statistics tests
 ```
 
 ---
@@ -172,15 +191,16 @@ def prism_my_chart(
 - Always `return fig, ax`
 - Never import matplotlib or seaborn at module level — they're lazy-loaded by `_ensure_imports()`
 
-### Step 2 — Register it in `_REGISTRY_SPECS` in `plotter_barplot_app.py`
+### Step 2 — Register it in `plotter_registry.py`
 
-Find the list starting at line ~348. Add a new `PlotTypeConfig(...)` entry:
+Add a new `PlotTypeConfig(...)` entry to the registry list in `plotter_registry.py`.
+Also add a sidebar icon drawing function to `plotter_app_icons.py`.
 
 ```python
 PlotTypeConfig(
     key="my_chart",           # internal key — used everywhere
     label="My Chart",         # shown in sidebar
-    fn_name="prism_my_chart", # must match the function name exactly
+    fn_name="plotter_my_chart", # must match the function name exactly
     tab_mode="bar",           # which UI tabs to use (see tab modes below)
     stats_tab="standard",     # which stats sub-tab
     validate="_validate_bar", # which validator method
@@ -238,7 +258,7 @@ Add a test section to `test_comprehensive.py` following the existing pattern.
 At minimum: one test that renders without crashing, one that checks a specific
 visual property, one that tests the validator.
 
-Run `python3 run_all.py` — all existing 417 tests must still pass.
+Run `python3 run_all.py` — all existing 520 tests must still pass.
 
 ---
 
@@ -427,7 +447,7 @@ sys.exit(0 if _h.FAIL == 0 else 1)
 5. **`_bar_renderer` lifetime** — cleared to `None` before each new render.
    Check for `None` before using.
 
-6. **New chart types added to `plotter_functions.py` but NOT yet to `_REGISTRY_SPECS`**
+6. **New chart types added to `plotter_functions.py` but NOT yet to registry**
    (area_chart, raincloud, qq_plot, lollipop, waterfall, pyramid, ecdf) —
    these functions exist and are tested in `test_comprehensive.py` but do not
    appear in the app sidebar yet. To add them to the UI, follow Step 2 above.
@@ -462,3 +482,66 @@ docs: update CLAUDE.md with pyramid chart layout
 ```
 
 Always run `python3 run_all.py` and confirm 0 failures before pushing.
+
+---
+
+## Phase 2 Changes (March 2026)
+
+Phase 2 added 14 new modules and significant new features while maintaining full
+backward compatibility. All 520 tests pass.
+
+### New infrastructure modules
+
+| Module | Purpose |
+|---|---|
+| `plotter_registry.py` | `PlotTypeConfig` registry extracted from `plotter_barplot_app.py` |
+| `plotter_tabs.py` | Multi-tab state management: `TabState`, `TabManager`, `TabBar` |
+| `plotter_app_icons.py` | Sidebar icon drawing for all 29 chart types |
+| `plotter_presets.py` | Style preset system: load/save named presets as `.json` |
+| `plotter_session.py` | Session persistence: auto-save and restore last-used settings |
+| `plotter_events.py` | `EventBus` for decoupled pub/sub messaging between components |
+| `plotter_types.py` | Shared dataclasses and type definitions |
+| `plotter_undo.py` | `UndoStack` implementing undo/redo for plot parameter changes |
+| `plotter_errors.py` | `ErrorReporter` for structured, user-friendly error messages |
+| `plotter_comparisons.py` | Custom comparison builder: select arbitrary group pairs for stats |
+| `plotter_project.py` | `.cplot` project file save/open (ZIP archives with data + settings) |
+| `plotter_import_pzfx.py` | GraphPad Prism `.pzfx` file importer |
+| `plotter_wiki_content.py` | Statistical wiki content: 29 sections, 21 references |
+| `plotter_app_wiki.py` | Statistical wiki popup viewer (Tk UI) |
+
+### New features wired into the app
+
+- **Style presets**: preset selector in Data tab; ships with 5 built-in presets
+- **Session persistence**: settings auto-saved on plot run, restored at startup
+- **Project files**: File > Save Project / Open Project (.cplot ZIP format)
+- **.pzfx import**: File > Import from GraphPad (.pzfx) to extract group data
+- **Statistical wiki**: Help > Statistical Methods (29 documented tests)
+- **Undo/redo**: Cmd+Z / Cmd+Shift+Z for plot parameter changes
+- **Keyboard shortcuts**: Cmd+1-9 to switch chart types in the sidebar
+- **Event bus**: internal pub/sub wiring (not yet widely used by UI components)
+- **Custom comparisons**: UI for selecting specific group pairs to test
+
+### Bugs fixed
+
+1. `plotter_repeated_measures`: `KeyError: 'p-unc'` — pingouin >=0.5 uses `p_unc`
+   (underscore) not `p-unc` (hyphen). Fixed with version-safe column lookup.
+
+### Additional gotchas (Phase 2)
+
+11. **Headless / CI environments** — `plotter_tabs.py` and other Tk modules
+    need a display. Run `xvfb-run python3 run_all.py` on CI. Without `$DISPLAY`
+    the modular test suite will show ~19 Tk-related failures (all expected).
+
+12. **All new modules use `plotter_` prefix** — never create new modules with
+    `prism_` prefix. Comments and docstrings may still say "GraphPad Prism"
+    (that's the product being emulated) but Python identifiers use `plotter_`.
+
+13. **Event bus is optional** — components don't need to use `EventBus`. It is
+    wired in but not required for rendering or stats.
+
+14. **`.cplot` files are ZIP archives** — they contain `settings.json` +
+    the original Excel file. Do not assume plain JSON.
+
+15. **`plotter_registry.py` is the canonical source** for `PlotTypeConfig` entries.
+    `plotter_barplot_app.py` imports the registry; do not add new chart types
+    directly to `plotter_barplot_app.py`.

@@ -1,0 +1,415 @@
+/workspaces/Claude-Prism/plotter_functions.py:1324: RuntimeWarning: More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`). Consider using `matplotlib.pyplot.close()`.
+  fig, ax = plt.subplots(figsize=figsize, dpi=_DPI)
+/workspaces/Claude-Prism/plotter_functions.py:921: RuntimeWarning: More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`). Consider using `matplotlib.pyplot.close()`.
+  fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SUITE: comprehensive  →  test_comprehensive.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 0 — Hallucination / Public Symbol Audit
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  All expected public symbols exist in plotter_functions
+  ✓  CURVE_MODELS registry complete (11 models)
+  ✓  All 16 plot functions are callable
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 1 — Statistical Engine Correctness
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  Parametric 2-group uses Welch's t-test (equal_var=False)
+  ✓  Student's t-test NOT used for unequal-variance groups
+  ✓  Paired 2-group uses ttest_rel
+  ✓  Paired 3-group produces 3 Holm-corrected paired t-test pairs
+  ✓  Non-parametric 2-group uses Mann-Whitney U
+  ✓  Non-parametric 3-group: KW gating blocks post-hoc when ns
+  ✓  Non-parametric 3-group: KW + Dunn yields 3 pairs
+  ✓  Parametric Tukey HSD 3-group: 3 pairs
+  ✓  Parametric Bonferroni 3-group: 3 pairs
+  ✓  Parametric Sidak 3-group: 3 pairs
+  ✓  Parametric Fisher LSD 3-group: 3 pairs
+  ✓  Parametric Dunnett vs control: 2 pairs, all vs Control
+  ✓  Permutation test 2-group returns valid p-value
+  ✓  All 4 MC correction methods return valid p in [0,1]
+  ✓  _p_to_stars thresholds match GraphPad Prism exactly
+  ✓  check_normality: normal → pass, skewed → fail
+  ✓  normality_warning fires for non-normal + parametric
+  ✓  normality_warning silent for non-parametric test
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 2 — Bar Chart
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] Bar: basic default
+  ✓  [A] Bar: error=sd
+  ✓  [A] Bar: error=ci95
+  ✓  [A] Bar: show_stats + parametric
+  ✓  [A] Bar: show_stats + nonparametric
+  ✓  [A] Bar: show_stats + paired (2-group)
+  ✓  [A] Bar: show_stats + permutation
+  ✓  [A] Bar: posthoc=Bonferroni
+  ✓  [A] Bar: posthoc=Sidak
+  ✓  [A] Bar: posthoc=Fisher LSD
+  ✓  [A] Bar: posthoc=Dunnett
+  ✓  [A] Bar: mc=Bonferroni
+  ✓  [A] Bar: mc=BH FDR
+  ✓  [A] Bar: mc=None
+  ✓  [A] Bar: show_p_values
+  ✓  [A] Bar: show_effect_size
+  ✓  [A] Bar: show_test_name
+  ✓  [A] Bar: gridlines=True
+  ✓  [A] Bar: horizontal=True
+  ✓  [A] Bar: yscale=log
+  ✓  [A] Bar: error_below_bar=True
+  ✓  [A] Bar: show_median=True
+  ✓  [A] Bar: open_points=True
+  ✓  [A] Bar: ref_line
+  ✓  [A] Bar: ylim manual
+  ✓  [A] Bar: color override
+  ✓  [A] Bar: bar_width=0.4
+  ✓  [A] Bar: show_stats + show_ns
+  ✓  [B] Bar: basic default
+  ✓  [B] Bar: error=sd
+  ✓  [B] Bar: error=ci95
+  ✓  [B] Bar: show_stats + parametric
+  ✓  [B] Bar: show_stats + nonparametric
+  ✓  [B] Bar: show_stats + paired (2-group)
+  ✓  [B] Bar: show_stats + permutation
+  ✓  [B] Bar: posthoc=Bonferroni
+  ✓  [B] Bar: posthoc=Sidak
+  ✓  [B] Bar: posthoc=Fisher LSD
+  ✓  [B] Bar: posthoc=Dunnett
+  ✓  [B] Bar: mc=Bonferroni
+  ✓  [B] Bar: mc=BH FDR
+  ✓  [B] Bar: mc=None
+  ✓  [B] Bar: show_p_values
+  ✓  [B] Bar: show_effect_size
+  ✓  [B] Bar: show_test_name
+  ✓  [B] Bar: gridlines=True
+  ✓  [B] Bar: horizontal=True
+  ✓  [B] Bar: yscale=log
+  ✓  [B] Bar: error_below_bar=True
+  ✓  [B] Bar: show_median=True
+  ✓  [B] Bar: open_points=True
+  ✓  [B] Bar: ref_line
+  ✓  [B] Bar: ylim manual
+  ✓  [B] Bar: color override
+  ✓  [B] Bar: bar_width=0.4
+  ✓  [B] Bar: show_stats + show_ns
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 3 — Line Graph
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] Line: basic default
+  ✓  [A] Line: error=sd
+  ✓  [A] Line: error=ci95
+  ✓  [A] Line: yscale=log
+  ✓  [A] Line: gridlines
+  ✓  [A] Line: show_points=False
+  ✓  [A] Line: marker_style=s
+  ✓  [A] Line: ref_line
+  ✓  [B] Line: basic default
+  ✓  [B] Line: error=sd
+  ✓  [B] Line: error=ci95
+  ✓  [B] Line: yscale=log
+  ✓  [B] Line: gridlines
+  ✓  [B] Line: show_points=False
+  ✓  [B] Line: marker_style=s
+  ✓  [B] Line: ref_line
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 4 — Grouped Bar
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] Grouped Bar: default
+  ✓  [A] Grouped Bar: show_stats=True
+  ✓  [A] Grouped Bar: show_anova_per_group
+  ✓  [A] Grouped Bar: yscale=log
+  ✓  [A] Grouped Bar: error=ci95
+  ✓  [B] Grouped Bar: default
+  ✓  [B] Grouped Bar: show_stats=True
+  ✓  [B] Grouped Bar: show_anova_per_group
+  ✓  [B] Grouped Bar: yscale=log
+  ✓  [B] Grouped Bar: error=ci95
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 5 — Box Plot
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] Box: default
+  ✓  [A] Box: show_stats parametric
+  ✓  [A] Box: show_stats nonparametric
+  ✓  [A] Box: show_stats paired
+  ✓  [A] Box: notch=True
+  ✓  [A] Box: gridlines
+  ✓  [A] Box: yscale=log
+  ✓  [A] Box: Dunnett
+  ✓  [B] Box: default
+  ✓  [B] Box: show_stats parametric
+  ✓  [B] Box: show_stats nonparametric
+  ✓  [B] Box: show_stats paired
+  ✓  [B] Box: notch=True
+  ✓  [B] Box: gridlines
+  ✓  [B] Box: yscale=log
+  ✓  [B] Box: Dunnett
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 6 — Scatter Plot
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] Scatter: default (regression+CI)
+  ✓  [A] Scatter: prediction_band
+  ✓  [A] Scatter: correlation_type=spearman
+  ✓  [A] Scatter: no regression
+  ✓  [A] Scatter: gridlines
+  ✓  [A] Scatter: log scales
+  ✓  [B] Scatter: default (regression+CI)
+  ✓  [B] Scatter: prediction_band
+  ✓  [B] Scatter: correlation_type=spearman
+  ✓  [B] Scatter: no regression
+  ✓  [B] Scatter: gridlines
+  ✓  [B] Scatter: log scales
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 7 — Violin Plot
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] Violin: default
+  ✓  [A] Violin: show_stats parametric Tukey
+  ✓  [A] Violin: show_stats nonparametric
+  ✓  [A] Violin: show_stats paired
+  ✓  [A] Violin: open_points
+  ✓  [A] Violin: Dunnett
+  ✓  [B] Violin: default
+  ✓  [B] Violin: show_stats parametric Tukey
+  ✓  [B] Violin: show_stats nonparametric
+  ✓  [B] Violin: show_stats paired
+  ✓  [B] Violin: open_points
+  ✓  [B] Violin: Dunnett
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 8 — Kaplan-Meier Survival
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] KM: default
+  ✓  [A] KM: show_ci=False
+  ✓  [A] KM: show_censors=False
+  ✓  [A] KM: show_stats=True
+  ✓  [A] KM: show_at_risk=True
+  ✓  [A] KM: show_p_values=True
+  ✓  [B] KM: default
+  ✓  [B] KM: show_ci=False
+  ✓  [B] KM: show_censors=False
+  ✓  [B] KM: show_stats=True
+  ✓  [B] KM: show_at_risk=True
+  ✓  [B] KM: show_p_values=True
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 9 — Heatmap
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] Heatmap: default
+  ✓  [A] Heatmap: annotate=True
+  ✓  [A] Heatmap: cluster_rows=True
+  ✓  [A] Heatmap: cluster_cols=True
+  ✓  [A] Heatmap: cluster rows+cols
+  ✓  [A] Heatmap: robust=True
+  ✓  [A] Heatmap: vmin/vmax
+  ✓  [A] Heatmap: custom colormap
+  ✓  [B] Heatmap: default
+  ✓  [B] Heatmap: annotate=True
+  ✓  [B] Heatmap: cluster_rows=True
+  ✓  [B] Heatmap: cluster_cols=True
+  ✓  [B] Heatmap: cluster rows+cols
+  ✓  [B] Heatmap: robust=True
+  ✓  [B] Heatmap: vmin/vmax
+  ✓  [B] Heatmap: custom colormap
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 10 — Two-Way ANOVA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] TwoWay: default
+  ✓  [A] TwoWay: show_stats=True
+  ✓  [A] TwoWay: show_posthoc=True
+  ✓  [A] TwoWay: show_effect_size
+  ✓  [A] TwoWay: error=sd
+  ✓  [A] TwoWay: error=ci95
+  ✓  [B] TwoWay: default
+  ✓  [B] TwoWay: show_stats=True
+  ✓  [B] TwoWay: show_posthoc=True
+  ✓  [B] TwoWay: show_effect_size
+  ✓  [B] TwoWay: error=sd
+  ✓  [B] TwoWay: error=ci95
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 11 — Before/After
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] Before/After: default
+  ✓  [A] Before/After: show_stats=True
+  ✓  [A] Before/After: show_p_values=True
+  ✓  [A] Before/After: gridlines
+  ✓  [A] Before/After: show_n_labels
+  ✓  [A] Before/After: yscale=log
+  ✓  [B] Before/After: default
+  ✓  [B] Before/After: show_stats=True
+  ✓  [B] Before/After: show_p_values=True
+  ✓  [B] Before/After: gridlines
+  ✓  [B] Before/After: show_n_labels
+  ✓  [B] Before/After: yscale=log
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 12 — Histogram
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] Histogram: auto bins
+  ✓  [A] Histogram: fixed bins=12
+  ✓  [A] Histogram: density=True
+  ✓  [A] Histogram: overlay_normal=True
+  ✓  [A] Histogram: density+normal
+  ✓  [B] Histogram: auto bins
+  ✓  [B] Histogram: fixed bins=12
+  ✓  [B] Histogram: density=True
+  ✓  [B] Histogram: overlay_normal=True
+  ✓  [B] Histogram: density+normal
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 13 — Subcolumn Scatter
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] Subcolumn: default
+  ✓  [A] Subcolumn: show_stats parametric
+  ✓  [A] Subcolumn: show_stats nonparametric
+  ✓  [A] Subcolumn: show_stats paired
+  ✓  [A] Subcolumn: Dunnett
+  ✓  [A] Subcolumn: error=sd open_points
+  ✓  [A] Subcolumn: yscale=log
+  ✓  [A] Subcolumn: gridlines
+  ✓  [A] Subcolumn: show_p_values
+  ✓  [B] Subcolumn: default
+  ✓  [B] Subcolumn: show_stats parametric
+  ✓  [B] Subcolumn: show_stats nonparametric
+  ✓  [B] Subcolumn: show_stats paired
+  ✓  [B] Subcolumn: Dunnett
+  ✓  [B] Subcolumn: error=sd open_points
+  ✓  [B] Subcolumn: yscale=log
+  ✓  [B] Subcolumn: gridlines
+  ✓  [B] Subcolumn: show_p_values
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 14 — Curve Fit (all 11 models)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] Curve Fit: 4PL Sigmoidal (EC50/IC50)
+  ✓  [A] Curve Fit: 4PL Sigmoidal (EC50/IC50) + show_residuals
+  ✓  [A] Curve Fit: 3PL Sigmoidal (no bottom)
+  ✓  [A] Curve Fit: 3PL Sigmoidal (no bottom) + show_residuals
+  ✓  [A] Curve Fit: One-phase exponential decay
+  ✓  [A] Curve Fit: One-phase exponential decay + show_residuals
+  ✓  [A] Curve Fit: One-phase exponential growth
+  ✓  [A] Curve Fit: One-phase exponential growth + show_residuals
+  ✓  [A] Curve Fit: Two-phase exponential decay
+  ✓  [A] Curve Fit: Two-phase exponential decay + show_residuals
+  ✓  [A] Curve Fit: Michaelis-Menten
+  ✓  [A] Curve Fit: Michaelis-Menten + show_residuals
+  ✓  [A] Curve Fit: Hill equation
+  ✓  [A] Curve Fit: Hill equation + show_residuals
+  ✓  [A] Curve Fit: Gaussian (bell curve)
+  ✓  [A] Curve Fit: Gaussian (bell curve) + show_residuals
+  ✓  [A] Curve Fit: Log-normal
+  ✓  [A] Curve Fit: Log-normal + show_residuals
+  ✓  [A] Curve Fit: Linear
+  ✓  [A] Curve Fit: Linear + show_residuals
+  ✓  [A] Curve Fit: Polynomial (2nd order)
+  ✓  [A] Curve Fit: Polynomial (2nd order) + show_residuals
+  ✓  [B] Curve Fit: 4PL Sigmoidal
+  ✓  [B] Curve Fit: One-phase exponential decay
+  ✓  [B] Curve Fit: Linear
+  ✓  [B] Curve Fit: gridlines + ci_band
+/home/codespace/.python/current/lib/python3.12/site-packages/scipy/stats/_axis_nan_policy.py:592: UserWarning: scipy.stats.shapiro: For N > 5000, computed p-value may not be accurate. Current N is 5001.
+  res = hypotest_fun_out(*samples, **kwds)
+/home/codespace/.python/current/lib/python3.12/site-packages/numpy/_core/fromnumeric.py:3824: RuntimeWarning: Mean of empty slice
+  return _methods._mean(a, axis=axis, dtype=dtype,
+/home/codespace/.python/current/lib/python3.12/site-packages/numpy/_core/_methods.py:142: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+/home/codespace/.python/current/lib/python3.12/site-packages/numpy/_core/fromnumeric.py:3824: RuntimeWarning: Mean of empty slice
+  return _methods._mean(a, axis=axis, dtype=dtype,
+/home/codespace/.python/current/lib/python3.12/site-packages/numpy/_core/_methods.py:142: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+��━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] Contingency: 2×2 Fisher exact
+  ✓  [B] Contingency: 2×2 Fisher exact
+  ✓  [A] Contingency: 3×2 chi-square
+  ✓  [A] Contingency: show_percentages=True
+  ✓  [A] Contingency: show_expected=True
+  ✓  [A] Contingency: show_percentages=False
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 17 — Repeated Measures
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] RM: default
+  ✓  [A] RM: show_stats parametric
+  ✓  [A] RM: show_stats nonparametric
+  ✓  [A] RM: show_subject_lines=False
+  ✓  [A] RM: show_p_values
+  ✓  [A] RM: error=sd
+  ✓  [A] RM: error=ci95
+  ✓  [A] RM: yscale=log
+  ✓  [B] RM: default
+  ✓  [B] RM: show_stats parametric
+  ✓  [B] RM: show_stats nonparametric
+  ✓  [B] RM: show_subject_lines=False
+  ✓  [B] RM: show_p_values
+  ✓  [B] RM: error=sd
+  ✓  [B] RM: error=ci95
+  ✓  [B] RM: yscale=log
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 18 — Help Analyze Decision Tree
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  [A] Help Analyze: 2 groups (normal) → Parametric
+  ✓  [A] Help Analyze: 2 groups (non-normal) → Non-parametric
+  ✓  [A] Help Analyze: 3 normal groups → Parametric
+  ✓  [A] Help Analyze: paired 2-group → Paired
+  ✓  [B] Help Analyze: 4 normal groups → Parametric
+  ✓  [B] Help Analyze: 2 groups (normal) → Parametric
+  ✓  [B] Help Analyze: paired 2-group → Paired
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 19 — Edge Cases & Robustness
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  _apply_correction: empty list returns empty list
+  ✓  _apply_correction: single p-value handled for all methods
+  ✓  _p_to_stars boundary values correct
+  ✓  check_normality: n<3 returns None (not crash)
+  ✓  _run_stats: single group returns empty list (no error)
+  ✓  Bar chart with single group (no stats) renders without crash
+  ✓  Dunnett: control=None falls back gracefully
+/home/codespace/.python/current/lib/python3.12/site-packages/scipy/stats/_axis_nan_policy.py:592: UserWarning: scipy.stats.shapiro: For N > 5000, computed p-value may not be accurate. Current N is 5001.
+  res = hypotest_fun_out(*samples, **kwds)
+  ✓  check_normality: n>5000 handled without crash
+  ✓  All 4 parametric posthoc options work with 3 groups
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  P16 — Bracket style variants
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  P16 all bracket_style variants
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  P17 — Horizontal stacked bar
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  P17 horizontal + percent stacked bar
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  P18 — Custom x-tick labels
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  P18 xtick_labels on bar chart
+  ✓  P18 wrong-length xtick_labels falls back
+  ✓  P18 xtick_labels=None default
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  P19 — Twin Y-axis and vertical reference line
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓  P19 twin_y_series
+  ✓  P19 twin_y_series=[] no-op
+  ✓  P19 twin_y missing series no crash
+  ✓  P19 ref_vline on line chart
+  ✓  P19 ref_vline on scatter
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  P20 — Export all charts PDF
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/home/codespace/.python/current/lib/python3.12/site-packages/numpy/_core/fromnumeric.py:3824: RuntimeWarning: Mean of empty slice
+  return _methods._mean(a, axis=axis, dtype=dtype,
+/home/codespace/.python/current/lib/python3.12/site-packages/numpy/_core/_methods.py:142: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+  ✓  P20 export_all_charts_pdf valid PDF

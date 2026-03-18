@@ -1,0 +1,59 @@
+Claude Plotter — Phase 2 Known Issues
+======================================
+Date: 2026-03-18
+Agent: G (Verification)
+
+ISSUE 1: Tk tests fail in headless environments
+------------------------------------------------
+Severity: Expected / By Design
+Suite: modular
+Count: ~19 tests
+
+All TabState, TabManager, TabBar, and draw_tab_icon tests fail with:
+  TclError: no display name and no $DISPLAY environment variable
+
+These tests require a graphical display (X11 or macOS Quartz). On headless
+CI systems, run with:  xvfb-run python3 run_all.py
+Or skip the modular suite:  python3 run_all.py comprehensive canvas_renderer p1p2p3 control
+
+This is not a code defect — Tkinter itself requires a display.
+
+ISSUE 2: Duplicate private helper functions across modules
+----------------------------------------------------------
+Severity: Low (no functional impact)
+Files: plotter_widgets.py, plotter_validators.py, plotter_barplot_app.py
+
+The following private helper functions are defined in multiple modules:
+  - _is_num: plotter_widgets.py:906, plotter_validators.py:55
+  - _non_numeric_values: plotter_widgets.py:915, plotter_validators.py:64
+  - _pd: plotter_validators.py:44, plotter_barplot_app.py:22
+  - _scipy_summary: plotter_widgets.py:930, plotter_barplot_app.py:352
+
+These are private (underscore-prefixed) helpers and do not cause any
+functional issues. Consolidation would be a future refactoring task.
+
+ISSUE 3: Results panel for grouped/stacked charts
+--------------------------------------------------
+Severity: Low (cosmetic)
+File: plotter_results.py
+
+_populate_results for grouped charts reads df.select_dtypes(include="number")
+which merges the two-row-header grouped layout incorrectly. The results
+panel shows all numeric cells combined for grouped/stacked charts.
+
+ISSUE 4: Canvas mode toggle for grouped charts
+-----------------------------------------------
+Severity: Low (edge case)
+File: plotter_barplot_app.py
+
+_toggle_canvas_mode checks plot_type == "bar" before re-triggering a run.
+Should be in ("bar", "grouped_bar"). The canvas mode toggle does not
+automatically re-render when switching to/from canvas mode on grouped charts.
+
+ISSUE 5: ttk.Treeview heading colours on macOS
+-----------------------------------------------
+Severity: Cosmetic
+File: plotter_barplot_app.py
+
+ttk.Style.configure heading background is ignored on macOS Aqua theme.
+Fix requires style.theme_use("clam") or custom drawing.

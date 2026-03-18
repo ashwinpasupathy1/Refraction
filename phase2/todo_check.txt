@@ -1,0 +1,2 @@
+./plotter_widgets.py:256:    PLACEHOLDER_COLOR = "#aaaaaa"
+./plotter_widgets.py:263:            entry.config(foreground=PLACEHOLDER_COLOR)

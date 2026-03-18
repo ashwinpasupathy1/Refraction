@@ -1,0 +1,21 @@
+  OK: plotter_barplot_app
+  OK: plotter_functions
+  OK: plotter_widgets
+  OK: plotter_validators
+  OK: plotter_results
+  OK: plotter_registry
+  OK: plotter_tabs
+  OK: plotter_app_icons
+  OK: plotter_presets
+  OK: plotter_session
+  OK: plotter_events
+  OK: plotter_types
+  OK: plotter_undo
+  OK: plotter_errors
+  OK: plotter_comparisons
+  OK: plotter_project
+  OK: plotter_import_pzfx
+  OK: plotter_wiki_content
+  OK: plotter_app_wiki
+
+All 19 modules import successfully

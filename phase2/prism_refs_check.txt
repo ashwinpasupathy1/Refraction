@@ -1,0 +1,68 @@
+./plotter_registry.py:2:prism_registry.py
+./plotter_registry.py:17:prism_validators.py for the validator, and test_comprehensive.py for tests).
+./tests/test_modular.py:6:  prism_widgets.py    — design tokens, helpers, widget classes
+./tests/test_modular.py:7:  prism_validators.py — standalone spreadsheet validation functions
+./tests/test_modular.py:8:  prism_results.py    — results panel (import + attribute checks only;
+./tests/test_modular.py:53:# Section 1 — prism_widgets: imports and constants
+./tests/test_modular.py:55:section("prism_widgets: module structure")
+./tests/test_modular.py:115:# Section 2 — prism_widgets: utility functions
+./tests/test_modular.py:117:section("prism_widgets: utility functions")
+./tests/test_modular.py:173:# Section 3 — prism_widgets: widget classes (import + basic instantiation)
+./tests/test_modular.py:175:section("prism_widgets: widget class attributes")
+./tests/test_modular.py:200:        assert hasattr(pw, cls_name), f"{cls_name} not found in prism_widgets"
+./tests/test_modular.py:214:# Section 4 — prism_validators: flat-header charts
+./tests/test_modular.py:216:section("prism_validators: flat-header")
+./tests/test_modular.py:278:# Section 5 — prism_validators: line chart
+./tests/test_modular.py:280:section("prism_validators: line chart")
+./tests/test_modular.py:309:# Section 6 — prism_validators: grouped bar
+./tests/test_modular.py:311:section("prism_validators: grouped bar")
+./tests/test_modular.py:340:# Section 7 — prism_validators: kaplan-meier
+./tests/test_modular.py:342:section("prism_validators: kaplan-meier")
+./tests/test_modular.py:379:# Section 8 — prism_validators: heatmap
+./tests/test_modular.py:381:section("prism_validators: heatmap")
+./tests/test_modular.py:408:# Section 9 — prism_validators: miscellaneous validators
+./tests/test_modular.py:410:section("prism_validators: miscellaneous")
+./tests/test_modular.py:503:# Section 10 — prism_results: module structure
+./tests/test_modular.py:505:section("prism_results: module structure")
+./tests/test_modular.py:512:run("prism_results exports populate_results callable", test_results_has_populate)
+./tests/test_modular.py:517:run("prism_results exports export_results_csv callable", test_results_has_export)
+./tests/test_modular.py:522:run("prism_results exports copy_results_tsv callable", test_results_has_copy)
+./tests/test_modular.py:527:run("prism_results has a non-trivial module docstring", test_results_module_docstring)
+./tests/test_modular.py:531:# Section 11 — prism_validators: module integrity
+./tests/test_modular.py:533:section("prism_validators: module integrity")
+./tests/test_modular.py:538:run("prism_validators has a non-trivial module docstring",
+./tests/test_modular.py:549:run("All validate_* functions in prism_validators have docstrings",
+./tests/test_modular.py:558:run("prism_validators exports at least 10 validate_* functions",
+./tests/test_modular.py:563:# Section 12 — prism_widgets: module integrity
+./tests/test_modular.py:565:section("prism_widgets: module integrity")
+./tests/test_modular.py:570:run("prism_widgets has a non-trivial module docstring", test_widgets_module_docstring)
+./tests/test_modular.py:591:run("Utility functions in prism_widgets all have docstrings",
+./plotter_results.py:2:prism_results.py
+./plotter_results.py:378:        initialfile="prism_results.csv"
+./.claude/hooks/update_docs.py:21:    "prism_registry.py",
+./.claude/hooks/update_docs.py:24:    "prism_widgets.py",
+./.claude/hooks/update_docs.py:25:    "prism_validators.py",
+./.claude/hooks/update_docs.py:26:    "prism_results.py",
+./.claude/hooks/update_docs.py:58:    # Registry lives in prism_registry.py; fall back to plotter_barplot_app.py
+./.claude/hooks/update_docs.py:59:    for candidate in ("prism_registry.py", "plotter_barplot_app.py"):
+./.claude/hooks/update_docs.py:186:        "prism_registry.py":        50,
+./.claude/hooks/update_docs.py:189:        "prism_widgets.py":         50,
+./.claude/hooks/update_docs.py:190:        "prism_validators.py":      10,
+./.claude/hooks/update_docs.py:191:        "prism_results.py":         10,
+./plotter_functions.py:5:Extracted from prism_barplot_final_updated.ipynb.
+./plotter_widgets.py:2:prism_widgets.py
+./plotter_widgets.py:8:no scientific computation.  Import it from ``prism_barplot_app`` so that
+./plotter_validators.py:2:prism_validators.py
+./plotter_validators.py:41:# Lazy pandas access (mirrors the _pd() pattern in prism_barplot_app)
+./plotter_barplot_app.py:3:prism_barplot_app.py
+./plotter_barplot_app.py:9:prism_barplot_app.py  -- this file; App class + PLOT_REGISTRY + icon helpers
+./plotter_barplot_app.py:10:prism_widgets.py      -- design-system tokens, PButton/PEntry/PCheckbox etc.
+./plotter_barplot_app.py:11:prism_validators.py   -- standalone spreadsheet validation functions
+./plotter_barplot_app.py:12:prism_results.py      -- results-panel population, export, and copy helpers
+./plotter_barplot_app.py:51:    print(f"[prism] warning: prism_widgets not found ({_e})")
+./plotter_barplot_app.py:62:    print(f"[prism] warning: prism_validators not found ({_e})")
+./plotter_barplot_app.py:69:    print(f"[prism] warning: prism_results not found ({_e})")
+./plotter_barplot_app.py:174:# Plot type registry  -  edit prism_registry.py to add new chart types
+./plotter_barplot_app.py:6362:        """Delegate to the standalone populate_results() in prism_results.py."""
+./plotter_barplot_app.py:6367:        """Delegate to the standalone export_results_csv() in prism_results.py."""
+./plotter_barplot_app.py:6374:        """Delegate to the standalone copy_results_tsv() in prism_results.py."""

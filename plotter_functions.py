@@ -4752,8 +4752,11 @@ def plotter_repeated_measures(
                 aov = pg.rm_anova(data=df_long, dv="value",
                                   within="condition", subject="subject")
                 F    = float(aov["F"].iloc[0])
-                p    = float(aov["p-unc"].iloc[0])
-                eps  = float(aov.get("eps", pd.Series([float("nan")])).iloc[0])
+                # pingouin uses p_unc (underscore) in newer versions
+                p_col = "p_unc" if "p_unc" in aov.columns else "p-unc"
+                p    = float(aov[p_col].iloc[0])
+                eps_col = "eps" if "eps" in aov.columns else None
+                eps  = float(aov[eps_col].iloc[0]) if eps_col else float("nan")
                 stat_header = (f"RM-ANOVA: F = {F:.3f},  p = {p:.4f}"
                                f"{'  (Greenhouse-Geisser ε={:.3f})'.format(eps) if not np.isnan(eps) else ''}")
                 if p < 0.05:
@@ -4762,7 +4765,9 @@ def plotter_repeated_measures(
                                                 subject="subject",
                                                 padjust="holm")
                     for _, row in posthoc.iterrows():
-                        p_adj = float(row.get("p-corr", row.get("p-unc", 1.0)))
+                        # pingouin uses p_corr/p_unc (underscores) in newer versions
+                        p_adj = float(row.get("p_corr", row.get("p-corr",
+                                      row.get("p_unc", row.get("p-unc", 1.0)))))
                         sig_results.append((str(row["A"]), str(row["B"]),
                                             p_adj, _p_to_stars(p_adj)))
             except ImportError:
