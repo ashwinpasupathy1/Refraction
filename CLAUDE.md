@@ -1,4 +1,4 @@
-# Claude Prism — Project Context for Claude Code
+# Claude Plotter — Project Context for Claude Code
 
 GraphPad Prism-style scientific plotting application for macOS.
 Built entirely by Claude (Anthropic) with Ashwin Pasupathy.
@@ -30,10 +30,10 @@ python3 run_all.py p1p2p3             # 60  tests — style params
 python3 run_all.py control            # 20  tests — control-group logic
 
 # Launch the app (macOS only — needs a display)
-python3 prism_barplot_app.py
+python3 plotter_barplot_app.py
 
 # Quick syntax check of all modules
-python3 -c "import prism_functions, prism_canvas_renderer, prism_widgets, prism_validators, prism_results; print('OK')"
+python3 -c "import plotter_functions, plotter_canvas_renderer, plotter_widgets, plotter_validators, plotter_results; print('OK')"
 ```
 
 ---
@@ -41,13 +41,13 @@ python3 -c "import prism_functions, prism_canvas_renderer, prism_widgets, prism_
 ## File map
 
 ```
-prism_barplot_app.py      7,907 lines   App class, PLOT_REGISTRY, icon helpers
-prism_widgets.py            952 lines   _DS tokens, PButton/PEntry/PCheckbox etc.
-prism_validators.py         518 lines   Standalone spreadsheet validators
-prism_results.py            387 lines   Results panel: populate / export / copy
-prism_functions.py        6,468 lines   29 matplotlib chart functions
-prism_canvas_renderer.py  1,687 lines   tk.Canvas bar+grouped-bar live renderer
-prism_test_harness.py       363 lines   Shared test bootstrap (imports once)
+plotter_barplot_app.py      7,907 lines   App class, PLOT_REGISTRY, icon helpers
+plotter_widgets.py            952 lines   _DS tokens, PButton/PEntry/PCheckbox etc.
+plotter_validators.py         518 lines   Standalone spreadsheet validators
+plotter_results.py            387 lines   Results panel: populate / export / copy
+plotter_functions.py        6,468 lines   29 matplotlib chart functions
+plotter_canvas_renderer.py  1,687 lines   tk.Canvas bar+grouped-bar live renderer
+plotter_test_harness.py       363 lines   Shared test bootstrap (imports once)
 run_all.py                  108 lines   5-suite unified test runner
 test_comprehensive.py     1,341 lines   Main chart function tests
 test_canvas_renderer.py   1,306 lines   Canvas renderer + GroupedCanvasRenderer
@@ -66,7 +66,7 @@ test_control.py             437 lines   Control-group statistics tests
 User clicks "Generate Plot"
     ↓
 App._run()  →  App._do_run() [background thread]
-    │  calls prism_functions.prism_barplot(**kw)  →  matplotlib fig, ax
+    │  calls plotter_functions.plotter_barplot(**kw)  →  matplotlib fig, ax
     │  deepcopy(kw) → _kw_snap
     └→ after(0) → App._embed_plot(fig, groups, kw=_kw_snap)
                        │
@@ -81,12 +81,12 @@ App._run()  →  App._do_run() [background thread]
 ### Dependency graph
 
 ```
-prism_barplot_app.py
-  ├── prism_widgets.py          (no prism deps — pure Tk + constants)
-  ├── prism_validators.py       (no prism deps — pure pandas)
-  ├── prism_results.py          (receives app object; no other prism imports)
-  ├── prism_functions.py        (numpy, pandas, matplotlib, scipy — all lazy)
-  └── prism_canvas_renderer.py  (numpy, pandas — NO matplotlib)
+plotter_barplot_app.py
+  ├── plotter_widgets.py          (no prism deps — pure Tk + constants)
+  ├── plotter_validators.py       (no prism deps — pure pandas)
+  ├── plotter_results.py          (receives app object; no other prism imports)
+  ├── plotter_functions.py        (numpy, pandas, matplotlib, scipy — all lazy)
+  └── plotter_canvas_renderer.py  (numpy, pandas — NO matplotlib)
 ```
 
 ### Key App methods
@@ -102,7 +102,7 @@ prism_barplot_app.py
 | `App._collect_stats(kw)` | Stats test, posthoc, correction, permutations |
 | `App._collect_figsize(kw)` | figsize, bar_width, font_size, jitter |
 | `App._validate_spreadsheet()` | Reads sheet, dispatches to validator, shows result |
-| `App._populate_results(...)` | Delegated to `prism_results.populate_results(app,...)` |
+| `App._populate_results(...)` | Delegated to `plotter_results.populate_results(app,...)` |
 | `App._build_sidebar(left)` | Chart-type selector (icons + labels) |
 | `App._tab_data(f, mode)` | Data tab: file picker, sheet, color, labels |
 | `App._tab_axes(f, mode)` | Axes tab: Y scale, limits, font, bar width |
@@ -112,7 +112,7 @@ prism_barplot_app.py
 
 ## Adding a new chart type — the 5-step checklist
 
-### Step 1 — Write the plot function in `prism_functions.py`
+### Step 1 — Write the plot function in `plotter_functions.py`
 
 Insert **before** the `# P20 — Export all chart types` block (around line 5586).
 
@@ -172,7 +172,7 @@ def prism_my_chart(
 - Always `return fig, ax`
 - Never import matplotlib or seaborn at module level — they're lazy-loaded by `_ensure_imports()`
 
-### Step 2 — Register it in `_REGISTRY_SPECS` in `prism_barplot_app.py`
+### Step 2 — Register it in `_REGISTRY_SPECS` in `plotter_barplot_app.py`
 
 Find the list starting at line ~348. Add a new `PlotTypeConfig(...)` entry:
 
@@ -217,7 +217,7 @@ at line ~5143 for a template) and set `stats_tab="my_chart"` in the registry.
 Add new `tk.StringVar` / `tk.BooleanVar` defaults to `_reset_vars_to_defaults()`
 so the form resets correctly when switching chart types.
 
-### Step 4 — Add a validator in `prism_validators.py`
+### Step 4 — Add a validator in `plotter_validators.py`
 
 ```python
 def validate_my_chart(df) -> tuple[list, list]:
@@ -227,8 +227,8 @@ def validate_my_chart(df) -> tuple[list, list]:
     return errors, warnings
 ```
 
-Then wire it in `prism_barplot_app.py`:
-- Import it in the `from prism_validators import ...` block at the top
+Then wire it in `plotter_barplot_app.py`:
+- Import it in the `from plotter_validators import ...` block at the top
 - Add it to `_STANDALONE_VALIDATORS` dict in `_validate_spreadsheet()`
 - Update `PlotTypeConfig.validate` to `"_validate_my_chart"`
 
@@ -244,7 +244,7 @@ Run `python3 run_all.py` — all existing 417 tests must still pass.
 
 ## Core helper functions (use these, don't reinvent them)
 
-### In `prism_functions.py`
+### In `plotter_functions.py`
 
 | Function | Purpose |
 |---|---|
@@ -266,7 +266,7 @@ Run `python3 run_all.py` — all existing 417 tests must still pass.
 | `_fmt_bar_label(v)` | Format a numeric value for bar top labels |
 | `normality_warning(groups, stats_test)` | Returns warning string if non-normal |
 
-### In `prism_widgets.py`
+### In `plotter_widgets.py`
 
 | Symbol | Purpose |
 |---|---|
@@ -280,7 +280,7 @@ Run `python3 run_all.py` — all existing 417 tests must still pass.
 | `add_placeholder(entry, var, text)` | Grey hint text when empty |
 | `label(key)` / `hint(key)` | LABELS/HINTS dict lookup |
 
-### In `prism_canvas_renderer.py`
+### In `plotter_canvas_renderer.py`
 
 | Class | Purpose |
 |---|---|
@@ -294,7 +294,7 @@ Run `python3 run_all.py` — all existing 417 tests must still pass.
 
 ---
 
-## Style constants (all in `prism_functions.py`)
+## Style constants (all in `plotter_functions.py`)
 
 ```python
 _DPI        = 144       # render DPI (144 = retina-grade)
@@ -348,9 +348,9 @@ is the single change needed.**
 
 | UI Label | Registry key | Function |
 |---|---|---|
-| Bar Chart | `bar` | `prism_barplot` |
-| Line Graph | `line` | `prism_linegraph` |
-| Grouped Bar | `grouped_bar` | `prism_grouped_barplot` |
+| Bar Chart | `bar` | `plotter_barplot` |
+| Line Graph | `line` | `plotter_linegraph` |
+| Grouped Bar | `grouped_bar` | `plotter_grouped_barplot` |
 | Box Plot | `box` | `prism_boxplot` |
 | Scatter Plot | `scatter` | `prism_scatterplot` |
 | Violin Plot | `violin` | `prism_violin` |
@@ -384,16 +384,16 @@ is the single change needed.**
 
 ```python
 # All test files follow this pattern:
-import prism_test_harness as _h
-from prism_test_harness import pf, plt, ok, fail, run, section, summarise, bar_excel, with_excel
+import plotter_test_harness as _h
+from plotter_test_harness import pf, plt, ok, fail, run, section, summarise, bar_excel, with_excel
 
 # Write a test:
 def test_my_feature():
     with bar_excel({"Control": [1,2,3], "Drug": [4,5,6]}) as path:
-        fig, ax = pf.prism_barplot(path)
+        fig, ax = pf.plotter_barplot(path)
         assert ax.get_xlim()[0] < 0
         plt.close(fig)
-run("prism_barplot: x axis extends left of first bar", test_my_feature)
+run("plotter_barplot: x axis extends left of first bar", test_my_feature)
 
 # Run standalone:
 summarise()
@@ -427,7 +427,7 @@ sys.exit(0 if _h.FAIL == 0 else 1)
 5. **`_bar_renderer` lifetime** — cleared to `None` before each new render.
    Check for `None` before using.
 
-6. **New chart types added to `prism_functions.py` but NOT yet to `_REGISTRY_SPECS`**
+6. **New chart types added to `plotter_functions.py` but NOT yet to `_REGISTRY_SPECS`**
    (area_chart, raincloud, qq_plot, lollipop, waterfall, pyramid, ecdf) —
    these functions exist and are tested in `test_comprehensive.py` but do not
    appear in the app sidebar yet. To add them to the UI, follow Step 2 above.

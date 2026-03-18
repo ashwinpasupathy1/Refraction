@@ -1,11 +1,11 @@
 """
 prism_test_harness.py
 =====================
-Shared harness, fixtures, and bootstrap for all Claude Prism test suites.
+Shared harness, fixtures, and bootstrap for all Claude Plotter test suites.
 
 Importing this module:
-  • Locates and imports prism_functions (works from both the work dir and the
-    legacy claude_prism_src sub-directory)
+  • Locates and imports plotter_functions (works from both the work dir and the
+    legacy claude_plotter_src sub-directory)
   • Calls _ensure_imports() once so matplotlib/seaborn are pre-loaded
   • Sets matplotlib backend to Agg
   • Exports: pf, plt, np, pd
@@ -14,9 +14,9 @@ Importing this module:
   • Exports: @with_excel context manager / decorator
 
 Usage in a test file:
-    from prism_test_harness import *          # imports everything
+    from plotter_test_harness import *          # imports everything
     # or selectively:
-    from prism_test_harness import pf, run, section, bar_excel, with_excel
+    from plotter_test_harness import pf, run, section, bar_excel, with_excel
 """
 
 import sys
@@ -30,17 +30,17 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-# ── Locate prism_functions ────────────────────────────────────────────────────
+# ── Locate plotter_functions ────────────────────────────────────────────────────
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_LEGACY_SRC = os.path.join(_HERE, "claude_prism_src")
+_LEGACY_SRC = os.path.join(_HERE, "claude_plotter_src")
 
 for _candidate in (_HERE, _LEGACY_SRC):
-    if os.path.isfile(os.path.join(_candidate, "prism_functions.py")):
+    if os.path.isfile(os.path.join(_candidate, "plotter_functions.py")):
         if _candidate not in sys.path:
             sys.path.insert(0, _candidate)
         break
 
-import prism_functions as pf  # noqa: E402
+import plotter_functions as pf  # noqa: E402
 
 # Re-export key constants so test files can access them via the harness
 PLOT_PARAM_DEFAULTS = pf.PLOT_PARAM_DEFAULTS
@@ -58,7 +58,7 @@ pf._ensure_imports()
 # Harness
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Module-level counters — each test file that does `from prism_test_harness
+# Module-level counters — each test file that does `from plotter_test_harness
 # import *` gets its OWN namespace for these, so counters stay per-file.
 # When run_all.py imports multiple suites it aggregates via summarise().
 PASS   = 0
@@ -133,14 +133,14 @@ def with_excel(write_fn=None, suffix=".xlsx"):
     Usage — passing a writer function::
 
         with with_excel(lambda p: bar_excel(groups, path=p)) as p:
-            fig, ax = pf.prism_barplot(p)
+            fig, ax = pf.plotter_barplot(p)
             close_fig(fig)
 
     Usage — getting a raw path to write manually::
 
         with with_excel() as p:
             pd.DataFrame(...).to_excel(p, index=False)
-            fig, ax = pf.prism_barplot(p)
+            fig, ax = pf.plotter_barplot(p)
             close_fig(fig)
     """
     tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)

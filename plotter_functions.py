@@ -1,5 +1,5 @@
 """
-prism_functions.py
+plotter_functions.py
 ------------------
 Plots GraphPad Prism-style bar and line graphs.
 Extracted from prism_barplot_final_updated.ipynb.
@@ -213,11 +213,11 @@ def _draw_bar_errorbar(ax, x, vals, error_type, yscale, *,
 
 
 # ---------------------------------------------------------------------------
-# Axis style / tick direction constants — used by _apply_prism_style
+# Axis style / tick direction constants — used by _apply_plotter_style
 # ---------------------------------------------------------------------------
 
 AXIS_STYLES = {
-    "Open (Prism default)": "open",
+    "Open (default)": "open",
     "Closed box":           "closed",
     "Floating":             "floating",
     "None":                 "none",
@@ -241,7 +241,7 @@ LEGEND_POSITIONS = {
 }
 
 
-def _apply_prism_style(
+def _apply_plotter_style(
     ax,
     font_size: float,
     axis_style: str = "open",
@@ -936,7 +936,7 @@ def _base_plot_finish(ax, fig, title, xlabel, ytitle, yscale, ylim,
     _set_axis_labels(ax, xlabel, ytitle, title, font_size)
     if ref_line is not None:
         _draw_ref_line(ax, ref_line, font_size, label=ref_line_label or None)
-    _apply_prism_style(ax, font_size,
+    _apply_plotter_style(ax, font_size,
                        axis_style=axis_style,
                        tick_dir=tick_dir,
                        minor_ticks=minor_ticks,
@@ -961,7 +961,7 @@ def _base_plot_finish(ax, fig, title, xlabel, ytitle, yscale, ylim,
 # ---------------------------------------------------------------------------
 # Adding a new universal param (e.g. a future "spine_width") requires only:
 #   1. Add its default here in PLOT_PARAM_DEFAULTS
-#   2. Add extraction in _style_kwargs() if it feeds _apply_prism_style
+#   2. Add extraction in _style_kwargs() if it feeds _apply_plotter_style
 #   3. Add the param to the function signatures that use it
 # No changes needed at call sites — _style_kwargs(locals()) handles the rest.
 # ---------------------------------------------------------------------------
@@ -1009,7 +1009,7 @@ def _style_kwargs(kw: dict) -> dict:
     Usage in any plot function::
 
         _sk = _style_kwargs(locals())
-        _apply_prism_style(ax, font_size, **_sk)
+        _apply_plotter_style(ax, font_size, **_sk)
         # …
         _base_plot_finish(ax, fig, …, **_sk)
 
@@ -1018,7 +1018,7 @@ def _style_kwargs(kw: dict) -> dict:
     rather than editing every call site.
 
     The function deliberately returns only the three keys that
-    ``_apply_prism_style`` / ``_base_plot_finish`` accept, so it is safe to
+    ``_apply_plotter_style`` / ``_base_plot_finish`` accept, so it is safe to
     unpack with ** into those helpers without leaking unrelated keys.
     """
     return {
@@ -1209,7 +1209,7 @@ def _apply_stats_brackets(ax, groups: dict, group_order: list,
 
 def _draw_subject_lines(ax, group_order, aligned, x_pos):
     """Draw thin gray connecting lines between repeated-measure subjects.
-    Used by prism_before_after and prism_repeated_measures.
+    Used by plotter_before_after and plotter_repeated_measures.
     """
     max_n = max(len(v) for v in aligned.values())
     for subj_i in range(max_n):
@@ -1245,10 +1245,10 @@ def _draw_mean_errorbar(ax, x, vals, color, error_type, yscale):
 
 
 # ---------------------------------------------------------------------------
-# prism_barplot
+# plotter_barplot
 # ---------------------------------------------------------------------------
 
-def prism_barplot(
+def plotter_barplot(
     excel_path: str,
     sheet=0,
     error: str = "sem",
@@ -1381,7 +1381,7 @@ def prism_barplot(
                             xtick_labels=xtick_labels)
     ax.set_xlabel("")
     ax.set_yscale(yscale)
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
     if xscale == "log":
         ax.set_xscale("log")
 
@@ -1426,7 +1426,7 @@ def prism_barplot(
             ax.set_xlim(xlim)
         else:
             ax.set_xlim(left=0)
-        _apply_prism_style(ax, font_size, **_sk)
+        _apply_plotter_style(ax, font_size, **_sk)
         _apply_grid(ax, grid_style, gridlines)
 
     if ylim is not None and not horizontal:
@@ -1472,10 +1472,10 @@ def prism_barplot(
 
 
 # ---------------------------------------------------------------------------
-# prism_linegraph
+# plotter_linegraph
 # ---------------------------------------------------------------------------
 
-def prism_linegraph(
+def plotter_linegraph(
     excel_path: str,
     sheet=0,
     error: str = "sem",
@@ -1650,7 +1650,7 @@ def prism_linegraph(
             _apply_legend(ax, legend_pos, font_size)
 
     # Axis styling
-    _apply_prism_style(ax, font_size, **_style_kwargs(locals()))
+    _apply_plotter_style(ax, font_size, **_style_kwargs(locals()))
 
     if yscale == "log":  ax.set_yscale("log")
     if ylim is not None: ax.set_ylim(ylim)
@@ -1667,10 +1667,10 @@ def prism_linegraph(
 
 
 # ---------------------------------------------------------------------------
-# prism_grouped_barplot
+# plotter_grouped_barplot
 # ---------------------------------------------------------------------------
 
-def prism_grouped_barplot(
+def plotter_grouped_barplot(
     excel_path: str,
     sheet=0,
     error: str = "sem",
@@ -1951,7 +1951,7 @@ def prism_grouped_barplot(
         ax.set_xlim(left=0)
         if ylim is not None:
             ax.set_xlim(ylim)
-        _apply_prism_style(ax, font_size, **_style_kwargs(locals()))
+        _apply_plotter_style(ax, font_size, **_style_kwargs(locals()))
         _apply_legend(ax, legend_pos, font_size)
         # Swap axis labels for horizontal orientation
         eff_xlabel = ytitle or ""
@@ -1968,7 +1968,7 @@ def prism_grouped_barplot(
     ax.set_xlim(cat_centres[0] - cluster_w, cat_centres[-1] + cluster_w)
     ax.set_ylim(bottom=0)
 
-    _apply_prism_style(ax, font_size, **_style_kwargs(locals()))
+    _apply_plotter_style(ax, font_size, **_style_kwargs(locals()))
     ax.set_yscale(yscale)
     if ylim is not None: ax.set_ylim(ylim)
 
@@ -2226,10 +2226,10 @@ def add_effect_sizes(ax, sig_results, groups, x_positions, font_size=10):
 
 
 # ---------------------------------------------------------------------------
-# prism_boxplot
+# plotter_boxplot
 # ---------------------------------------------------------------------------
 
-def prism_boxplot(
+def plotter_boxplot(
     excel_path: str,
     sheet=0,
     show_points: bool = True,
@@ -2324,7 +2324,7 @@ def prism_boxplot(
                             xtick_labels=xtick_labels)
     ax.set_xlabel("")
     ax.set_yscale(yscale)
-    _apply_prism_style(ax, font_size, **_style_kwargs(locals()))
+    _apply_plotter_style(ax, font_size, **_style_kwargs(locals()))
 
     _apply_grid(ax, grid_style, gridlines)
 
@@ -2396,10 +2396,10 @@ def _best_annotation_corner(ax, all_xs, all_ys):
 
 
 # ---------------------------------------------------------------------------
-# prism_scatterplot
+# plotter_scatterplot
 # ---------------------------------------------------------------------------
 
-def prism_scatterplot(
+def plotter_scatterplot(
     excel_path: str,
     sheet=0,
     color=None,
@@ -2597,7 +2597,7 @@ def prism_scatterplot(
 
     # ── Axis styling ──────────────────────────────────────────────────────────
     _sk = _style_kwargs(locals())
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
     fig.patch.set_facecolor(fig_bg)
 
     if yscale == "log":  ax.set_yscale("log")
@@ -2613,7 +2613,7 @@ def prism_scatterplot(
     return fig, ax
 # ---------------------------------------------------------------------------
 
-def prism_violin(
+def plotter_violin(
     excel_path: str,
     sheet=0,
     color=None,
@@ -2713,7 +2713,7 @@ def prism_violin(
                                 jitter_amount=jitter_amount, open_points=open_points,
                                 point_size=point_size, point_alpha=point_alpha)
 
-    _apply_prism_style(ax, font_size, **_style_kwargs(locals()))
+    _apply_plotter_style(ax, font_size, **_style_kwargs(locals()))
     _apply_grid(ax, grid_style, gridlines)
     _set_categorical_xticks(ax, group_order, groups, font_size,
                             show_n_labels=show_n_labels)
@@ -2830,10 +2830,10 @@ def _logrank_test(groups_dict):
 
 
 # ---------------------------------------------------------------------------
-# prism_kaplan_meier
+# plotter_kaplan_meier
 # ---------------------------------------------------------------------------
 
-def prism_kaplan_meier(
+def plotter_kaplan_meier(
     excel_path: str,
     sheet=0,
     color=None,
@@ -2946,7 +2946,7 @@ def prism_kaplan_meier(
                            color=c, linewidths=1.5, zorder=5)
 
     # ── Styling ───────────────────────────────────────────────────────────────
-    _apply_prism_style(ax, font_size, **_style_kwargs(locals()))
+    _apply_plotter_style(ax, font_size, **_style_kwargs(locals()))
     ax.set_ylim(-0.05, 1.05)
     if ylim is not None:
         ax.set_ylim(ylim)
@@ -3001,10 +3001,10 @@ def prism_kaplan_meier(
 
 
 # ---------------------------------------------------------------------------
-# prism_heatmap
+# plotter_heatmap
 # ---------------------------------------------------------------------------
 
-def prism_heatmap(
+def plotter_heatmap(
     excel_path: str,
     sheet=0,
     color=None,                   # colormap name e.g. "viridis", "RdBu_r", "mako"
@@ -3334,10 +3334,10 @@ def _twoway_posthoc(df, dv, factor_a, factor_b, correction="holm"):
 
 
 # ---------------------------------------------------------------------------
-# prism_two_way_anova
+# plotter_two_way_anova
 # ---------------------------------------------------------------------------
 
-def prism_two_way_anova(
+def plotter_two_way_anova(
     excel_path: str,
     sheet=0,
     color=None,
@@ -3457,7 +3457,7 @@ def prism_two_way_anova(
                            s=16, alpha=0.75, zorder=5)
 
     # ── Axis styling ──────────────────────────────────────────────────────────
-    _apply_prism_style(ax, font_size, **_style_kwargs(locals()))
+    _apply_plotter_style(ax, font_size, **_style_kwargs(locals()))
     ax.set_xticks(x_positions)
     _rot, _ha = _smart_xrotation(a_levels)
     ax.set_xticklabels(a_levels, fontsize=font_size, fontfamily=_get_font(),
@@ -3549,10 +3549,10 @@ def prism_two_way_anova(
 
 
 # ---------------------------------------------------------------------------
-# prism_before_after  (↕ Before/After paired dot plot)
+# plotter_before_after  (↕ Before/After paired dot plot)
 # ---------------------------------------------------------------------------
 
-def prism_before_after(
+def plotter_before_after(
     excel_path: str,
     sheet=0,
     color=None,
@@ -3645,7 +3645,7 @@ def prism_before_after(
             ax.set_ylim(top=bk_y + y_range * 0.12)
 
     # ── Axis styling ──────────────────────────────────────────────────────────
-    _apply_prism_style(ax, font_size, **_style_kwargs(locals()))
+    _apply_plotter_style(ax, font_size, **_style_kwargs(locals()))
     ax.set_xticks(range(n_groups))
     _tick_labels = _n_labels(group_order, groups, font_size) if show_n_labels else group_order
     _rot, _ha = _smart_xrotation(group_order)
@@ -3662,10 +3662,10 @@ def prism_before_after(
 
 
 # ---------------------------------------------------------------------------
-# prism_histogram  (📶 Histogram)
+# plotter_histogram  (📶 Histogram)
 # ---------------------------------------------------------------------------
 
-def prism_histogram(
+def plotter_histogram(
     excel_path: str,
     sheet=0,
     color=None,
@@ -3741,7 +3741,7 @@ def prism_histogram(
     if len(group_order) > 1:
         _apply_legend(ax, legend_pos, font_size)
 
-    _apply_prism_style(ax, font_size, **_style_kwargs(locals()))
+    _apply_plotter_style(ax, font_size, **_style_kwargs(locals()))
     ax.set_xlabel(xlabel or group_order[0] if len(group_order) == 1 else xlabel,
                   fontsize=font_size + 2, fontfamily=_get_font(),
                   labelpad=6, fontweight="bold")
@@ -3755,10 +3755,10 @@ def prism_histogram(
 
 
 # ---------------------------------------------------------------------------
-# prism_subcolumn_scatter  (∷ Subcolumn Scatter)
+# plotter_subcolumn_scatter  (∷ Subcolumn Scatter)
 # ---------------------------------------------------------------------------
 
-def prism_subcolumn_scatter(
+def plotter_subcolumn_scatter(
     excel_path: str,
     sheet=0,
     color=None,
@@ -3844,7 +3844,7 @@ def prism_subcolumn_scatter(
     _draw_normality_warning(ax, norm_warn, font_size)
 
     # ── Axis styling ──────────────────────────────────────────────────────────
-    _apply_prism_style(ax, font_size, **_style_kwargs(locals()))
+    _apply_plotter_style(ax, font_size, **_style_kwargs(locals()))
     _set_categorical_xticks(ax, group_order, groups, font_size,
                             show_n_labels=show_n_labels,
                             xtick_labels=xtick_labels)
@@ -3858,7 +3858,7 @@ def prism_subcolumn_scatter(
     return fig, ax
 
 # ---------------------------------------------------------------------------
-# Nonlinear curve fitting — prism_curve_fit
+# Nonlinear curve fitting — plotter_curve_fit
 # ---------------------------------------------------------------------------
 
 # ── Model library ────────────────────────────────────────────────────────────
@@ -4074,10 +4074,10 @@ def _curve_ci_band(x_line, x_data, y_data, popt, fn, alpha=0.05):
 
 
 # ---------------------------------------------------------------------------
-# prism_curve_fit  (📈 Curve Fit)
+# plotter_curve_fit  (📈 Curve Fit)
 # ---------------------------------------------------------------------------
 
-def prism_curve_fit(
+def plotter_curve_fit(
     excel_path: str,
     sheet=0,
     color=None,
@@ -4300,7 +4300,7 @@ def prism_curve_fit(
                           ec="lightgray", alpha=0.92))
 
     # ── Axis styling ─────────────────────────────────────────────────────────
-    _apply_prism_style(ax, font_size, **_style_kwargs(locals()))
+    _apply_plotter_style(ax, font_size, **_style_kwargs(locals()))
     if yscale == "log":
         ax.set_yscale("log")
         _apply_log_formatting(ax)
@@ -4319,7 +4319,7 @@ def prism_curve_fit(
     _apply_grid(ax, grid_style, gridlines)
 
     if ax_res is not None:
-        _apply_prism_style(ax_res, font_size - 2, **_style_kwargs(locals()))
+        _apply_plotter_style(ax_res, font_size - 2, **_style_kwargs(locals()))
         ax_res.set_ylabel("Residuals", fontsize=font_size,
                           fontfamily=_get_font(), labelpad=6)
         ax_res.set_xlabel(effective_xlabel, fontsize=font_size+2,
@@ -4335,10 +4335,10 @@ def prism_curve_fit(
     return fig, ax
 
 # ---------------------------------------------------------------------------
-# prism_column_stats  (📋 Column Statistics)
+# plotter_column_stats  (📋 Column Statistics)
 # ---------------------------------------------------------------------------
 
-def prism_column_stats(
+def plotter_column_stats(
     excel_path: str,
     sheet=0,
     color=None,
@@ -4480,10 +4480,10 @@ def prism_column_stats(
 
 
 # ---------------------------------------------------------------------------
-# prism_contingency  (🔲 Contingency)
+# plotter_contingency  (🔲 Contingency)
 # ---------------------------------------------------------------------------
 
-def prism_contingency(
+def plotter_contingency(
     excel_path: str,
     sheet=0,
     color=None,
@@ -4599,7 +4599,7 @@ def prism_contingency(
                         color="black", linewidth=1.5, linestyle="--",
                         zorder=5)
 
-    _apply_prism_style(ax, font_size, **_style_kwargs(locals()))
+    _apply_plotter_style(ax, font_size, **_style_kwargs(locals()))
     _rot, _ha = _smart_xrotation(row_lbls)
     ax.set_xticks(x)
     ax.set_xticklabels(row_lbls, fontsize=font_size, fontfamily=_get_font(),
@@ -4631,10 +4631,10 @@ def prism_contingency(
 
 
 # ---------------------------------------------------------------------------
-# prism_repeated_measures  (🔁 Repeated Measures)
+# plotter_repeated_measures  (🔁 Repeated Measures)
 # ---------------------------------------------------------------------------
 
-def prism_repeated_measures(
+def plotter_repeated_measures(
     excel_path: str,
     sheet=0,
     color=None,
@@ -4808,7 +4808,7 @@ def prism_repeated_measures(
                 show_p_values=show_p_values)
 
     # ── Axis styling ──────────────────────────────────────────────────────────
-    _apply_prism_style(ax, font_size, **_style_kwargs(locals()))
+    _apply_plotter_style(ax, font_size, **_style_kwargs(locals()))
     _set_categorical_xticks(ax, group_order, None, font_size,
                             show_n_labels=False,
                             xtick_labels=xtick_labels)
@@ -4829,7 +4829,7 @@ def prism_repeated_measures(
 # Priority 2b — Chi-Square Goodness of Fit
 # ---------------------------------------------------------------------------
 
-def prism_chi_square_gof(
+def plotter_chi_square_gof(
     excel_path: str,
     sheet=0,
     color=None,
@@ -4911,7 +4911,7 @@ def prism_chi_square_gof(
             bbox=dict(boxstyle="round,pad=0.4", fc="white", ec="lightgray", alpha=0.92))
 
     _sk = _style_kwargs(locals())
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
     ax.set_xticks(x)
     _rot, _ha = _smart_xrotation(categories)
     ax.set_xticklabels(categories, fontsize=font_size, fontfamily=_get_font(),
@@ -4926,7 +4926,7 @@ def prism_chi_square_gof(
 
 
 # ---------------------------------------------------------------------------
-# Priority 2c — Full Linear Regression Table helper (used by prism_scatterplot)
+# Priority 2c — Full Linear Regression Table helper (used by plotter_scatterplot)
 # ---------------------------------------------------------------------------
 
 def _draw_regression_table(ax, fig, xs_arr, ys_arr, font_size, color):
@@ -5003,7 +5003,7 @@ def _draw_regression_table(ax, fig, xs_arr, ys_arr, font_size, color):
 # Priority 3a — Stacked Bar Chart
 # ===========================================================================
 
-def prism_stacked_bar(
+def plotter_stacked_bar(
     excel_path: str,
     sheet=0,
     color=None,
@@ -5130,7 +5130,7 @@ def prism_stacked_bar(
                                     zorder=8)
         bottoms += vals
 
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
 
     if horizontal:
         ax.set_yticks(x)
@@ -5174,7 +5174,7 @@ def prism_stacked_bar(
 # Priority 3b — Bubble Chart
 # ===========================================================================
 
-def prism_bubble(
+def plotter_bubble(
     excel_path: str,
     sheet=0,
     color=None,
@@ -5260,7 +5260,7 @@ def prism_bubble(
                             fontsize=max(font_size - 4, 7),
                             fontfamily=_get_font(), color="white", fontweight="bold")
 
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
     if len(series_list) > 1:
         _apply_legend(ax, legend_pos, font_size)
 
@@ -5281,7 +5281,7 @@ def prism_bubble(
 # Priority 3c — Dot Plot (Strip / Cleveland)
 # ===========================================================================
 
-def prism_dot_plot(
+def plotter_dot_plot(
     excel_path: str,
     sheet=0,
     color=None,
@@ -5350,7 +5350,7 @@ def prism_dot_plot(
                     color=_darken_color(c, 0.4), linewidth=1.8,
                     linestyle="--", zorder=5)
 
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
     _set_categorical_xticks(ax, group_order, groups, font_size,
                             show_n_labels=show_n_labels,
                             xtick_labels=xtick_labels)
@@ -5373,7 +5373,7 @@ def prism_dot_plot(
 # Priority 3d — Bland-Altman Plot
 # ===========================================================================
 
-def prism_bland_altman(
+def plotter_bland_altman(
     excel_path: str,
     sheet=0,
     color=None,
@@ -5469,7 +5469,7 @@ def prism_bland_altman(
 
     ax.axhline(0, color="black", linewidth=0.6, linestyle=":", zorder=2)
 
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
     ax.set_xlim(x_range)
 
     eff_xlabel = xlabel or f"Mean of {group_order[0]} & {group_order[1]}"
@@ -5487,7 +5487,7 @@ def prism_bland_altman(
 # Priority 3e — Forest Plot
 # ===========================================================================
 
-def prism_forest_plot(
+def plotter_forest_plot(
     excel_path: str,
     sheet=0,
     color=None,
@@ -5638,7 +5638,7 @@ def prism_forest_plot(
     y_bottom = (-2.5 if show_summary else -0.8)
     ax.set_ylim(y_bottom, n - 0.5)
 
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
     ax.spines["left"].set_visible(False)
 
     eff_xlabel = xlabel or "Effect size"
@@ -5663,7 +5663,7 @@ def prism_forest_plot(
 # prism_area_chart  — Area fill under line chart
 # ---------------------------------------------------------------------------
 
-def prism_area_chart(
+def plotter_area_chart(
     excel_path: str,
     sheet=0,
     error: str = "sem",
@@ -5757,7 +5757,7 @@ def prism_area_chart(
         if stacked:
             baseline = top.copy()
 
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
     _apply_grid(ax, grid_style, gridlines)
     if ylim is not None: ax.set_ylim(ylim)
     elif not stacked: ax.set_ylim(bottom=0)
@@ -5773,7 +5773,7 @@ def prism_area_chart(
 # prism_raincloud  — Half-violin + jitter strip + mean/SD bar (raincloud plot)
 # ---------------------------------------------------------------------------
 
-def prism_raincloud(
+def plotter_raincloud(
     excel_path: str,
     sheet=0,
     color=None,
@@ -5884,7 +5884,7 @@ def prism_raincloud(
                             show_n_labels=show_n_labels)
     ax.set_xlim(-0.6, n_groups - 0.4)
     ax.set_xlabel("")
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
     _apply_grid(ax, grid_style, gridlines)
     if ylim is not None: ax.set_ylim(ylim)
 
@@ -5905,7 +5905,7 @@ def prism_raincloud(
 # prism_qq_plot  — Quantile-quantile normality plot
 # ---------------------------------------------------------------------------
 
-def prism_qq_plot(
+def plotter_qq_plot(
     excel_path: str,
     sheet=0,
     color=None,
@@ -5981,7 +5981,7 @@ def prism_qq_plot(
             ax.fill_between(theo, lo_ci, hi_ci, alpha=ci_alpha,
                             color=c, zorder=2)
 
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
     _apply_grid(ax, grid_style, gridlines)
     _apply_legend(ax, legend_pos, font_size)
     ax.set_xlabel(xlabel, fontsize=font_size + 2, fontfamily=_get_font(),
@@ -5999,7 +5999,7 @@ def prism_qq_plot(
 # prism_lollipop  — Lollipop / Cleveland dot chart
 # ---------------------------------------------------------------------------
 
-def prism_lollipop(
+def plotter_lollipop(
     excel_path: str,
     sheet=0,
     error: str = "sem",
@@ -6088,7 +6088,7 @@ def prism_lollipop(
                   if show_n_labels else (xtick_labels or group_order))
         ax.set_yticklabels(h_lbls, fontsize=font_size, fontfamily=_get_font(), fontweight="bold")
         ax.set_xlim(left=0)
-        _apply_prism_style(ax, font_size, **_sk)
+        _apply_plotter_style(ax, font_size, **_sk)
         if ytitle:
             ax.set_xlabel(ytitle, fontsize=font_size + 2, fontfamily=_get_font(),
                           labelpad=_LABEL_PAD, fontweight="bold")
@@ -6099,7 +6099,7 @@ def prism_lollipop(
         ax.set_xlim(-0.6, n_groups - 0.4)
         ax.set_ylim(bottom=0)
         ax.set_xlabel("")
-        _apply_prism_style(ax, font_size, **_sk)
+        _apply_plotter_style(ax, font_size, **_sk)
         if show_stats:
             _apply_stats_brackets(ax, groups, group_order,
                                   stats_test, n_permutations, control,
@@ -6119,7 +6119,7 @@ def prism_lollipop(
 # prism_waterfall  — Waterfall / bridge chart
 # ---------------------------------------------------------------------------
 
-def prism_waterfall(
+def plotter_waterfall(
     excel_path: str,
     sheet=0,
     color=None,
@@ -6225,7 +6225,7 @@ def prism_waterfall(
                        fontweight="bold", rotation=45 if n > 5 else 0,
                        ha="right" if n > 5 else "center")
     ax.set_xlim(-0.6, n - 0.4)
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
     _apply_grid(ax, grid_style, gridlines)
     _base_plot_finish(ax, fig, title, xlabel, ytitle, "linear", None,
                       font_size, ref_line, n,
@@ -6237,7 +6237,7 @@ def prism_waterfall(
 # prism_pyramid  — Population pyramid / mirrored bar chart
 # ---------------------------------------------------------------------------
 
-def prism_pyramid(
+def plotter_pyramid(
     excel_path: str,
     sheet=0,
     color=None,
@@ -6317,7 +6317,7 @@ def prism_pyramid(
     ax.set_xticklabels([f"{abs(t):,.0f}" for t in ticks],
                        fontsize=font_size * 0.85, fontfamily=_get_font())
 
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
     _apply_grid(ax, grid_style, gridlines)
     _apply_legend(ax, legend_pos, font_size)
     if title: ax.set_title(title, fontsize=font_size + 4, fontfamily=_get_font(),
@@ -6334,7 +6334,7 @@ def prism_pyramid(
 # prism_ecdf  — Empirical cumulative distribution function plot
 # ---------------------------------------------------------------------------
 
-def prism_ecdf(
+def plotter_ecdf(
     excel_path: str,
     sheet=0,
     color=None,
@@ -6397,7 +6397,7 @@ def prism_ecdf(
                        s=point_size**2, linewidths=0.7, alpha=point_alpha, zorder=4)
 
     ax.set_ylim(0, 1.05)
-    _apply_prism_style(ax, font_size, **_sk)
+    _apply_plotter_style(ax, font_size, **_sk)
     _apply_grid(ax, grid_style, gridlines)
     _apply_legend(ax, legend_pos, font_size)
     ax.set_xlabel(xlabel or "Value", fontsize=font_size + 2, fontfamily=_get_font(),
@@ -6437,28 +6437,28 @@ def export_all_charts_pdf(output_path: str, excel_path: str,
     from matplotlib.backends.backend_pdf import PdfPages
 
     CHART_FNS = [
-        ("Bar",                prism_barplot),
-        ("Line",               prism_linegraph),
-        ("Grouped Bar",        prism_grouped_barplot),
-        ("Box Plot",           prism_boxplot),
-        ("Scatter",            prism_scatterplot),
-        ("Violin",             prism_violin),
-        ("Before / After",     prism_before_after),
-        ("Histogram",          prism_histogram),
-        ("Subcolumn Scatter",  prism_subcolumn_scatter),
-        ("Dot Plot",           prism_dot_plot),
-        ("Repeated Measures",  prism_repeated_measures),
-        ("Stacked Bar",        prism_stacked_bar),
-        ("Kaplan-Meier",       prism_kaplan_meier),
-        ("Heatmap",            prism_heatmap),
-        ("Two-Way ANOVA",      prism_two_way_anova),
-        ("Curve Fit",          prism_curve_fit),
-        ("Column Statistics",  prism_column_stats),
-        ("Contingency",        prism_contingency),
-        ("Chi-Square GoF",     prism_chi_square_gof),
-        ("Bubble",             prism_bubble),
-        ("Bland-Altman",       prism_bland_altman),
-        ("Forest Plot",        prism_forest_plot),
+        ("Bar",                plotter_barplot),
+        ("Line",               plotter_linegraph),
+        ("Grouped Bar",        plotter_grouped_barplot),
+        ("Box Plot",           plotter_boxplot),
+        ("Scatter",            plotter_scatterplot),
+        ("Violin",             plotter_violin),
+        ("Before / After",     plotter_before_after),
+        ("Histogram",          plotter_histogram),
+        ("Subcolumn Scatter",  plotter_subcolumn_scatter),
+        ("Dot Plot",           plotter_dot_plot),
+        ("Repeated Measures",  plotter_repeated_measures),
+        ("Stacked Bar",        plotter_stacked_bar),
+        ("Kaplan-Meier",       plotter_kaplan_meier),
+        ("Heatmap",            plotter_heatmap),
+        ("Two-Way ANOVA",      plotter_two_way_anova),
+        ("Curve Fit",          plotter_curve_fit),
+        ("Column Statistics",  plotter_column_stats),
+        ("Contingency",        plotter_contingency),
+        ("Chi-Square GoF",     plotter_chi_square_gof),
+        ("Bubble",             plotter_bubble),
+        ("Bland-Altman",       plotter_bland_altman),
+        ("Forest Plot",        plotter_forest_plot),
     ]
 
     _common = dict(excel_path=excel_path, sheet=sheet,
@@ -6468,7 +6468,7 @@ def export_all_charts_pdf(output_path: str, excel_path: str,
         # Cover page
         fig_cover, ax_cover = plt.subplots(figsize=figsize, dpi=_DPI)
         ax_cover.axis("off")
-        ax_cover.text(0.5, 0.60, "Claude Prism", transform=ax_cover.transAxes,
+        ax_cover.text(0.5, 0.60, "Claude Plotter", transform=ax_cover.transAxes,
                       ha="center", va="center", fontsize=28, fontweight="bold",
                       fontfamily=_get_font(), color="#2274A5")
         ax_cover.text(0.5, 0.48, "Chart Type Showcase", transform=ax_cover.transAxes,
@@ -6528,7 +6528,7 @@ def export_all_charts_pdf(output_path: str, excel_path: str,
 
         # PDF metadata
         d = pdf.infodict()
-        d["Title"] = "Claude Prism — Chart Showcase"
+        d["Title"] = "Claude Plotter — Chart Showcase"
         d["Author"] = "Claude (Anthropic) / Ashwin Pasupathy"
         d["Subject"] = "GraphPad Prism-style charts"
 

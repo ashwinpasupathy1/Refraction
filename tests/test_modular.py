@@ -18,8 +18,8 @@ import pandas as pd
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import prism_test_harness as _h
-from prism_test_harness import ok, fail, run, section, summarise
+import plotter_test_harness as _h
+from plotter_test_harness import ok, fail, run, section, summarise
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ def _grouped_df(cats, subs, n_rows=4, seed=0):
 # ═════════════════════════════════════════════════════════════════════════════
 section("prism_widgets: module structure")
 
-import prism_widgets as pw
+import plotter_widgets as pw
 
 
 def test_ds_has_primary():
@@ -198,7 +198,7 @@ run("PRadioGroup._DOT == 14", test_pradiogroup_dot_size)
 def test_all_widget_classes_importable():
     for cls_name in ["PButton", "PCheckbox", "PRadioGroup", "PEntry", "PCombobox"]:
         assert hasattr(pw, cls_name), f"{cls_name} not found in prism_widgets"
-run("All five P-widget classes are importable from prism_widgets",
+run("All five P-widget classes are importable from plotter_widgets",
     test_all_widget_classes_importable)
 
 
@@ -215,7 +215,7 @@ run("_DS font constants are non-empty tuples", test_ds_font_tuples)
 # ═════════════════════════════════════════════════════════════════════════════
 section("prism_validators: flat-header")
 
-import prism_validators as pv
+import plotter_validators as pv
 
 
 def test_validate_bar_valid():
@@ -504,7 +504,7 @@ run("All validators return (errors_list, warnings_list) for any input",
 # ═════════════════════════════════════════════════════════════════════════════
 section("prism_results: module structure")
 
-import prism_results as pr
+import plotter_results as pr
 
 
 def test_results_has_populate():
@@ -598,8 +598,8 @@ run("Utility functions in prism_widgets all have docstrings",
 section("prism_tabs: TabState defaults")
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-import prism_tabs as pt
-from prism_tabs import TabState, TabManager, TabBar, draw_tab_icon
+import plotter_tabs as pt
+from plotter_tabs import TabState, TabManager, TabBar, draw_tab_icon
 
 
 def _make_tabstate(tab_id="t1", chart_type="bar", chart_type_idx=0,

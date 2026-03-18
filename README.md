@@ -1,4 +1,4 @@
-# Claude Prism
+# Claude Plotter
 
 > A GraphPad Prism-style scientific plotting application for macOS — built entirely by Claude (Anthropic) with Ashwin Pasupathy.
 
@@ -12,7 +12,7 @@
 
 ## Overview
 
-Claude Prism is a fully-featured desktop application that brings the familiar workflow of GraphPad Prism to macOS. Load your data from an Excel spreadsheet, choose a chart type, tweak your style parameters, and generate publication-quality figures — all without writing a single line of code.
+Claude Plotter is a fully-featured desktop application that brings the familiar workflow of GraphPad Prism to macOS. Load your data from an Excel spreadsheet, choose a chart type, tweak your style parameters, and generate publication-quality figures — all without writing a single line of code.
 
 The application is built on Python + Tkinter for the UI, Matplotlib for rendering, and a bespoke `tk.Canvas` live renderer for interactive bar charts that respond to clicks, colour changes, and drag gestures in real time.
 
@@ -44,7 +44,7 @@ Python 3.9 or later is required. A macOS display is required to run the GUI.
 
 ```bash
 # From the terminal
-python3 prism_barplot_app.py
+python3 plotter_barplot_app.py
 
 # Or double-click PrismBarplot.app in Finder
 # (macOS may prompt you to allow it on first launch)
@@ -60,7 +60,7 @@ python3 prism_barplot_app.py
 
 ## Chart Types
 
-Claude Prism supports 29 chart types across a wide range of scientific use cases.
+Claude Plotter supports 29 chart types across a wide range of scientific use cases.
 
 ### Categorical / Distribution
 
@@ -140,15 +140,15 @@ The app validates your spreadsheet layout before plotting and shows specific err
 
 ## Architecture
 
-Claude Prism is split into six focused modules with no circular dependencies.
+Claude Plotter is split into six focused modules with no circular dependencies.
 
 ```
-prism_barplot_app.py      ~8,000 lines   App class, PLOT_REGISTRY, sidebar, tabs
-prism_widgets.py            ~950 lines   Design-system tokens, PButton/PEntry/etc.
-prism_validators.py         ~520 lines   Standalone spreadsheet validators
-prism_results.py            ~390 lines   Results panel: populate / export / copy
-prism_functions.py        ~6,400 lines   29 Matplotlib chart functions
-prism_canvas_renderer.py  ~1,700 lines   tk.Canvas live renderer (no Matplotlib)
+plotter_barplot_app.py      ~8,000 lines   App class, PLOT_REGISTRY, sidebar, tabs
+plotter_widgets.py            ~950 lines   Design-system tokens, PButton/PEntry/etc.
+plotter_validators.py         ~520 lines   Standalone spreadsheet validators
+plotter_results.py            ~390 lines   Results panel: populate / export / copy
+plotter_functions.py        ~6,400 lines   29 Matplotlib chart functions
+plotter_canvas_renderer.py  ~1,700 lines   tk.Canvas live renderer (no Matplotlib)
 ```
 
 ### Rendering pipeline
@@ -158,7 +158,7 @@ User clicks "Generate Plot"
         │
         ▼
 App._do_run()  [background thread]
-  calls prism_functions.prism_<chart_type>(**kwargs)
+  calls plotter_functions.prism_<chart_type>(**kwargs)
   returns (fig, ax)
         │
         ▼
@@ -174,12 +174,12 @@ App._embed_plot()  [main thread, via after(0)]
 ### Dependency graph
 
 ```
-prism_barplot_app.py
-  ├── prism_widgets.py          (pure Tk + constants — no prism deps)
-  ├── prism_validators.py       (pure pandas — no prism deps)
-  ├── prism_results.py          (accepts app object; no other prism imports)
-  ├── prism_functions.py        (numpy / pandas / matplotlib / scipy — lazy)
-  └── prism_canvas_renderer.py  (numpy / pandas — no matplotlib)
+plotter_barplot_app.py
+  ├── plotter_widgets.py          (pure Tk + constants — no prism deps)
+  ├── plotter_validators.py       (pure pandas — no prism deps)
+  ├── plotter_results.py          (accepts app object; no other prism imports)
+  ├── plotter_functions.py        (numpy / pandas / matplotlib / scipy — lazy)
+  └── plotter_canvas_renderer.py  (numpy / pandas — no matplotlib)
 ```
 
 ---
@@ -209,17 +209,17 @@ All 417 tests must pass before any commit. If tests regress, fix them before doi
 ### Quick syntax check
 
 ```bash
-python3 -c "import prism_functions, prism_canvas_renderer, prism_widgets, prism_validators, prism_results; print('OK')"
+python3 -c "import plotter_functions, plotter_canvas_renderer, plotter_widgets, plotter_validators, plotter_results; print('OK')"
 ```
 
 ### Adding a new chart type
 
 The process follows a five-step checklist:
 
-1. **Write the plot function** in `prism_functions.py`
-2. **Register it** in `_REGISTRY_SPECS` inside `prism_barplot_app.py`
+1. **Write the plot function** in `plotter_functions.py`
+2. **Register it** in `_REGISTRY_SPECS` inside `plotter_barplot_app.py`
 3. **Add UI controls** (if the chart needs custom options beyond the standard tabs)
-4. **Add a validator** in `prism_validators.py`
+4. **Add a validator** in `plotter_validators.py`
 5. **Write tests** in `test_comprehensive.py`
 
 See `CLAUDE.md` for the full detailed checklist with code templates.

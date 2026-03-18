@@ -1,7 +1,7 @@
 """
 test_stats_verification.py
 ===========================
-Verification tests for statistical computations in prism_functions.py.
+Verification tests for statistical computations in plotter_functions.py.
 
 Every test here compares against:
   • scipy.stats (authoritative reference implementation)
@@ -18,8 +18,8 @@ import sys, os
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import prism_test_harness as _h
-from prism_test_harness import pf, ok, fail, run, section, summarise
+import plotter_test_harness as _h
+from plotter_test_harness import pf, ok, fail, run, section, summarise
 
 # ─── shorthand for the internal stats helpers ────────────────────────────────
 _cohens_d        = pf._cohens_d
@@ -618,7 +618,7 @@ section("Two-way post-hoc — Welch's t-test (equal_var=False)")
 
 def test_twoway_posthoc_welch():
     """Two-way post-hoc p-values match scipy Welch t-test (equal_var=False)."""
-    from prism_functions import _twoway_posthoc
+    from plotter_functions import _twoway_posthoc
     df = _make_twoway_df()
     results = _twoway_posthoc(df, "Y", "A", "B", correction="none")
     for row in results:

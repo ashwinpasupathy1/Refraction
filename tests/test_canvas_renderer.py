@@ -15,12 +15,12 @@ import pandas as pd
 from unittest.mock import MagicMock, call, patch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import prism_test_harness as _h
-from prism_test_harness import ok, fail, run, section, summarise
+import plotter_test_harness as _h
+from plotter_test_harness import ok, fail, run, section, summarise
 
-from prism_canvas_renderer import (
+from plotter_canvas_renderer import (
     _hex_to_rgb, _rgb_to_hex, _darken_hex, _rgba_to_hex, _blend_alpha,
-    _fmt_tick_label, _calc_error_plain, _prism_palette_n,
+    _fmt_tick_label, _calc_error_plain, _plotter_palette_n,
     build_bar_scene,
     BarElement, BarScene,
     CoordTransform,
@@ -675,7 +675,7 @@ run("BarScene.element_by_tag: lookup and None for missing", test_scene_element_b
 # ═════════════════════════════════════════════════════════════════════════════
 section("ClickResult")
 
-from prism_canvas_renderer import ClickResult
+from plotter_canvas_renderer import ClickResult
 
 def test_clickresult_defaults():
     cr = ClickResult()
@@ -965,7 +965,7 @@ run("CanvasRenderer.snapshot_png: returns None or bytes, never raises",
 # ═════════════════════════════════════════════════════════════════════════════
 section("GroupedBarScene builder")
 
-from prism_canvas_renderer import (
+from plotter_canvas_renderer import (
     GroupedBarGroup, GroupedBarScene,
     build_grouped_bar_scene,
     GroupedCoordTransform,

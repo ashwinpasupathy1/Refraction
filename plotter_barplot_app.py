@@ -2,7 +2,7 @@
 """
 prism_barplot_app.py
 ====================
-Claude Prism -- main application window (macOS, tabbed ttk layout).
+Claude Plotter -- main application window (macOS, tabbed ttk layout).
 
 Module structure
 ----------------
@@ -10,7 +10,7 @@ prism_barplot_app.py  -- this file; App class + PLOT_REGISTRY + icon helpers
 prism_widgets.py      -- design-system tokens, PButton/PEntry/PCheckbox etc.
 prism_validators.py   -- standalone spreadsheet validation functions
 prism_results.py      -- results-panel population, export, and copy helpers
-prism_functions.py    -- matplotlib plot functions (29 chart types)
+plotter_functions.py    -- matplotlib plot functions (29 chart types)
 prism_tabs.py         -- TabState, TabManager, TabBar (plot tab system)
 
 The App class imports from all four companion modules so each can be
@@ -40,7 +40,7 @@ if _HERE not in _sys.path:
     _sys.path.insert(0, _HERE)
 
 try:
-    from prism_widgets import (
+    from plotter_widgets import (
         _DS, PButton, PCheckbox, PRadioGroup, PEntry, PCombobox,
         section_sep, _create_tooltip, add_placeholder, _bind_scroll_recursive,
         LABELS, HINTS, label, hint, tip,
@@ -51,7 +51,7 @@ except ImportError as _e:
     print(f"[prism] warning: prism_widgets not found ({_e})")
 
 try:
-    from prism_validators import (
+    from plotter_validators import (
         validate_flat_header, validate_bar, validate_line,
         validate_grouped_bar, validate_kaplan_meier, validate_heatmap,
         validate_two_way_anova, validate_contingency, validate_chi_square_gof,
@@ -63,7 +63,7 @@ except ImportError as _e:
     _VALIDATORS_AVAILABLE = False
 
 try:
-    from prism_results import populate_results, export_results_csv, copy_results_tsv
+    from plotter_results import populate_results, export_results_csv, copy_results_tsv
     _RESULTS_AVAILABLE = True
 except ImportError as _e:
     print(f"[prism] warning: prism_results not found ({_e})")
@@ -87,7 +87,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ICON_PNG   = os.path.join(SCRIPT_DIR, "assets", "AppIcon.png")
 ICON_ICNS  = os.path.join(SCRIPT_DIR, "assets", "AppIcon.icns")
 
-# Add the script directory to sys.path so prism_functions is importable
+# Add the script directory to sys.path so plotter_functions is importable
 import sys
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
@@ -260,11 +260,11 @@ def _create_tooltip(widget, text):
 # Plot type registry  -  edit prism_registry.py to add new chart types
 # ---------------------------------------------------------------------------
 
-from prism_registry import (
+from plotter_registry import (
     PlotTypeConfig, _REGISTRY_SPECS,
     ERROR_TYPE_MAP, STATS_TEST_MAP, MARKER_STYLE_MAP, PAD,
 )
-from prism_tabs import TabState, TabManager, TabBar
+from plotter_tabs import TabState, TabManager, TabBar
 
 PLOT_REGISTRY: list = []  # populated after App class definition so fn_name can be resolved
 
@@ -279,7 +279,7 @@ _VAR_DEFAULTS: dict = {
     "excel_path": "", "sheet": "",
     # data tab
     "error": "SEM (Standard Error)", "show_points": True,
-    "show_n_labels": False, "show_value_labels": False, "color": "Default (Prism)",
+    "show_n_labels": False, "show_value_labels": False, "color": "Default",
     "title": "", "xlabel": "", "ytitle": "",
     "jitter_amount": "0", "error_below_bar": False,
     # axes tab
@@ -338,7 +338,7 @@ _VAR_DEFAULTS: dict = {
     # repeated measures
     "rm_show_lines": True, "rm_test_type": "Parametric",
     # ── Priority-1 styling (axes tab) ────────────────────────────────────────
-    "axis_style":  "Open (Prism default)",
+    "axis_style":  "Open (default)",
     "tick_dir":    "Outward (default)",
     "minor_ticks": False,
     "point_size":  "6",
@@ -479,7 +479,7 @@ def _bind_scroll_recursive(widget, handler, button4_handler=None, button5_handle
         pass
 
 
-PREFS_PATH = os.path.expanduser("~/Library/Preferences/claude_prism.json")
+PREFS_PATH = os.path.expanduser("~/Library/Preferences/claude_plotter.json")
 
 def _load_prefs():
     try:
@@ -1420,7 +1420,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         super().__init__()
         # Hide window during build to avoid visible resize animation
         self.withdraw()
-        self.title("Claude Prism")
+        self.title("Claude Plotter")
         self.resizable(True, True)
         self._pf              = None
         self._pf_ready        = False
@@ -1510,7 +1510,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         try:
             import matplotlib
             matplotlib.use("Agg")   # belt-and-suspenders alongside MPLBACKEND env var
-            import prism_functions as pf
+            import plotter_functions as pf
             self._pf = pf
             # ── _ensure_imports() loads matplotlib.pyplot + seaborn ──────────
             # These must complete BEFORE _pf_ready flips so that _watch_dock_icon
@@ -1869,7 +1869,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         help_menu.add_command(label="Help Analyze…",
                               command=self._help_analyze)
         help_menu.add_separator()
-        help_menu.add_command(label="About Claude Prism",
+        help_menu.add_command(label="About Claude Plotter",
                               command=self._show_about)
         menubar.add_cascade(label="Help", menu=help_menu)
 
@@ -2674,7 +2674,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                            fg="white", bg=color, padx=4, pady=1)
             lbl.pack(anchor="w", padx=28, pady=(0, 4))
 
-        def prism_link(page_slug, link_text):
+        def plotter_link(page_slug, link_text):
             """Clickable hyperlink to a GraphPad Prism 11 Statistics Guide page."""
             import webbrowser
             url = f"https://www.graphpad.com/guides/prism/latest/statistics/{page_slug}"
@@ -2721,13 +2721,13 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         body("Welch's t-test (unequal variances) is the default in GraphPad Prism "
              "since version 8. It does not assume equal standard deviations and is "
              "preferred over Student's t-test in most practical situations.")
-        prism_link("stat_qa_choosing_a_test_to_compare_.htm",
+        plotter_link("stat_qa_choosing_a_test_to_compare_.htm",
                    "Prism 11: Choosing a test to compare two groups")
 
         h2("Paired t-test  (Parametric, 2 matched groups)")
         tag("scipy.stats.ttest_rel", "#2274A5")
         scipy_entry(_st.ttest_rel, "ttest_rel")
-        prism_link("stat_checklist_pairedt.htm",
+        plotter_link("stat_checklist_pairedt.htm",
                    "Prism 11: Checklist for paired t-test")
 
         h2("One-Way ANOVA  (Parametric, 3+ groups)")
@@ -2736,9 +2736,9 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         body("Prism 8+ also offers Welch's ANOVA and Brown-Forsythe ANOVA when equal "
              "variances cannot be assumed. These adjust the F-ratio and degrees of freedom "
              "for heteroscedasticity  -  recommended when Levene's or Bartlett's test is significant.")
-        prism_link("stat_checklist_1wayanova.htm",
+        plotter_link("stat_checklist_1wayanova.htm",
                    "Prism 11: Checklist for one-way ANOVA")
-        prism_link("stat_how_to_multiple_comparisons_af.htm",
+        plotter_link("stat_how_to_multiple_comparisons_af.htm",
                    "Prism 11: Multiple comparisons after one-way ANOVA")
 
         h2("Repeated-Measures One-Way ANOVA  (Parametric, matched)")
@@ -2747,7 +2747,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
              "in each condition. More powerful than one-way ANOVA when matching is effective. "
              "Prism 11 applies the Geisser-Greenhouse correction by default when sphericity "
              "cannot be assumed.")
-        prism_link("stat_checklist_1wayanova_rm.htm",
+        plotter_link("stat_checklist_1wayanova_rm.htm",
                    "Prism 11: Repeated-measures one-way ANOVA")
 
         h2("Two-Way ANOVA  (Parametric, 2 factors)")
@@ -2756,25 +2756,25 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
              "whether the effect of one factor depends on the level of the other. "
              "Type II Sum of Squares tests each main effect after controlling for the other. "
              "Post-hoc pairwise comparisons are corrected with Holm-Bonferroni.")
-        prism_link("stat_howto_twowayanova.htm",
+        plotter_link("stat_howto_twowayanova.htm",
                    "Prism 11: Two-way ANOVA")
 
         h2("Mann-Whitney U  (Non-parametric, 2 groups)")
         tag("scipy.stats.mannwhitneyu", "#32936F")
         scipy_entry(_st.mannwhitneyu, "mannwhitneyu")
-        prism_link("stat_checklist_mwt.htm",
+        plotter_link("stat_checklist_mwt.htm",
                    "Prism 11: Checklist for Mann-Whitney test")
 
         h2("Wilcoxon Signed-Rank  (Non-parametric, paired)")
         tag("scipy.stats.wilcoxon", "#32936F")
         scipy_entry(_st.wilcoxon, "wilcoxon")
-        prism_link("stat_checklist_wilcoxon_signed_rank.htm",
+        plotter_link("stat_checklist_wilcoxon_signed_rank.htm",
                    "Prism 11: Wilcoxon signed-rank test")
 
         h2("Kruskal-Wallis H  (Non-parametric, 3+ groups)")
         tag("scipy.stats.kruskal", "#32936F")
         scipy_entry(_st.kruskal, "kruskal")
-        prism_link("stat_checklist_kw.htm",
+        plotter_link("stat_checklist_kw.htm",
                    "Prism 11: Checklist for Kruskal-Wallis test")
 
         h2("Friedman Test  (Non-parametric, repeated measures)")
@@ -2782,7 +2782,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         body("Non-parametric analogue of repeated-measures one-way ANOVA. Ranks values "
              "within each subject (row) and tests whether ranks differ across conditions. "
              "Follow with Dunn's post-hoc + Holm correction for pairwise comparisons.")
-        prism_link("stat_checklist_friedman.htm",
+        plotter_link("stat_checklist_friedman.htm",
                    "Prism 11: Friedman test")
 
         h2("Tukey HSD  (Post-hoc, all-pairwise, parametric)")
@@ -2796,7 +2796,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         body("Holm-Sidak is more powerful than Tukey HSD (can find significant differences "
              "where Tukey cannot) but does not produce confidence intervals. Prism 11 "
              "recommends Tukey for its combination of power and interpretability.")
-        prism_link("stat_options_tab_1wayanova.htm",
+        plotter_link("stat_options_tab_1wayanova.htm",
                    "Prism 11: Post-hoc test options for one-way ANOVA")
 
         h2("Dunn's Test  (Post-hoc, non-parametric)")
@@ -2805,7 +2805,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
              "Kruskal-Wallis or Friedman test. Holm-Bonferroni correction controls the "
              "family-wise error rate across all comparisons. Prism 11 default for "
              "non-parametric pairwise post-hoc analysis.")
-        prism_link("stat_checklist_kw.htm",
+        plotter_link("stat_checklist_kw.htm",
                    "Prism 11: Multiple comparisons after Kruskal-Wallis")
 
         # ── Normality & Variance Tests ────────────────────────────────────────
@@ -2818,7 +2818,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
              "that 'it is not a good idea to base your decision solely on the normality test'  -  "
              "small samples have low power to detect non-normality, and large samples "
              "detect trivially small deviations. Use it as one input among several.")
-        prism_link("stat_checklist_1wayanova.htm",
+        plotter_link("stat_checklist_1wayanova.htm",
                    "Prism 11: Normality assumption in ANOVA")
 
         h2("Levene's Test for Equal Variances")
@@ -2826,8 +2826,8 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         scipy_entry(_st.levene, "levene")
         body("Prism 11 uses Brown-Forsythe and Bartlett's tests for homoscedasticity, "
              "not Levene's. Brown-Forsythe (median-centred) is more robust to non-normality. "
-             "Claude Prism uses Levene's as an equivalent diagnostic.")
-        prism_link("stat_checklist_1wayanova.htm",
+             "Claude Plotter uses Levene's as an equivalent diagnostic.")
+        plotter_link("stat_checklist_1wayanova.htm",
                    "Prism 11: Equal variance assumption (Brown-Forsythe / Bartlett)")
 
         # ── Effect Sizes ─────────────────────────────────────────────────────
@@ -2837,15 +2837,15 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         tag("d = (μ₁ − μ₂) / s_pooled", "#6B4226")
         body("Standardised mean difference. d = 0.2: small, 0.5: medium, 0.8: large "
              "(Cohen 1988). Prism 11 reports Cohen's d for t-tests and partial η² for ANOVA.")
-        prism_link("stat_options_tab_one-way_anova.htm",
+        plotter_link("stat_options_tab_one-way_anova.htm",
                    "Prism 11: Effect size for ANOVA")
 
         h2("Eta Squared / Partial Eta Squared  (ANOVA)")
         tag("η² = SS_effect / SS_total", "#6B4226")
         body("Proportion of total variance explained by a factor. η² = 0.01: small, "
              "0.06: medium, 0.14: large (Cohen). For one-way ANOVA η² = partial η². "
-             "For two-way ANOVA Claude Prism reports partial η² (effect SS / (effect SS + error SS)).")
-        prism_link("stat_options_tab_one-way_anova.htm",
+             "For two-way ANOVA Claude Plotter reports partial η² (effect SS / (effect SS + error SS)).")
+        plotter_link("stat_options_tab_one-way_anova.htm",
                    "Prism 11: Eta squared and omega squared")
 
         # ── Choosing the Right Test ───────────────────────────────────────────
@@ -2865,9 +2865,9 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
              "all-pairwise comparisons and Dunnett for comparing groups to a control. "
              "Fisher's LSD provides no correction and inflates Type I error  -  "
              "only use it with a very specific justification.")
-        prism_link("stat_how_to_multiple_comparisons_af.htm",
+        plotter_link("stat_how_to_multiple_comparisons_af.htm",
                    "Prism 11: Guide to multiple comparisons")
-        prism_link("stat_---_principles_of_statistics_-.htm",
+        plotter_link("stat_---_principles_of_statistics_-.htm",
                    "Prism 11: Principles of Statistics (overview)")
 
         # ── Chart Types ───────────────────────────────────────────────────────
@@ -2916,7 +2916,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             h2(chart_name)
             tag(chart_name, color)
             body(desc)
-            prism_link(slug, link_text)
+            plotter_link(slug, link_text)
 
         ttk.Frame(frame, height=40).pack()
 
@@ -2937,7 +2937,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                      ("show_n_labels", False), ("show_value_labels", False),
                      ("stacked_value_labels", False), ("error_below_bar", False),
                      ("jitter_amount", "0"),
-                     ("color", "Default (Prism)"), ("title", ""),
+                     ("color", "Default"), ("title", ""),
                      ("xlabel", ""), ("ytitle", "")]:
             if k not in self._vars:
                 self._vars[k] = (tk.BooleanVar(value=v)
@@ -3057,7 +3057,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         _color_cb = PCombobox(g, textvariable=self._vars["color"],
                      values=[
                          # ── Prism default ──────────────────────────────────
-                         "Default (Prism)",
+                         "Default",
                          # ── Curated presets ────────────────────────────────
                          "Pastel",          # soft pastels, great for posters
                          "Vivid",           # saturated, high-contrast
@@ -3082,7 +3082,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                      ],
                      state="normal", width=26, font=("Menlo", 12))
         _color_cb.grid(row=r, column=0, columnspan=2, sticky="w", padx=PAD, pady=4)
-        add_placeholder(_color_cb, self._vars["color"], "Default (Prism)")
+        add_placeholder(_color_cb, self._vars["color"], "Default")
 
         # Color swatch  -  5 squares that update live as palette name changes
         _swatch_frame = ttk.Frame(g)
@@ -3097,7 +3097,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         def _update_swatches(*_):
             import sys
             pal_name = self._vars["color"].get().strip()
-            # Curated presets defined inline (mirrors _assign_colors in prism_functions)
+            # Curated presets defined inline (mirrors _assign_colors in plotter_functions)
             _PRESET_SWATCHES = {
                 "Pastel":    ["#AEC6CF", "#FFD1DC", "#B5EAD7", "#FFDAC1", "#C9C9FF"],
                 "Vivid":     ["#E8453C", "#2274A5", "#32936F", "#F18F01", "#A846A0"],
@@ -3109,7 +3109,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 "RdBu":      ["#d73027", "#f46d43", "#e0f3f8", "#74add1", "#4575b4"],
             }
             if not pal_name or pal_name.lower() in ("none", "default (prism)"):
-                pf_mod = sys.modules.get("prism_functions")
+                pf_mod = sys.modules.get("plotter_functions")
                 hex_cols = (pf_mod.PRISM_PALETTE[:5] if pf_mod
                             else ["#E8453C", "#2274A5", "#32936F", "#F18F01", "#A846A0"])
             elif pal_name in _PRESET_SWATCHES:
@@ -3399,11 +3399,11 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         r = self._section_label(g, r, "Axis & Tick Style")
 
         # Axis Frame
-        self._init_vars({"axis_style": "Open (Prism default)"})
+        self._init_vars({"axis_style": "Open (default)"})
         ttk.Label(g, text="Axis Frame", font=("Helvetica Neue", 13, "bold")
                   ).grid(row=r, column=0, sticky="w", padx=PAD, pady=(4, 2)); r += 1
         PCombobox(g, textvariable=self._vars["axis_style"],
-                     values=["Open (Prism default)", "Closed box", "Floating", "None"],
+                     values=["Open (default)", "Closed box", "Floating", "None"],
                      state="readonly", width=22, font=("Helvetica Neue", 12)
                      ).grid(row=r, column=0, sticky="w", padx=PAD, pady=4); r += 1
 
@@ -4113,7 +4113,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
         desktop = os.path.join(os.path.expanduser("~"), "Desktop")
         ts      = datetime.now().strftime("%Y%m%d_%H%M%S")
-        fname   = f"claude_prism_template_{mode}_{ts}.xlsx"
+        fname   = f"claude_plotter_template_{mode}_{ts}.xlsx"
         path    = os.path.join(desktop, fname)
 
         wb = openpyxl.Workbook()
@@ -4435,7 +4435,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         mode = self._plot_type.get()
         spec = next((s for s in _REGISTRY_SPECS if s.key == mode), _REGISTRY_SPECS[0])
 
-        # Prefer standalone validators from prism_validators (pure functions).
+        # Prefer standalone validators from plotter_validators (pure functions).
         # Fall back to the App instance-method versions for any that weren't extracted.
         _STANDALONE_VALIDATORS = {
             "_validate_bar":           validate_bar           if _VALIDATORS_AVAILABLE else None,
@@ -4938,7 +4938,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         r = self._section_label(g, r, "Model")
         _model_names = list(getattr(
             __import__("sys").modules.get(
-                "prism_functions", type("M", (), {"CURVE_MODELS": {}})()),
+                "plotter_functions", type("M", (), {"CURVE_MODELS": {}})()),
             "CURVE_MODELS", {}
         ).keys()) or [
             "4PL Sigmoidal (EC50/IC50)", "3PL Sigmoidal (no bottom)",
@@ -5569,7 +5569,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 reasoning.append(("ℹ", "Multiple conditions, same subjects. Prism 11 uses "
                                    "repeated-measures one-way ANOVA with optional "
                                    "Geisser-Greenhouse correction for non-sphericity. "
-                                   "Claude Prism uses pairwise paired t-tests with "
+                                   "Claude Plotter uses pairwise paired t-tests with "
                                    "Holm correction as a robust equivalent."))
             else:
                 test, rec_title = "Non-parametric", "Friedman test + Dunn's post-hoc (Holm corrected)"
@@ -6558,8 +6558,8 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         kw["xscale"]        = "log" if self._get_var("xscale", "Linear") == "Log" else "linear"
 
         # ── Priority-1 styling params ─────────────────────────────────────────
-        from prism_functions import AXIS_STYLES, TICK_DIRS, LEGEND_POSITIONS
-        raw_axis  = self._get_var("axis_style",  "Open (Prism default)")
+        from plotter_functions import AXIS_STYLES, TICK_DIRS, LEGEND_POSITIONS
+        raw_axis  = self._get_var("axis_style",  "Open (default)")
         raw_tick  = self._get_var("tick_dir",    "Outward (default)")
         raw_leg   = self._get_var("legend_pos",  "Upper right")
         kw["axis_style"]  = AXIS_STYLES.get(raw_axis,  "open")
@@ -7285,11 +7285,11 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         src_path  = self._vars.get("excel_path", tk.StringVar()).get().strip()
         if title_str:
             safe = "".join(c if c.isalnum() or c in " _-" else "_" for c in title_str).strip()
-            default_name = safe[:60] or "claude_prism"
+            default_name = safe[:60] or "claude_plotter"
         elif src_path:
             default_name = os.path.splitext(os.path.basename(src_path))[0][:60]
         else:
-            default_name = f"claude_prism_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            default_name = f"claude_plotter_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         path = filedialog.asksaveasfilename(
             initialdir=desktop, initialfile=f"{default_name}.png",
             defaultextension=".png",
@@ -7353,8 +7353,8 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         """About dialog."""
         from tkinter import messagebox
         messagebox.showinfo(
-            "About Claude Prism",
-            "Claude Prism\n\n"
+            "About Claude Plotter",
+            "Claude Plotter\n\n"
             "A GraphPad Prism-style data visualization application.\n\n"
             "Designed and implemented by Claude (Anthropic).\n"
             "Commissioned by Ashwin Pasupathy.\n\n"
@@ -7378,7 +7378,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             title="Save Chart Showcase PDF",
             defaultextension=".pdf",
             filetypes=[("PDF", "*.pdf")],
-            initialfile="claude_prism_showcase.pdf"
+            initialfile="claude_plotter_showcase.pdf"
         )
         if not out_path:
             return

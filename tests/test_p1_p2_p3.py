@@ -2,7 +2,7 @@
 test_p1_p2_p3.py
 ================
 Tests for Priority 1 (styling), Priority 2 (new stats), and Priority 3
-(new chart types) additions to Claude Prism.
+(new chart types) additions to Claude Plotter.
 
 Run:
   python3 test_p1_p2_p3.py
@@ -12,8 +12,8 @@ import pandas as pd
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import prism_test_harness as _h
-from prism_test_harness import (
+import plotter_test_harness as _h
+from plotter_test_harness import (
     pf, plt, ok, fail, run, section, summarise, close_fig,
     bar_excel, line_excel, simple_xy_excel, grouped_excel,
     km_excel, heatmap_excel, two_way_excel, contingency_excel,
@@ -126,7 +126,7 @@ for style in ("open", "closed", "floating", "none"):
     def _t(s=style):
         p = bar_excel(GROUPS_AB)
         try:
-            fig, ax = pf.prism_barplot(p, axis_style=s)
+            fig, ax = pf.plotter_barplot(p, axis_style=s)
             close_fig(fig)
         finally:
             os.unlink(p)
@@ -138,7 +138,7 @@ for td in ("out", "in", "inout", ""):
     def _t(d=td):
         p = bar_excel(GROUPS_AB)
         try:
-            fig, ax = pf.prism_barplot(p, tick_dir=d)
+            fig, ax = pf.plotter_barplot(p, tick_dir=d)
             close_fig(fig)
         finally:
             os.unlink(p)
@@ -149,7 +149,7 @@ section("P1 — Minor Ticks")
 def test_minor_ticks():
     p = bar_excel(GROUPS_AB)
     try:
-        fig, ax = pf.prism_barplot(p, minor_ticks=True)
+        fig, ax = pf.plotter_barplot(p, minor_ticks=True)
         close_fig(fig)
     finally:
         os.unlink(p)
@@ -161,14 +161,14 @@ for ps, pa in ((2.0, 0.3), (6.0, 0.8), (14.0, 1.0)):
     def _t(s=ps, a=pa):
         p = bar_excel(GROUPS_AB)
         try:
-            fig, ax = pf.prism_barplot(p, point_size=s, point_alpha=a)
+            fig, ax = pf.plotter_barplot(p, point_size=s, point_alpha=a)
             close_fig(fig)
         finally:
             os.unlink(p)
     run(f"point_size={ps}, point_alpha={pa} on bar chart", _t)
 
 # point_size on boxplot and violin
-for fn_name, fn in (("boxplot", pf.prism_boxplot), ("violin", pf.prism_violin)):
+for fn_name, fn in (("boxplot", pf.plotter_boxplot), ("violin", pf.plotter_violin)):
     def _t(f=fn, n=fn_name):
         p = bar_excel(GROUPS_AB)
         try:
@@ -184,7 +184,7 @@ for cs in (0.0, 4.0, 10.0):
     def _t(c=cs):
         p = bar_excel(GROUPS_AB)
         try:
-            fig, ax = pf.prism_barplot(p, cap_size=c)
+            fig, ax = pf.plotter_barplot(p, cap_size=c)
             close_fig(fig)
         finally:
             os.unlink(p)
@@ -196,7 +196,7 @@ for lp in ("best", "upper right", "upper left", "lower right", "outside", "none"
     def _t(pos=lp):
         p = _scatter_excel()
         try:
-            fig, ax = pf.prism_scatterplot(p, legend_pos=pos)
+            fig, ax = pf.plotter_scatterplot(p, legend_pos=pos)
             close_fig(fig)
         finally:
             os.unlink(p)
@@ -227,34 +227,34 @@ ALL_STYLE = dict(axis_style="closed", tick_dir="in", minor_ticks=True,
 
 def _bar_style():
     p = bar_excel(GROUPS_AB)
-    try: fig,ax = pf.prism_barplot(p, **ALL_STYLE); close_fig(fig)
+    try: fig,ax = pf.plotter_barplot(p, **ALL_STYLE); close_fig(fig)
     finally: os.unlink(p)
-run("style params on prism_barplot", _bar_style)
+run("style params on plotter_barplot", _bar_style)
 
 def _box_style():
     p = bar_excel(GROUPS_AB)
-    try: fig,ax = pf.prism_boxplot(p, **ALL_STYLE); close_fig(fig)
+    try: fig,ax = pf.plotter_boxplot(p, **ALL_STYLE); close_fig(fig)
     finally: os.unlink(p)
-run("style params on prism_boxplot", _box_style)
+run("style params on plotter_boxplot", _box_style)
 
 def _violin_style():
     p = bar_excel(GROUPS_AB)
-    try: fig,ax = pf.prism_violin(p, **ALL_STYLE); close_fig(fig)
+    try: fig,ax = pf.plotter_violin(p, **ALL_STYLE); close_fig(fig)
     finally: os.unlink(p)
-run("style params on prism_violin", _violin_style)
+run("style params on plotter_violin", _violin_style)
 
 def _scatter_style():
     p = _scatter_excel()
-    try: fig,ax = pf.prism_scatterplot(p, **{k:v for k,v in ALL_STYLE.items()
+    try: fig,ax = pf.plotter_scatterplot(p, **{k:v for k,v in ALL_STYLE.items()
                                               if k not in ("point_size","point_alpha","cap_size")}); close_fig(fig)
     finally: os.unlink(p)
-run("style params on prism_scatterplot", _scatter_style)
+run("style params on plotter_scatterplot", _scatter_style)
 
 def _subcolumn_style():
     p = bar_excel(GROUPS_AB)
-    try: fig,ax = pf.prism_subcolumn_scatter(p, **ALL_STYLE); close_fig(fig)
+    try: fig,ax = pf.plotter_subcolumn_scatter(p, **ALL_STYLE); close_fig(fig)
     finally: os.unlink(p)
-run("style params on prism_subcolumn_scatter", _subcolumn_style)
+run("style params on plotter_subcolumn_scatter", _subcolumn_style)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -304,10 +304,10 @@ def test_one_sample_mc_correction():
 run("one_sample: all MC corrections work", test_one_sample_mc_correction)
 
 def test_one_sample_on_bar_chart():
-    """prism_barplot with stats_test=one_sample renders without crash."""
+    """plotter_barplot with stats_test=one_sample renders without crash."""
     p = bar_excel({"Control": rng.normal(5,1,12), "Drug": rng.normal(8,1,12)})
     try:
-        fig, ax = pf.prism_barplot(p, show_stats=True,
+        fig, ax = pf.plotter_barplot(p, show_stats=True,
                                    stats_test="one_sample", mu0=0.0)
         close_fig(fig)
     finally:
@@ -323,42 +323,42 @@ section("P2b — Chi-Square GoF")
 def test_gof_equal_expected():
     p = _gof_excel(equal=True)
     try:
-        fig, ax = pf.prism_chi_square_gof(p, expected_equal=True)
+        fig, ax = pf.plotter_chi_square_gof(p, expected_equal=True)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_chi_square_gof: equal expected proportions", test_gof_equal_expected)
+run("plotter_chi_square_gof: equal expected proportions", test_gof_equal_expected)
 
 def test_gof_custom_expected():
     p = _gof_excel(equal=False)
     try:
-        fig, ax = pf.prism_chi_square_gof(p, expected_equal=False)
+        fig, ax = pf.plotter_chi_square_gof(p, expected_equal=False)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_chi_square_gof: custom expected from Row 3", test_gof_custom_expected)
+run("plotter_chi_square_gof: custom expected from Row 3", test_gof_custom_expected)
 
 def test_gof_style_params():
     p = _gof_excel()
     try:
-        fig, ax = pf.prism_chi_square_gof(p, axis_style="closed",
+        fig, ax = pf.plotter_chi_square_gof(p, axis_style="closed",
                                            tick_dir="in", minor_ticks=True)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_chi_square_gof: style params applied", test_gof_style_params)
+run("plotter_chi_square_gof: style params applied", test_gof_style_params)
 
 def test_gof_annotation_present():
     """Chi-sq stat annotation must appear on axes."""
     p = _gof_excel()
     try:
-        fig, ax = pf.prism_chi_square_gof(p)
+        fig, ax = pf.plotter_chi_square_gof(p)
         texts = [t.get_text() for t in ax.texts]
         assert any("χ²" in t for t in texts), f"No χ² annotation found; texts={texts}"
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_chi_square_gof: χ² annotation appears on axes", test_gof_annotation_present)
+run("plotter_chi_square_gof: χ² annotation appears on axes", test_gof_annotation_present)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -369,36 +369,36 @@ section("P2c — Full Regression Table")
 def test_regression_table_renders():
     p = _scatter_excel()
     try:
-        fig, ax = pf.prism_scatterplot(p, show_regression=True,
+        fig, ax = pf.plotter_scatterplot(p, show_regression=True,
                                         show_regression_table=True)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_scatterplot: show_regression_table=True renders", test_regression_table_renders)
+run("plotter_scatterplot: show_regression_table=True renders", test_regression_table_renders)
 
 def test_regression_table_annotation():
     """Regression table annotation must contain 'Slope' text."""
     p = _scatter_excel()
     try:
-        fig, ax = pf.prism_scatterplot(p, show_regression_table=True)
+        fig, ax = pf.plotter_scatterplot(p, show_regression_table=True)
         texts = [t.get_text() for t in ax.texts]
         assert any("Slope" in t for t in texts), f"No 'Slope' found; texts={texts}"
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_scatterplot: regression table contains Slope annotation", test_regression_table_annotation)
+run("plotter_scatterplot: regression table contains Slope annotation", test_regression_table_annotation)
 
 def test_regression_table_false():
     """show_regression_table=False must NOT add Slope annotation."""
     p = _scatter_excel()
     try:
-        fig, ax = pf.prism_scatterplot(p, show_regression_table=False)
+        fig, ax = pf.plotter_scatterplot(p, show_regression_table=False)
         texts = [t.get_text() for t in ax.texts]
         assert not any("Slope" in t for t in texts)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_scatterplot: show_regression_table=False suppresses table", test_regression_table_false)
+run("plotter_scatterplot: show_regression_table=False suppresses table", test_regression_table_false)
 
 def test_draw_regression_table_direct():
     """_draw_regression_table helper works standalone."""
@@ -430,53 +430,53 @@ section("P3a — Stacked Bar Chart")
 def test_stacked_bar_absolute():
     p = _grouped_excel()
     try:
-        fig, ax = pf.prism_stacked_bar(p, mode="absolute")
+        fig, ax = pf.plotter_stacked_bar(p, mode="absolute")
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_stacked_bar: mode=absolute renders", test_stacked_bar_absolute)
+run("plotter_stacked_bar: mode=absolute renders", test_stacked_bar_absolute)
 
 def test_stacked_bar_percent():
     p = _grouped_excel()
     try:
-        fig, ax = pf.prism_stacked_bar(p, mode="percent")
+        fig, ax = pf.plotter_stacked_bar(p, mode="percent")
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_stacked_bar: mode=percent renders", test_stacked_bar_percent)
+run("plotter_stacked_bar: mode=percent renders", test_stacked_bar_percent)
 
 def test_stacked_bar_legend():
     """Legend must be present for percent mode."""
     p = _grouped_excel()
     try:
-        fig, ax = pf.prism_stacked_bar(p, mode="percent")
+        fig, ax = pf.plotter_stacked_bar(p, mode="percent")
         assert ax.get_legend() is not None
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_stacked_bar: legend present", test_stacked_bar_legend)
+run("plotter_stacked_bar: legend present", test_stacked_bar_legend)
 
 def test_stacked_bar_percent_max():
     """In percent mode, bar tops should be ≤100 (within float tolerance)."""
     p = _grouped_excel()
     try:
-        fig, ax = pf.prism_stacked_bar(p, mode="percent")
+        fig, ax = pf.plotter_stacked_bar(p, mode="percent")
         # Check ylim top is consistent with 0–100 range
         _, ytop = ax.get_ylim()
         assert ytop >= 90, f"ytop={ytop} seems too low for percent mode"
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_stacked_bar: percent mode y-range is sensible", test_stacked_bar_percent_max)
+run("plotter_stacked_bar: percent mode y-range is sensible", test_stacked_bar_percent_max)
 
 def test_stacked_bar_style():
     p = _grouped_excel()
     try:
-        fig, ax = pf.prism_stacked_bar(p, axis_style="floating", tick_dir="in")
+        fig, ax = pf.plotter_stacked_bar(p, axis_style="floating", tick_dir="in")
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_stacked_bar: style params applied", test_stacked_bar_style)
+run("plotter_stacked_bar: style params applied", test_stacked_bar_style)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -487,39 +487,39 @@ section("P3b — Bubble Chart")
 def test_bubble_default():
     p = _bubble_excel()
     try:
-        fig, ax = pf.prism_bubble(p)
+        fig, ax = pf.plotter_bubble(p)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_bubble: default render", test_bubble_default)
+run("plotter_bubble: default render", test_bubble_default)
 
 def test_bubble_scale():
     for scale in (0.2, 1.0, 3.0):
         p = _bubble_excel()
         try:
-            fig, ax = pf.prism_bubble(p, bubble_scale=scale)
+            fig, ax = pf.plotter_bubble(p, bubble_scale=scale)
             close_fig(fig)
         finally:
             os.unlink(p)
-run("prism_bubble: bubble_scale 0.2/1.0/3.0 renders", test_bubble_scale)
+run("plotter_bubble: bubble_scale 0.2/1.0/3.0 renders", test_bubble_scale)
 
 def test_bubble_show_labels():
     p = _bubble_excel()
     try:
-        fig, ax = pf.prism_bubble(p, show_labels=True)
+        fig, ax = pf.plotter_bubble(p, show_labels=True)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_bubble: show_labels=True renders", test_bubble_show_labels)
+run("plotter_bubble: show_labels=True renders", test_bubble_show_labels)
 
 def test_bubble_style():
     p = _bubble_excel()
     try:
-        fig, ax = pf.prism_bubble(p, axis_style="closed", point_alpha=0.5)
+        fig, ax = pf.plotter_bubble(p, axis_style="closed", point_alpha=0.5)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_bubble: style params applied", test_bubble_style)
+run("plotter_bubble: style params applied", test_bubble_style)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -532,47 +532,47 @@ GROUPS_3 = {"A": rng.normal(5,1,12), "B": rng.normal(7,1,12), "C": rng.normal(9,
 def test_dot_plot_default():
     p = bar_excel(GROUPS_3)
     try:
-        fig, ax = pf.prism_dot_plot(p)
+        fig, ax = pf.plotter_dot_plot(p)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_dot_plot: default render", test_dot_plot_default)
+run("plotter_dot_plot: default render", test_dot_plot_default)
 
 def test_dot_plot_mean_median():
     p = bar_excel(GROUPS_3)
     try:
-        fig, ax = pf.prism_dot_plot(p, show_mean=True, show_median=True)
+        fig, ax = pf.plotter_dot_plot(p, show_mean=True, show_median=True)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_dot_plot: show_mean + show_median", test_dot_plot_mean_median)
+run("plotter_dot_plot: show_mean + show_median", test_dot_plot_mean_median)
 
 def test_dot_plot_no_overlay():
     p = bar_excel(GROUPS_3)
     try:
-        fig, ax = pf.prism_dot_plot(p, show_mean=False, show_median=False)
+        fig, ax = pf.plotter_dot_plot(p, show_mean=False, show_median=False)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_dot_plot: no mean/median overlay", test_dot_plot_no_overlay)
+run("plotter_dot_plot: no mean/median overlay", test_dot_plot_no_overlay)
 
 def test_dot_plot_open_points():
     p = bar_excel(GROUPS_3)
     try:
-        fig, ax = pf.prism_dot_plot(p, open_points=True, point_size=10.0)
+        fig, ax = pf.plotter_dot_plot(p, open_points=True, point_size=10.0)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_dot_plot: open_points + custom point_size", test_dot_plot_open_points)
+run("plotter_dot_plot: open_points + custom point_size", test_dot_plot_open_points)
 
 def test_dot_plot_style():
     p = bar_excel(GROUPS_3)
     try:
-        fig, ax = pf.prism_dot_plot(p, axis_style="none", tick_dir="")
+        fig, ax = pf.plotter_dot_plot(p, axis_style="none", tick_dir="")
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_dot_plot: axis_style=none + tick_dir=empty", test_dot_plot_style)
+run("plotter_dot_plot: axis_style=none + tick_dir=empty", test_dot_plot_style)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -583,33 +583,33 @@ section("P3d — Bland-Altman Plot")
 def test_bland_altman_default():
     p = _bland_altman_excel()
     try:
-        fig, ax = pf.prism_bland_altman(p)
+        fig, ax = pf.plotter_bland_altman(p)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_bland_altman: default render", test_bland_altman_default)
+run("plotter_bland_altman: default render", test_bland_altman_default)
 
 def test_bland_altman_no_ci():
     p = _bland_altman_excel()
     try:
-        fig, ax = pf.prism_bland_altman(p, show_ci=False)
+        fig, ax = pf.plotter_bland_altman(p, show_ci=False)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_bland_altman: show_ci=False", test_bland_altman_no_ci)
+run("plotter_bland_altman: show_ci=False", test_bland_altman_no_ci)
 
 def test_bland_altman_annotations():
     """Mean diff and LoA annotations must appear on plot."""
     p = _bland_altman_excel()
     try:
-        fig, ax = pf.prism_bland_altman(p)
+        fig, ax = pf.plotter_bland_altman(p)
         texts = [t.get_text() for t in ax.texts]
         assert any("Mean" in t for t in texts), f"No Mean annotation; texts={texts}"
         assert any("SD" in t for t in texts), f"No SD annotation; texts={texts}"
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_bland_altman: Mean and SD annotations present", test_bland_altman_annotations)
+run("plotter_bland_altman: Mean and SD annotations present", test_bland_altman_annotations)
 
 def test_bland_altman_raises_one_column():
     """Should raise ValueError if only 1 column provided."""
@@ -617,23 +617,23 @@ def test_bland_altman_raises_one_column():
     try:
         raised = False
         try:
-            pf.prism_bland_altman(p)
+            pf.plotter_bland_altman(p)
         except (ValueError, KeyError, IndexError):
             raised = True
         assert raised, "Expected error for single-column input"
     finally:
         os.unlink(p)
-run("prism_bland_altman: raises for <2 columns", test_bland_altman_raises_one_column)
+run("plotter_bland_altman: raises for <2 columns", test_bland_altman_raises_one_column)
 
 def test_bland_altman_style():
     p = _bland_altman_excel()
     try:
-        fig, ax = pf.prism_bland_altman(p, axis_style="floating",
+        fig, ax = pf.plotter_bland_altman(p, axis_style="floating",
                                          tick_dir="in", minor_ticks=True)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_bland_altman: style params applied", test_bland_altman_style)
+run("plotter_bland_altman: style params applied", test_bland_altman_style)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -644,74 +644,74 @@ section("P3e — Forest Plot")
 def test_forest_plot_default():
     p = _forest_excel()
     try:
-        fig, ax = pf.prism_forest_plot(p)
+        fig, ax = pf.plotter_forest_plot(p)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_forest_plot: default render", test_forest_plot_default)
+run("plotter_forest_plot: default render", test_forest_plot_default)
 
 def test_forest_plot_no_summary():
     p = _forest_excel()
     try:
-        fig, ax = pf.prism_forest_plot(p, show_summary=False)
+        fig, ax = pf.plotter_forest_plot(p, show_summary=False)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_forest_plot: show_summary=False", test_forest_plot_no_summary)
+run("plotter_forest_plot: show_summary=False", test_forest_plot_no_summary)
 
 def test_forest_plot_ref_value():
     p = _forest_excel()
     try:
-        fig, ax = pf.prism_forest_plot(p, ref_value=1.0)
+        fig, ax = pf.plotter_forest_plot(p, ref_value=1.0)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_forest_plot: ref_value=1.0 (OR reference)", test_forest_plot_ref_value)
+run("plotter_forest_plot: ref_value=1.0 (OR reference)", test_forest_plot_ref_value)
 
 def test_forest_plot_no_weights():
     p = _forest_excel()
     try:
-        fig, ax = pf.prism_forest_plot(p, show_weights=False)
+        fig, ax = pf.plotter_forest_plot(p, show_weights=False)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_forest_plot: show_weights=False", test_forest_plot_no_weights)
+run("plotter_forest_plot: show_weights=False", test_forest_plot_no_weights)
 
 def test_forest_plot_study_labels():
     """Study labels must appear as text on axes."""
     p = _forest_excel()
     try:
-        fig, ax = pf.prism_forest_plot(p)
+        fig, ax = pf.plotter_forest_plot(p)
         texts = [t.get_text() for t in ax.texts]
         assert any("Smith" in t or "2020" in t for t in texts), \
             f"No study label found; texts={texts}"
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_forest_plot: study labels appear on axes", test_forest_plot_study_labels)
+run("plotter_forest_plot: study labels appear on axes", test_forest_plot_study_labels)
 
 def test_forest_plot_summary_diamond():
     """Summary diamond (filled polygon) must be present when show_summary=True."""
     p = _forest_excel()
     try:
-        fig, ax = pf.prism_forest_plot(p, show_summary=True)
+        fig, ax = pf.plotter_forest_plot(p, show_summary=True)
         polys = [c for c in ax.collections
                  if hasattr(c, 'get_paths') and len(c.get_paths()) > 0]
         assert len(polys) > 0, "No filled polygon found for summary diamond"
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_forest_plot: summary diamond polygon present", test_forest_plot_summary_diamond)
+run("plotter_forest_plot: summary diamond polygon present", test_forest_plot_summary_diamond)
 
 def test_forest_plot_style():
     p = _forest_excel()
     try:
-        fig, ax = pf.prism_forest_plot(p, axis_style="open",
+        fig, ax = pf.plotter_forest_plot(p, axis_style="open",
                                         tick_dir="out", minor_ticks=False)
         close_fig(fig)
     finally:
         os.unlink(p)
-run("prism_forest_plot: style params applied", test_forest_plot_style)
+run("plotter_forest_plot: style params applied", test_forest_plot_style)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -724,7 +724,7 @@ def test_style_propagates_via_base_plot_finish():
     fig, ax = plt.subplots()
     sk = pf._style_kwargs({"axis_style": "closed", "tick_dir": "out",
                             "minor_ticks": False})
-    pf._apply_prism_style(ax, 12, **sk)
+    pf._apply_plotter_style(ax, 12, **sk)
     for spine in ax.spines.values():
         assert spine.get_visible(), f"Spine {spine} not visible for axis_style=closed"
     plt.close(fig)
@@ -732,7 +732,7 @@ run("axis_style=closed: all 4 spines visible", test_style_propagates_via_base_pl
 
 def test_axis_style_none_hides_spines():
     fig, ax = plt.subplots()
-    pf._apply_prism_style(ax, 12, axis_style="none")
+    pf._apply_plotter_style(ax, 12, axis_style="none")
     for spine in ax.spines.values():
         assert not spine.get_visible(), f"Spine visible for axis_style=none"
     plt.close(fig)
@@ -740,7 +740,7 @@ run("axis_style=none: all spines hidden", test_axis_style_none_hides_spines)
 
 def test_axis_style_floating_offset():
     fig, ax = plt.subplots()
-    pf._apply_prism_style(ax, 12, axis_style="floating")
+    pf._apply_plotter_style(ax, 12, axis_style="floating")
     left_pos = ax.spines["left"].get_position()
     assert left_pos == ("outward", 5), f"Expected outward 5, got {left_pos}"
     plt.close(fig)
@@ -774,11 +774,11 @@ STYLE_NEW = {"axis_style": "open", "tick_dir": "out", "minor_ticks": False,
              "point_size": 6.0, "point_alpha": 0.8, "cap_size": 4.0}
 
 for label, fn, maker in [
-    ("barplot",     pf.prism_barplot,     _make_bar),
-    ("boxplot",     pf.prism_boxplot,     _make_bar),
-    ("violin",      pf.prism_violin,      _make_bar),
-    ("subcolumn",   pf.prism_subcolumn_scatter, _make_bar),
-    ("before_after",pf.prism_before_after, lambda: bar_excel({"Pre": rng.normal(5,1,8), "Post": rng.normal(7,1,8)})),
+    ("barplot",     pf.plotter_barplot,     _make_bar),
+    ("boxplot",     pf.plotter_boxplot,     _make_bar),
+    ("violin",      pf.plotter_violin,      _make_bar),
+    ("subcolumn",   pf.plotter_subcolumn_scatter, _make_bar),
+    ("before_after",pf.plotter_before_after, lambda: bar_excel({"Pre": rng.normal(5,1,8), "Post": rng.normal(7,1,8)})),
 ]:
     def _t(f=fn, m=maker, lbl=label):
         p = m()

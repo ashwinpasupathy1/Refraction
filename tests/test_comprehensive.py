@@ -1,7 +1,7 @@
 """
 comprehensive_tests.py
 ======================
-Exhaustive test suite for Claude Prism / prism_functions.py.
+Exhaustive test suite for Claude Plotter / plotter_functions.py.
 
 Two completely independent datasets (DATASET_A = biological/clinical,
 DATASET_B = environmental/engineering) are used for every chart type
@@ -20,7 +20,7 @@ Coverage:
   • heatmap clustering rows+cols, annotate, robust, vmin/vmax
   • All normality + Welch's t-test correctness checks
   • Help-Analyze decision tree (mocked)
-  • Hallucination checks: every public symbol imported from prism_functions
+  • Hallucination checks: every public symbol imported from plotter_functions
     must actually exist in the module
 
 Run:
@@ -33,8 +33,8 @@ import pandas as pd
 
 # ── Shared harness (single source of truth for all counters) ─────────────────
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import prism_test_harness as _h
-from prism_test_harness import (
+import plotter_test_harness as _h
+from plotter_test_harness import (
     pf, plt, ok, fail, run, section, close_fig,
     bar_excel, line_excel, simple_xy_excel, grouped_excel,
     km_excel, heatmap_excel, two_way_excel, contingency_excel,
@@ -192,11 +192,11 @@ section("SECTION 0 — Hallucination / Public Symbol Audit")
 
 EXPECTED_PUBLIC = [
     # plot functions
-    "prism_barplot", "prism_linegraph", "prism_grouped_barplot", "prism_boxplot",
-    "prism_scatterplot", "prism_violin", "prism_kaplan_meier", "prism_heatmap",
-    "prism_two_way_anova", "prism_before_after", "prism_histogram",
-    "prism_subcolumn_scatter", "prism_curve_fit", "prism_column_stats",
-    "prism_contingency", "prism_repeated_measures",
+    "plotter_barplot", "plotter_linegraph", "plotter_grouped_barplot", "plotter_boxplot",
+    "plotter_scatterplot", "plotter_violin", "plotter_kaplan_meier", "plotter_heatmap",
+    "plotter_two_way_anova", "plotter_before_after", "plotter_histogram",
+    "plotter_subcolumn_scatter", "plotter_curve_fit", "plotter_column_stats",
+    "plotter_contingency", "plotter_repeated_measures",
     # shared helpers
     "_run_stats", "_apply_correction", "_p_to_stars", "_ensure_imports",
     "check_normality", "normality_warning", "CURVE_MODELS",
@@ -208,7 +208,7 @@ def test_symbols():
     missing = [s for s in EXPECTED_PUBLIC if not hasattr(pf, s)]
     assert not missing, f"Missing symbols: {missing}"
 
-run("All expected public symbols exist in prism_functions", test_symbols)
+run("All expected public symbols exist in plotter_functions", test_symbols)
 
 def test_curve_models():
     expected_models = [
@@ -226,12 +226,12 @@ run("CURVE_MODELS registry complete (11 models)", test_curve_models)
 
 def test_no_hallucinated_imports():
     """Check that every symbol used via 'pf.' in this test actually exists."""
-    fns = [pf.prism_barplot, pf.prism_linegraph, pf.prism_grouped_barplot,
-           pf.prism_boxplot, pf.prism_scatterplot, pf.prism_violin,
-           pf.prism_kaplan_meier, pf.prism_heatmap, pf.prism_two_way_anova,
-           pf.prism_before_after, pf.prism_histogram, pf.prism_subcolumn_scatter,
-           pf.prism_curve_fit, pf.prism_column_stats, pf.prism_contingency,
-           pf.prism_repeated_measures]
+    fns = [pf.plotter_barplot, pf.plotter_linegraph, pf.plotter_grouped_barplot,
+           pf.plotter_boxplot, pf.plotter_scatterplot, pf.plotter_violin,
+           pf.plotter_kaplan_meier, pf.plotter_heatmap, pf.plotter_two_way_anova,
+           pf.plotter_before_after, pf.plotter_histogram, pf.plotter_subcolumn_scatter,
+           pf.plotter_curve_fit, pf.plotter_column_stats, pf.plotter_contingency,
+           pf.plotter_repeated_measures]
     for f in fns:
         assert callable(f), f"{f} is not callable"
 
@@ -412,7 +412,7 @@ def _bar_test(name, groups, **kwargs):
         path = f.name
     try:
         _write_bar(path, groups)
-        fig, ax = pf.prism_barplot(path, **kwargs)
+        fig, ax = pf.plotter_barplot(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -501,7 +501,7 @@ def _line_test(name, series, x_vals, **kwargs):
         path = f.name
     try:
         _write_line(path, series, x_vals)
-        fig, ax = pf.prism_linegraph(path, **kwargs)
+        fig, ax = pf.plotter_linegraph(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -541,7 +541,7 @@ def _grouped_test(name, ds_tag, **kwargs):
         path = f.name
     try:
         _write_grouped(path, cats, subs, data_a)
-        fig, ax = pf.prism_grouped_barplot(path, **kwargs)
+        fig, ax = pf.plotter_grouped_barplot(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -570,7 +570,7 @@ def _box_test(groups, **kwargs):
         path = f.name
     try:
         _write_bar(path, groups)
-        fig, ax = pf.prism_boxplot(path, **kwargs)
+        fig, ax = pf.plotter_boxplot(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -606,7 +606,7 @@ def _scatter_test(series, x_vals, **kwargs):
         path = f.name
     try:
         _write_line(path, series, x_vals)
-        fig, ax = pf.prism_scatterplot(path, **kwargs)
+        fig, ax = pf.plotter_scatterplot(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -640,7 +640,7 @@ def _violin_test(groups, **kwargs):
         path = f.name
     try:
         _write_bar(path, groups)
-        fig, ax = pf.prism_violin(path, **kwargs)
+        fig, ax = pf.plotter_violin(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -674,7 +674,7 @@ def _km_test(groups, **kwargs):
         path = f.name
     try:
         _write_km(path, groups)
-        fig, ax = pf.prism_kaplan_meier(path, **kwargs)
+        fig, ax = pf.plotter_kaplan_meier(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -705,7 +705,7 @@ def _hm_test(matrix, rows, cols, **kwargs):
         path = f.name
     try:
         _write_heatmap(path, matrix, rows, cols)
-        fig, ax = pf.prism_heatmap(path, **kwargs)
+        fig, ax = pf.plotter_heatmap(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -741,7 +741,7 @@ def _twa_test(records, **kwargs):
         path = f.name
     try:
         _write_two_way(path, records)
-        fig, ax = pf.prism_two_way_anova(path, **kwargs)
+        fig, ax = pf.plotter_two_way_anova(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -772,7 +772,7 @@ def _ba_test(groups, **kwargs):
         path = f.name
     try:
         _write_bar(path, groups)
-        fig, ax = pf.prism_before_after(path, **kwargs)
+        fig, ax = pf.plotter_before_after(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -803,7 +803,7 @@ def _hist_test(groups, **kwargs):
         path = f.name
     try:
         _write_bar(path, groups)
-        fig, ax = pf.prism_histogram(path, **kwargs)
+        fig, ax = pf.plotter_histogram(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -832,7 +832,7 @@ def _sub_test(groups, **kwargs):
         path = f.name
     try:
         _write_bar(path, groups)
-        fig, ax = pf.prism_subcolumn_scatter(path, **kwargs)
+        fig, ax = pf.plotter_subcolumn_scatter(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -875,7 +875,7 @@ def _cf_test(x_vals, y_vals, model_name, **kwargs):
         _write_line(path, series, x_vals)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            fig, ax = pf.prism_curve_fit(path, model_name=model_name, **kwargs)
+            fig, ax = pf.plotter_curve_fit(path, model_name=model_name, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -938,7 +938,7 @@ def _cs_test(groups, **kwargs):
         path = f.name
     try:
         _write_bar(path, groups)
-        fig, ax = pf.prism_column_stats(path, **kwargs)
+        fig, ax = pf.plotter_column_stats(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -967,7 +967,7 @@ def _ct_test(row_labels, col_labels, matrix, **kwargs):
         path = f.name
     try:
         _write_contingency(path, row_labels, col_labels, matrix)
-        fig, ax = pf.prism_contingency(path, **kwargs)
+        fig, ax = pf.plotter_contingency(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -1003,7 +1003,7 @@ def _rm_test(groups, **kwargs):
         path = f.name
     try:
         _write_bar(path, groups)
-        fig, ax = pf.prism_repeated_measures(path, **kwargs)
+        fig, ax = pf.plotter_repeated_measures(path, **kwargs)
         assert fig is not None
         _close(fig)
     finally:
@@ -1126,7 +1126,7 @@ def test_bar_single_group():
         path = f.name
     try:
         _write_bar(path, {"Control": rng.normal(5, 1, 8)})
-        fig, ax = pf.prism_barplot(path)
+        fig, ax = pf.plotter_barplot(path)
         assert fig is not None
         _close(fig)
     finally:
@@ -1189,7 +1189,7 @@ def test_bracket_styles():
     xl = bar_excel(_g3)
     try:
         for style in ("lines", "bracket", "asterisks_only"):
-            fig, ax = pf.prism_barplot(xl, show_stats=True, bracket_style=style)
+            fig, ax = pf.plotter_barplot(xl, show_stats=True, bracket_style=style)
             plt.close(fig)
     finally:
         if os.path.exists(xl): os.unlink(xl)
@@ -1199,14 +1199,14 @@ run("P16 all bracket_style variants", test_bracket_styles)
 section("P17 — Horizontal stacked bar")
 
 def test_stacked_horizontal():
-    """prism_stacked_bar horizontal=True renders without crash."""
+    """plotter_stacked_bar horizontal=True renders without crash."""
     xl = grouped_excel(["CatA","CatB"], ["Sub1","Sub2"], _stacked_data)
     try:
-        fig, ax = pf.prism_stacked_bar(xl, horizontal=True)
+        fig, ax = pf.plotter_stacked_bar(xl, horizontal=True)
         plt.close(fig)
-        fig, ax = pf.prism_stacked_bar(xl, horizontal=True, mode="percent")
+        fig, ax = pf.plotter_stacked_bar(xl, horizontal=True, mode="percent")
         plt.close(fig)
-        fig, ax = pf.prism_stacked_bar(xl, horizontal=False)
+        fig, ax = pf.plotter_stacked_bar(xl, horizontal=False)
         plt.close(fig)
     finally:
         if os.path.exists(xl): os.unlink(xl)
@@ -1220,7 +1220,7 @@ def test_xtick_labels_bar():
     xl = bar_excel(_g3)
     try:
         labels = ["Alpha", "Beta", "Gamma"]
-        fig, ax = pf.prism_barplot(xl, xtick_labels=labels)
+        fig, ax = pf.plotter_barplot(xl, xtick_labels=labels)
         tick_texts = [t.get_text() for t in ax.get_xticklabels()]
         assert any("Alpha" in t for t in tick_texts), f"Labels not applied: {tick_texts}"
         plt.close(fig)
@@ -1231,7 +1231,7 @@ def test_xtick_labels_wrong_length():
     """xtick_labels with wrong length falls back without crash."""
     xl = bar_excel(_g3)
     try:
-        fig, ax = pf.prism_barplot(xl, xtick_labels=["OnlyOne"])
+        fig, ax = pf.plotter_barplot(xl, xtick_labels=["OnlyOne"])
         plt.close(fig)
     finally:
         if os.path.exists(xl): os.unlink(xl)
@@ -1240,7 +1240,7 @@ def test_xtick_labels_none():
     """xtick_labels=None uses original column names."""
     xl = bar_excel(_g3)
     try:
-        fig, ax = pf.prism_barplot(xl, xtick_labels=None)
+        fig, ax = pf.plotter_barplot(xl, xtick_labels=None)
         plt.close(fig)
     finally:
         if os.path.exists(xl): os.unlink(xl)
@@ -1264,32 +1264,32 @@ def _make_line_xl():
 def test_twin_y():
     """twin_y_series renders second axis without crash."""
     with _make_line_xl() as xl:
-        fig, ax = pf.prism_linegraph(xl, twin_y_series=["Series2"])
+        fig, ax = pf.plotter_linegraph(xl, twin_y_series=["Series2"])
         plt.close(fig)
 
 def test_twin_y_empty():
     """twin_y_series=[] is a no-op."""
     with _make_line_xl() as xl:
-        fig, ax = pf.prism_linegraph(xl, twin_y_series=[])
+        fig, ax = pf.plotter_linegraph(xl, twin_y_series=[])
         plt.close(fig)
 
 def test_twin_y_missing_series():
     """twin_y_series with nonexistent name doesn't crash."""
     with _make_line_xl() as xl:
-        fig, ax = pf.prism_linegraph(xl, twin_y_series=["Ghost"])
+        fig, ax = pf.plotter_linegraph(xl, twin_y_series=["Ghost"])
         plt.close(fig)
 
 def test_ref_vline_line():
     """ref_vline draws vertical line on line chart."""
     with _make_line_xl() as xl:
-        fig, ax = pf.prism_linegraph(xl, ref_vline=3.0, ref_vline_label="EC50")
+        fig, ax = pf.plotter_linegraph(xl, ref_vline=3.0, ref_vline_label="EC50")
         plt.close(fig)
 
 def test_ref_vline_scatter():
     """ref_vline works on scatter plot."""
     ys = rng_p.normal(5,1,5)
     with with_excel(lambda p: simple_xy_excel(_xs, ys, path=p)) as xl:
-        fig, ax = pf.prism_scatterplot(xl, ref_vline=2.5)
+        fig, ax = pf.plotter_scatterplot(xl, ref_vline=2.5)
         plt.close(fig)
 
 run("P19 twin_y_series", test_twin_y)

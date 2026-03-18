@@ -1,7 +1,7 @@
 """
 prism_results.py
 ================
-Results panel logic for Claude Prism — decoupled from the App class.
+Results panel logic for Claude Plotter — decoupled from the App class.
 
 The three public functions receive the ``app`` object (an App instance)
 as their first argument so they can read ``app._results_inner``,

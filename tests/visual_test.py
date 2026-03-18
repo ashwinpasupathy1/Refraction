@@ -15,7 +15,7 @@ import sys, os, tempfile, warnings, traceback
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "claude_prism_src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "claude_plotter_src"))
 os.environ.setdefault("MPLBACKEND", "Agg")
 
 import matplotlib
@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from PIL import Image
 
-import prism_functions as pf
+import plotter_functions as pf
 pf._ensure_imports()
 
 OUT_DIR = os.path.join(os.path.dirname(__file__), "visual_output")
@@ -139,28 +139,28 @@ print("\n── Bar Chart ──")
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_bar(p, {"Control": CTRL, "Drug A": DRUG, "Drug B": DRUGB})
 
-run_case("Bar default",         pf.prism_barplot, p, title="Bar – default")
-run_case("Bar + stats Tukey",   pf.prism_barplot, p, title="Bar + Tukey HSD",
+run_case("Bar default",         pf.plotter_barplot, p, title="Bar – default")
+run_case("Bar + stats Tukey",   pf.plotter_barplot, p, title="Bar + Tukey HSD",
          show_stats=True, stats_test="parametric", posthoc="Tukey HSD",
          show_p_values=True, show_effect_size=True)
-run_case("Bar + Dunnett",       pf.prism_barplot, p, title="Bar + Dunnett",
+run_case("Bar + Dunnett",       pf.plotter_barplot, p, title="Bar + Dunnett",
          show_stats=True, posthoc="Dunnett (vs control)", control="Control")
-run_case("Bar nonparametric",   pf.prism_barplot, p, title="Bar – KW + Dunn's",
+run_case("Bar nonparametric",   pf.plotter_barplot, p, title="Bar – KW + Dunn's",
          show_stats=True, stats_test="nonparametric")
-run_case("Bar horizontal",      pf.prism_barplot, p, title="Bar – horizontal",
+run_case("Bar horizontal",      pf.plotter_barplot, p, title="Bar – horizontal",
          horizontal=True)
-run_case("Bar log scale",       pf.prism_barplot, p, title="Bar – log Y",
+run_case("Bar log scale",       pf.plotter_barplot, p, title="Bar – log Y",
          yscale="log")
-run_case("Bar error=SD",        pf.prism_barplot, p, error="sd",
+run_case("Bar error=SD",        pf.plotter_barplot, p, error="sd",
          title="Bar – SD error bars")
-run_case("Bar open pts median", pf.prism_barplot, p, open_points=True,
+run_case("Bar open pts median", pf.plotter_barplot, p, open_points=True,
          show_median=True, title="Bar – open pts + median")
 os.unlink(p)
 
 # 2-group paired
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_bar(p, {"Before": BEFORE, "After": AFTER})
-run_case("Bar paired t-test",   pf.prism_barplot, p, title="Bar – paired",
+run_case("Bar paired t-test",   pf.plotter_barplot, p, title="Bar – paired",
          show_stats=True, stats_test="paired")
 os.unlink(p)
 
@@ -174,13 +174,13 @@ line_series = {
 }
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_line(p, X_VALS, line_series)
-run_case("Line default",        pf.prism_linegraph, p, title="Line – default",
+run_case("Line default",        pf.plotter_linegraph, p, title="Line – default",
          xlabel="Time (h)", ytitle="Response")
-run_case("Line log Y",          pf.prism_linegraph, p, title="Line – log Y",
+run_case("Line log Y",          pf.plotter_linegraph, p, title="Line – log Y",
          yscale="log")
-run_case("Line SD error",       pf.prism_linegraph, p, error="sd",
+run_case("Line SD error",       pf.plotter_linegraph, p, error="sd",
          title="Line – SD error bars")
-run_case("Line gridlines",      pf.prism_linegraph, p, gridlines=True,
+run_case("Line gridlines",      pf.plotter_linegraph, p, gridlines=True,
          title="Line – gridlines")
 os.unlink(p)
 
@@ -195,15 +195,15 @@ gb_data = {c: {s: rng.normal(5 + i * 3 + j * 2, 1.0, 8).tolist()
            for i, c in enumerate(cats)}
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_grouped(p, cats, subs, gb_data)
-run_case("Grouped Bar default", pf.prism_grouped_barplot, p,
+run_case("Grouped Bar default", pf.plotter_grouped_barplot, p,
          title="Grouped Bar – default")
-run_case("Grouped + stats",     pf.prism_grouped_barplot, p,
+run_case("Grouped + stats",     pf.plotter_grouped_barplot, p,
          title="Grouped Bar + pairwise stats",
          show_stats=True, show_p_values=True)
-run_case("Grouped ANOVA/grp",   pf.prism_grouped_barplot, p,
+run_case("Grouped ANOVA/grp",   pf.plotter_grouped_barplot, p,
          title="Grouped Bar + ANOVA per group",
          show_anova_per_group=True)
-run_case("Grouped log scale",   pf.prism_grouped_barplot, p,
+run_case("Grouped log scale",   pf.plotter_grouped_barplot, p,
          title="Grouped Bar – log Y", yscale="log")
 os.unlink(p)
 
@@ -213,14 +213,14 @@ os.unlink(p)
 print("\n── Box Plot ──")
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_bar(p, {"Control": CTRL, "Drug A": DRUG, "Drug B": DRUGB})
-run_case("Box default",         pf.prism_boxplot, p, title="Box – default")
-run_case("Box + Tukey",         pf.prism_boxplot, p, title="Box + Tukey HSD",
+run_case("Box default",         pf.plotter_boxplot, p, title="Box – default")
+run_case("Box + Tukey",         pf.plotter_boxplot, p, title="Box + Tukey HSD",
          show_stats=True, posthoc="Tukey HSD", show_p_values=True)
-run_case("Box nonparametric",   pf.prism_boxplot, p, title="Box – KW + Dunn's",
+run_case("Box nonparametric",   pf.plotter_boxplot, p, title="Box – KW + Dunn's",
          show_stats=True, stats_test="nonparametric")
-run_case("Box notch",           pf.prism_boxplot, p, title="Box – notched",
+run_case("Box notch",           pf.plotter_boxplot, p, title="Box – notched",
          notch=True)
-run_case("Box log Y",           pf.prism_boxplot, p, title="Box – log Y",
+run_case("Box log Y",           pf.plotter_boxplot, p, title="Box – log Y",
          yscale="log")
 os.unlink(p)
 
@@ -234,12 +234,12 @@ scatter_series = {
 }
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_line(p, X_VALS, scatter_series)
-run_case("Scatter regression",  pf.prism_scatterplot, p,
+run_case("Scatter regression",  pf.plotter_scatterplot, p,
          title="Scatter – regression + CI")
-run_case("Scatter Spearman",    pf.prism_scatterplot, p,
+run_case("Scatter Spearman",    pf.plotter_scatterplot, p,
          title="Scatter – Spearman ρ",
          correlation_type="spearman", show_regression=False)
-run_case("Scatter pred band",   pf.prism_scatterplot, p,
+run_case("Scatter pred band",   pf.plotter_scatterplot, p,
          title="Scatter – prediction band",
          show_prediction_band=True)
 os.unlink(p)
@@ -250,10 +250,10 @@ os.unlink(p)
 print("\n── Violin ──")
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_bar(p, {"Control": CTRL, "Drug A": DRUG, "Drug B": DRUGB})
-run_case("Violin default",      pf.prism_violin, p, title="Violin – default")
-run_case("Violin + Tukey",      pf.prism_violin, p, title="Violin + Tukey HSD",
+run_case("Violin default",      pf.plotter_violin, p, title="Violin – default")
+run_case("Violin + Tukey",      pf.plotter_violin, p, title="Violin + Tukey HSD",
          show_stats=True, posthoc="Tukey HSD", show_p_values=True)
-run_case("Violin open points",  pf.prism_violin, p, title="Violin – open pts",
+run_case("Violin open points",  pf.plotter_violin, p, title="Violin – open pts",
          open_points=True)
 os.unlink(p)
 
@@ -269,12 +269,12 @@ km_data = {
 }
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_km(p, km_data)
-run_case("KM default",          pf.prism_kaplan_meier, p,
+run_case("KM default",          pf.plotter_kaplan_meier, p,
          title="Kaplan-Meier – default")
-run_case("KM + log-rank",       pf.prism_kaplan_meier, p,
+run_case("KM + log-rank",       pf.plotter_kaplan_meier, p,
          title="KM – log-rank p-value",
          show_stats=True, show_p_values=True)
-run_case("KM at-risk table",    pf.prism_kaplan_meier, p,
+run_case("KM at-risk table",    pf.plotter_kaplan_meier, p,
          title="KM – at-risk table",
          show_at_risk=True)
 os.unlink(p)
@@ -287,13 +287,13 @@ hm_mat = rng.normal(0, 1, (8, 5))
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_heatmap(p, hm_mat, [f"Gene{i}" for i in range(8)],
               [f"S{i}" for i in range(5)])
-run_case("Heatmap default",     pf.prism_heatmap, p, title="Heatmap – default")
-run_case("Heatmap annotated",   pf.prism_heatmap, p, title="Heatmap – annotated",
+run_case("Heatmap default",     pf.plotter_heatmap, p, title="Heatmap – default")
+run_case("Heatmap annotated",   pf.plotter_heatmap, p, title="Heatmap – annotated",
          annotate=True)
-run_case("Heatmap clustered",   pf.prism_heatmap, p,
+run_case("Heatmap clustered",   pf.plotter_heatmap, p,
          title="Heatmap – row+col cluster",
          cluster_rows=True, cluster_cols=True)
-run_case("Heatmap RdBu_r",      pf.prism_heatmap, p, title="Heatmap – RdBu_r",
+run_case("Heatmap RdBu_r",      pf.plotter_heatmap, p, title="Heatmap – RdBu_r",
          color="RdBu_r", center=0)
 os.unlink(p)
 
@@ -309,12 +309,12 @@ twa_recs = [(f, g, v)
                  "Control_Male": 3, "Control_Female": 4}[f+"_"+g], 0.8, 8)]
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_two_way(p, twa_recs)
-run_case("TwoWay default",      pf.prism_two_way_anova, p,
+run_case("TwoWay default",      pf.plotter_two_way_anova, p,
          title="Two-Way ANOVA – default")
-run_case("TwoWay + stats",      pf.prism_two_way_anova, p,
+run_case("TwoWay + stats",      pf.plotter_two_way_anova, p,
          title="Two-Way ANOVA + posthoc",
          show_stats=True, show_posthoc=True, show_p_values=True)
-run_case("TwoWay effect size",  pf.prism_two_way_anova, p,
+run_case("TwoWay effect size",  pf.plotter_two_way_anova, p,
          title="Two-Way ANOVA + η²",
          show_stats=True, show_effect_size=True)
 os.unlink(p)
@@ -325,9 +325,9 @@ os.unlink(p)
 print("\n── Before/After ──")
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_bar(p, {"Before": BEFORE, "After": AFTER})
-run_case("Before/After default",   pf.prism_before_after, p,
+run_case("Before/After default",   pf.plotter_before_after, p,
          title="Before/After – default")
-run_case("Before/After + stats",   pf.prism_before_after, p,
+run_case("Before/After + stats",   pf.plotter_before_after, p,
          title="Before/After – paired t-test",
          show_stats=True, show_p_values=True)
 os.unlink(p)
@@ -336,7 +336,7 @@ os.unlink(p)
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_bar(p, {"Baseline": BEFORE, "Week 2": AFTER,
               "Week 4": AFTER + rng.normal(1, 0.5, 10)})
-run_case("Before/After 3-cond",    pf.prism_before_after, p,
+run_case("Before/After 3-cond",    pf.plotter_before_after, p,
          title="Before/After – 3 conditions")
 os.unlink(p)
 
@@ -347,12 +347,12 @@ print("\n── Histogram ──")
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_bar(p, {"Control": rng.normal(10, 2, 50),
               "Drug A":  rng.normal(14, 2.5, 50)})
-run_case("Histogram auto bins",    pf.prism_histogram, p,
+run_case("Histogram auto bins",    pf.plotter_histogram, p,
          title="Histogram – auto bins")
-run_case("Histogram density+norm", pf.prism_histogram, p,
+run_case("Histogram density+norm", pf.plotter_histogram, p,
          title="Histogram – density + normal curve",
          density=True, overlay_normal=True)
-run_case("Histogram 20 bins",      pf.prism_histogram, p,
+run_case("Histogram 20 bins",      pf.plotter_histogram, p,
          title="Histogram – 20 bins", bins=20)
 os.unlink(p)
 
@@ -362,12 +362,12 @@ os.unlink(p)
 print("\n── Subcolumn ──")
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_bar(p, {"Control": CTRL, "Drug A": DRUG, "Drug B": DRUGB})
-run_case("Subcolumn default",      pf.prism_subcolumn_scatter, p,
+run_case("Subcolumn default",      pf.plotter_subcolumn_scatter, p,
          title="Subcolumn – default")
-run_case("Subcolumn + Tukey",      pf.prism_subcolumn_scatter, p,
+run_case("Subcolumn + Tukey",      pf.plotter_subcolumn_scatter, p,
          title="Subcolumn + Tukey HSD",
          show_stats=True, posthoc="Tukey HSD", show_p_values=True)
-run_case("Subcolumn error=SD",     pf.prism_subcolumn_scatter, p,
+run_case("Subcolumn error=SD",     pf.plotter_subcolumn_scatter, p,
          title="Subcolumn – SD error bars", error="sd")
 os.unlink(p)
 
@@ -421,7 +421,7 @@ for model_name, (x_d, y_d) in model_data.items():
     write_cf(p, x_d, y_d)
     # Use enough of the model name to avoid filename collisions
     short = model_name.replace("(", "").replace(")", "").replace(" ", "_")[:28]
-    run_case(f"CurveFit {short}", pf.prism_curve_fit, p,
+    run_case(f"CurveFit {short}", pf.plotter_curve_fit, p,
              model_name=model_name, title=f"Curve Fit – {short}",
              show_ci_band=True)
     os.unlink(p)
@@ -429,7 +429,7 @@ for model_name, (x_d, y_d) in model_data.items():
 # Residuals panel
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_cf(p, CF_X, CF_Y)
-run_case("CurveFit residuals",  pf.prism_curve_fit, p,
+run_case("CurveFit residuals",  pf.plotter_curve_fit, p,
          model_name="4PL Sigmoidal (EC50/IC50)",
          show_residuals=True, title="4PL – residuals panel")
 os.unlink(p)
@@ -440,9 +440,9 @@ os.unlink(p)
 print("\n── Column Stats ──")
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_bar(p, {"Control": CTRL, "Drug A": DRUG, "Drug B": DRUGB})
-run_case("ColStats all on",     pf.prism_column_stats, p,
+run_case("ColStats all on",     pf.plotter_column_stats, p,
          title="Column Stats – all flags on")
-run_case("ColStats minimal",    pf.prism_column_stats, p,
+run_case("ColStats minimal",    pf.plotter_column_stats, p,
          title="Column Stats – minimal",
          show_normality=False, show_ci=False, show_cv=False)
 os.unlink(p)
@@ -453,9 +453,9 @@ os.unlink(p)
 print("\n── Contingency ──")
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_contingency(p, ["Drug", "Control"], ["Survived", "Died"], [[45, 5], [20, 30]])
-run_case("Contingency 2×2",     pf.prism_contingency, p,
+run_case("Contingency 2×2",     pf.plotter_contingency, p,
          title="Contingency – 2×2 Fisher exact")
-run_case("Contingency %+expect",pf.prism_contingency, p,
+run_case("Contingency %+expect",pf.plotter_contingency, p,
          title="Contingency – % + expected",
          show_percentages=True, show_expected=True)
 os.unlink(p)
@@ -464,7 +464,7 @@ with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_contingency(p, ["Young", "Middle", "Old"],
                   ["Recovered", "Not Recovered"],
                   [[45, 15], [30, 20], [20, 30]])
-run_case("Contingency 3×2",     pf.prism_contingency, p,
+run_case("Contingency 3×2",     pf.plotter_contingency, p,
          title="Contingency – 3×2 chi-square")
 os.unlink(p)
 
@@ -474,15 +474,15 @@ os.unlink(p)
 print("\n── Repeated Measures ──")
 with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f: p = f.name
 write_bar(p, {"T0": T0, "T1": T1, "T2": T2, "T3": T3})
-run_case("RM default",          pf.prism_repeated_measures, p,
+run_case("RM default",          pf.plotter_repeated_measures, p,
          title="Repeated Measures – default")
-run_case("RM parametric stats", pf.prism_repeated_measures, p,
+run_case("RM parametric stats", pf.plotter_repeated_measures, p,
          title="RM – RM-ANOVA / paired t-tests",
          show_stats=True, test_type="parametric", show_p_values=True)
-run_case("RM nonparametric",    pf.prism_repeated_measures, p,
+run_case("RM nonparametric",    pf.plotter_repeated_measures, p,
          title="RM – Friedman + Dunn's",
          show_stats=True, test_type="nonparametric")
-run_case("RM no subject lines", pf.prism_repeated_measures, p,
+run_case("RM no subject lines", pf.plotter_repeated_measures, p,
          title="RM – no subject lines",
          show_subject_lines=False)
 os.unlink(p)

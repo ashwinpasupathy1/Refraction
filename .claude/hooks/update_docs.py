@@ -2,7 +2,7 @@
 """
 update_docs.py
 ==============
-SessionStart hook for Claude Prism.
+SessionStart hook for Claude Plotter.
 Runs once at the start of each new session to refresh README.md and CLAUDE.md
 with current file line counts and registered chart type counts.
 
@@ -17,10 +17,10 @@ ROOT = Path(__file__).parent.parent.parent  # .claude/hooks/ -> project root
 
 # ── Source files tracked in the File Map ─────────────────────────────────────
 SOURCE_FILES = [
-    "prism_barplot_app.py",
+    "plotter_barplot_app.py",
     "prism_registry.py",
-    "prism_functions.py",
-    "prism_canvas_renderer.py",
+    "plotter_functions.py",
+    "plotter_canvas_renderer.py",
     "prism_widgets.py",
     "prism_validators.py",
     "prism_results.py",
@@ -55,8 +55,8 @@ def test_count(filename: str) -> int:
 
 
 def registered_chart_count() -> int:
-    # Registry lives in prism_registry.py; fall back to prism_barplot_app.py
-    for candidate in ("prism_registry.py", "prism_barplot_app.py"):
+    # Registry lives in prism_registry.py; fall back to plotter_barplot_app.py
+    for candidate in ("prism_registry.py", "plotter_barplot_app.py"):
         path = ROOT / candidate
         if not path.exists():
             continue
@@ -154,7 +154,7 @@ def update_claude_md(counts: dict[str, int]) -> bool:
 
     for fname, count in counts.items():
         # Match:  filename    <digits with optional comma>  lines   <description>
-        # e.g.:   prism_barplot_app.py      7,834 lines   App class...
+        # e.g.:   plotter_barplot_app.py      7,834 lines   App class...
         # Use basename only (some files are stored as tests/foo.py)
         basename = Path(fname).name
         pattern = (
@@ -182,10 +182,10 @@ def update_readme(counts: dict[str, int], n_charts: int) -> bool:
 
     # Update approximate line counts in Architecture section
     readme_bases = {
-        "prism_barplot_app.py":     200,
+        "plotter_barplot_app.py":     200,
         "prism_registry.py":        50,
-        "prism_functions.py":       200,
-        "prism_canvas_renderer.py": 100,
+        "plotter_functions.py":       200,
+        "plotter_canvas_renderer.py": 100,
         "prism_widgets.py":         50,
         "prism_validators.py":      10,
         "prism_results.py":         10,
@@ -248,7 +248,7 @@ def main():
     readme_updated = readme_updated or readme_tests_updated
 
     # Output goes into Claude's session context
-    print("=== Claude Prism — session context ===")
+    print("=== Claude Plotter — session context ===")
     print(f"Charts registered in sidebar: {n_charts}")
     print(f"Test registrations (run() calls): {total_tests}")
     print("  " + "  ".join(f"{k}={v}" for k, v in suite_counts.items()))

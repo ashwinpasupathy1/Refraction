@@ -1,7 +1,7 @@
 """
 prism_registry.py
 =================
-Chart-type registry for Claude Prism.
+Chart-type registry for Claude Plotter.
 
 Contains:
 - PlotTypeConfig  — dataclass describing one chart type's UI contract
@@ -9,11 +9,11 @@ Contains:
 - Shared UI maps  — ERROR_TYPE_MAP, STATS_TEST_MAP, MARKER_STYLE_MAP
 - PAD             — global UI padding constant
 
-Importing this module from prism_barplot_app.py keeps the main app file
+Importing this module from plotter_barplot_app.py keeps the main app file
 focused on UI logic rather than data definitions.
 
 To add a new chart type, append a PlotTypeConfig entry to _REGISTRY_SPECS.
-No other file needs to change (except prism_functions.py for the function,
+No other file needs to change (except plotter_functions.py for the function,
 prism_validators.py for the validator, and test_comprehensive.py for tests).
 """
 
@@ -67,7 +67,7 @@ PAD = 16
 class PlotTypeConfig:
     key:         str            # internal key e.g. "bar"
     label:       str            # tab label e.g. "📊 Bar"
-    fn_name:     str            # name of function in prism_functions module
+    fn_name:     str            # name of function in plotter_functions module
     tab_mode:    str            # passed to _tab_data / _tab_axes
     stats_tab:   str            # "standard" | "scatter" | "kaplan_meier" | etc.
     validate:    str            # name of validation method e.g. "_validate_bar"
@@ -114,7 +114,7 @@ class PlotTypeConfig:
 
 _REGISTRY_SPECS = [
     PlotTypeConfig(
-        key="bar", label="Bar Chart", fn_name="prism_barplot",
+        key="bar", label="Bar Chart", fn_name="plotter_barplot",
         tab_mode="bar", stats_tab="standard",
         validate="_validate_bar",
         has_points=True, has_error_bars=True, has_legend=False, has_stats=True, x_continuous=False,
@@ -125,7 +125,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="line", label="Line Graph", fn_name="prism_linegraph",
+        key="line", label="Line Graph", fn_name="plotter_linegraph",
         tab_mode="line", stats_tab="standard",
         validate="_validate_line",
         has_points=True, has_error_bars=True, has_legend=True, has_stats=True, x_continuous=True,
@@ -139,7 +139,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="grouped_bar", label="Grouped Bar", fn_name="prism_grouped_barplot",
+        key="grouped_bar", label="Grouped Bar", fn_name="plotter_grouped_barplot",
         tab_mode="grouped_bar", stats_tab="grouped_bar",
         validate="_validate_grouped_bar",
         has_points=True, has_error_bars=True, has_legend=True, has_stats=True, x_continuous=False,
@@ -149,14 +149,14 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="box", label="Box Plot", fn_name="prism_boxplot",
+        key="box", label="Box Plot", fn_name="plotter_boxplot",
         tab_mode="box", stats_tab="standard",
         validate="_validate_bar",
         has_points=True, has_error_bars=False, has_legend=False, has_stats=True, x_continuous=False,
         axes_has_bar_width=False, axes_has_line_opts=False,
     ),
     PlotTypeConfig(
-        key="scatter", label="Scatter Plot", fn_name="prism_scatterplot",
+        key="scatter", label="Scatter Plot", fn_name="plotter_scatterplot",
         tab_mode="scatter", stats_tab="scatter",
         validate="_validate_line",
         has_points=True, has_error_bars=False, has_legend=True, has_stats=True, x_continuous=True,
@@ -175,14 +175,14 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="violin", label="Violin Plot", fn_name="prism_violin",
+        key="violin", label="Violin Plot", fn_name="plotter_violin",
         tab_mode="box", stats_tab="standard",
         validate="_validate_bar",
         has_points=True, has_error_bars=False, has_legend=False, has_stats=True, x_continuous=False,
         axes_has_bar_width=False, axes_has_line_opts=False,
     ),
     PlotTypeConfig(
-        key="kaplan_meier", label="Survival Curve", fn_name="prism_kaplan_meier",
+        key="kaplan_meier", label="Survival Curve", fn_name="plotter_kaplan_meier",
         tab_mode="kaplan_meier", stats_tab="kaplan_meier",
         validate="_validate_kaplan_meier",
         has_points=False, has_error_bars=False, has_legend=True, has_stats=False, x_continuous=True,
@@ -194,7 +194,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="heatmap", label="Heatmap", fn_name="prism_heatmap",
+        key="heatmap", label="Heatmap", fn_name="plotter_heatmap",
         tab_mode="heatmap", stats_tab="heatmap",
         validate="_validate_heatmap",
         has_points=False, has_error_bars=False, has_legend=False, has_stats=False, x_continuous=False,
@@ -210,7 +210,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="two_way_anova", label="Two-Way ANOVA", fn_name="prism_two_way_anova",
+        key="two_way_anova", label="Two-Way ANOVA", fn_name="plotter_two_way_anova",
         tab_mode="two_way_anova", stats_tab="two_way_anova",
         validate="_validate_two_way_anova",
         has_points=False, has_error_bars=True, has_legend=False, has_stats=True, x_continuous=False,
@@ -221,7 +221,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="before_after", label="Before / After", fn_name="prism_before_after",
+        key="before_after", label="Before / After", fn_name="plotter_before_after",
         tab_mode="before_after", stats_tab="before_after",
         validate="_validate_bar",
         has_points=True, has_error_bars=True, has_legend=False, has_stats=True, x_continuous=False,
@@ -231,7 +231,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="histogram", label="Histogram", fn_name="prism_histogram",
+        key="histogram", label="Histogram", fn_name="plotter_histogram",
         tab_mode="histogram", stats_tab="histogram",
         validate="_validate_bar",
         has_points=False, has_error_bars=False, has_legend=True, has_stats=False, x_continuous=True,
@@ -243,7 +243,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="subcolumn_scatter", label="Subcolumn", fn_name="prism_subcolumn_scatter",
+        key="subcolumn_scatter", label="Subcolumn", fn_name="plotter_subcolumn_scatter",
         tab_mode="subcolumn_scatter", stats_tab="subcolumn_scatter",
         validate="_validate_bar",
         has_points=True, has_error_bars=True, has_legend=False, has_stats=True, x_continuous=False,
@@ -254,7 +254,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="curve_fit", label="Curve Fit", fn_name="prism_curve_fit",
+        key="curve_fit", label="Curve Fit", fn_name="plotter_curve_fit",
         tab_mode="scatter", stats_tab="curve_fit",
         validate="_validate_line",
         has_points=True, has_error_bars=False, has_legend=True, has_stats=False, x_continuous=True,
@@ -270,7 +270,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="column_stats", label="Col Statistics", fn_name="prism_column_stats",
+        key="column_stats", label="Col Statistics", fn_name="plotter_column_stats",
         tab_mode="bar", stats_tab="column_stats",
         validate="_validate_bar",
         has_points=False, has_error_bars=False, has_legend=False, has_stats=False, x_continuous=False,
@@ -282,7 +282,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="contingency", label="Contingency", fn_name="prism_contingency",
+        key="contingency", label="Contingency", fn_name="plotter_contingency",
         tab_mode="bar", stats_tab="contingency",
         validate="_validate_contingency",
         has_points=False, has_error_bars=False, has_legend=True, has_stats=False, x_continuous=False,
@@ -293,7 +293,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="repeated_measures", label="Repeated Meas.", fn_name="prism_repeated_measures",
+        key="repeated_measures", label="Repeated Meas.", fn_name="plotter_repeated_measures",
         tab_mode="before_after", stats_tab="repeated_measures",
         validate="_validate_bar",
         has_points=True, has_error_bars=True, has_legend=False, has_stats=True, x_continuous=False,
@@ -310,7 +310,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="chi_square_gof", label="Chi-Sq GoF", fn_name="prism_chi_square_gof",
+        key="chi_square_gof", label="Chi-Sq GoF", fn_name="plotter_chi_square_gof",
         tab_mode="bar", stats_tab="chi_square_gof",
         validate="_validate_chi_square_gof",
         has_points=False, has_error_bars=False, has_legend=False, has_stats=False, x_continuous=False,
@@ -320,7 +320,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="stacked_bar", label="Stacked Bar", fn_name="prism_stacked_bar",
+        key="stacked_bar", label="Stacked Bar", fn_name="plotter_stacked_bar",
         tab_mode="grouped_bar", stats_tab="stacked_bar",
         validate="_validate_grouped_bar",
         has_points=False, has_error_bars=False, has_legend=True, has_stats=False, x_continuous=False,
@@ -335,7 +335,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="bubble", label="Bubble Chart", fn_name="prism_bubble",
+        key="bubble", label="Bubble Chart", fn_name="plotter_bubble",
         tab_mode="scatter", stats_tab="bubble",
         validate="_validate_line",
         has_points=True, has_error_bars=False, has_legend=True, has_stats=False, x_continuous=True,
@@ -347,7 +347,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="dot_plot", label="Dot Plot", fn_name="prism_dot_plot",
+        key="dot_plot", label="Dot Plot", fn_name="plotter_dot_plot",
         tab_mode="bar", stats_tab="dot_plot",
         validate="_validate_bar",
         has_points=True, has_error_bars=False, has_legend=False, has_stats=True, x_continuous=False,
@@ -358,7 +358,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="bland_altman", label="Bland-Altman", fn_name="prism_bland_altman",
+        key="bland_altman", label="Bland-Altman", fn_name="plotter_bland_altman",
         tab_mode="bar", stats_tab="bland_altman",
         validate="_validate_bland_altman",
         has_points=True, has_error_bars=False, has_legend=False, has_stats=False, x_continuous=True,
@@ -368,7 +368,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="forest_plot", label="Forest Plot", fn_name="prism_forest_plot",
+        key="forest_plot", label="Forest Plot", fn_name="plotter_forest_plot",
         tab_mode="bar", stats_tab="forest_plot",
         validate="_validate_forest_plot",
         has_points=True, has_error_bars=False, has_legend=False, has_stats=False, x_continuous=False,
@@ -380,7 +380,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="area_chart", label="Area Chart", fn_name="prism_area_chart",
+        key="area_chart", label="Area Chart", fn_name="plotter_area_chart",
         tab_mode="bar", stats_tab="standard",
         validate="_validate_bar",
         has_points=False, has_error_bars=True, has_legend=True, has_stats=False, x_continuous=False,
@@ -391,7 +391,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="raincloud", label="Raincloud", fn_name="prism_raincloud",
+        key="raincloud", label="Raincloud", fn_name="plotter_raincloud",
         tab_mode="bar", stats_tab="standard",
         validate="_validate_bar",
         has_points=True, has_error_bars=False, has_legend=False, has_stats=True, x_continuous=False,
@@ -401,7 +401,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="qq_plot", label="Q-Q Plot", fn_name="prism_qq_plot",
+        key="qq_plot", label="Q-Q Plot", fn_name="plotter_qq_plot",
         tab_mode="bar", stats_tab="standard",
         validate="_validate_bar",
         has_points=True, has_error_bars=False, has_legend=True, has_stats=False, x_continuous=False,
@@ -412,7 +412,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="lollipop", label="Lollipop", fn_name="prism_lollipop",
+        key="lollipop", label="Lollipop", fn_name="plotter_lollipop",
         tab_mode="bar", stats_tab="standard",
         validate="_validate_bar",
         has_points=False, has_error_bars=True, has_legend=False, has_stats=True, x_continuous=False,
@@ -423,7 +423,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="waterfall", label="Waterfall", fn_name="prism_waterfall",
+        key="waterfall", label="Waterfall", fn_name="plotter_waterfall",
         tab_mode="bar", stats_tab="standard",
         validate="_validate_bar",
         has_points=False, has_error_bars=False, has_legend=False, has_stats=False, x_continuous=False,
@@ -434,7 +434,7 @@ _REGISTRY_SPECS = [
         }),
     ),
     PlotTypeConfig(
-        key="pyramid", label="Pyramid", fn_name="prism_pyramid",
+        key="pyramid", label="Pyramid", fn_name="plotter_pyramid",
         tab_mode="bar", stats_tab="standard",
         validate="_validate_pyramid",
         has_points=False, has_error_bars=False, has_legend=True, has_stats=False, x_continuous=False,
@@ -442,7 +442,7 @@ _REGISTRY_SPECS = [
         extra_collect=None,
     ),
     PlotTypeConfig(
-        key="ecdf", label="ECDF", fn_name="prism_ecdf",
+        key="ecdf", label="ECDF", fn_name="plotter_ecdf",
         tab_mode="bar", stats_tab="standard",
         validate="_validate_bar",
         has_points=True, has_error_bars=False, has_legend=True, has_stats=False, x_continuous=False,

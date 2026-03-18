@@ -1,7 +1,7 @@
 """
 prism_tabs.py
 =============
-Tab system for Claude Prism.
+Tab system for Claude Plotter.
 
 Three classes:
   TabState    — dataclass holding per-tab identity and form state
@@ -69,7 +69,7 @@ class TabManager:
     def new_tab(self, chart_type: str = "bar") -> TabState:
         """Create a new tab, add it to the bar, switch to it."""
         try:
-            from prism_registry import _REGISTRY_SPECS as _specs
+            from plotter_registry import _REGISTRY_SPECS as _specs
         except ImportError:
             _specs = []
         idx = next((i for i, s in enumerate(_specs) if s.key == chart_type), 0)

@@ -1,10 +1,10 @@
 """
 run_all.py
 ==========
-Unified test runner for all Claude Prism test suites.
+Unified test runner for all Claude Plotter test suites.
 
 Runs all three suites in a single Python process sharing the already-loaded
-prism_functions module (saves ~3–5 s vs running each file separately).
+plotter_functions module (saves ~3–5 s vs running each file separately).
 
 Usage:
     python3 run_all.py                  # run all suites
@@ -18,7 +18,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
 sys.path.insert(0, os.path.join(_HERE, "tests"))
 
-import prism_test_harness as _h   # pre-loads pf + matplotlib once
+import plotter_test_harness as _h   # pre-loads pf + matplotlib once
 
 LINE = "━" * 64
 
@@ -64,7 +64,7 @@ def run_suite(module_name: str, label: str) -> tuple[int, int, list]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Claude Prism unified test runner")
+    parser = argparse.ArgumentParser(description="Claude Plotter unified test runner")
     parser.add_argument("suites", nargs="*",
                         help="Suite name(s): comprehensive / p1p2p3 / control / "
                              "canvas_renderer / modular / stats_verify "

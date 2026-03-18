@@ -19,8 +19,8 @@ import sys, os, warnings
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import prism_test_harness as _h
-from prism_test_harness import (
+import plotter_test_harness as _h
+from plotter_test_harness import (
     pf, plt, ok, fail, run, section, summarise, close_fig,
     bar_excel, line_excel, simple_xy_excel, grouped_excel,
     km_excel, heatmap_excel, two_way_excel, contingency_excel,
@@ -307,7 +307,7 @@ def test_bar_chart_show_stats_vs_control():
               "High":    rng.normal(10, 1, 12)}
     p = bar_excel(groups)
     try:
-        fig, ax = pf.prism_barplot(p, show_stats=True,
+        fig, ax = pf.plotter_barplot(p, show_stats=True,
                                     stats_test="parametric",
                                     posthoc="Tukey HSD",
                                     control="Vehicle",
@@ -330,7 +330,7 @@ def test_bar_chart_stale_control_in_render():
     try:
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
-            fig, ax = pf.prism_barplot(p, show_stats=True,
+            fig, ax = pf.plotter_barplot(p, show_stats=True,
                                         stats_test="parametric",
                                         posthoc="Tukey HSD",
                                         control="OldGroupName")
@@ -364,7 +364,7 @@ def test_dunnett_with_control_on_bar_chart():
               "High":    rng.normal(10, 1, 12)}
     p = bar_excel(groups)
     try:
-        fig, ax = pf.prism_barplot(p, show_stats=True,
+        fig, ax = pf.plotter_barplot(p, show_stats=True,
                                     stats_test="parametric",
                                     posthoc="Dunnett (vs control)",
                                     control="Vehicle")
@@ -382,7 +382,7 @@ def test_nonparametric_vs_control_render():
               "TrtB": rng.normal(11, 1, 10)}
     p = bar_excel(groups)
     try:
-        fig, ax = pf.prism_barplot(p, show_stats=True,
+        fig, ax = pf.plotter_barplot(p, show_stats=True,
                                     stats_test="nonparametric",
                                     control="Ctrl")
         close_fig(fig)
