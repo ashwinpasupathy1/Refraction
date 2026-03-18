@@ -1,4 +1,19 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(ls *)",
+      "Bash(wc *)",
+      "Bash(python3 run_all.py*)",
+      "Bash(python3 -c *)",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "Agent"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
