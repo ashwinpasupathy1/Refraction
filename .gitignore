@@ -16,3 +16,6 @@ venv/
 # Temporary / test output files
 *.tmp
 *.log
+
+# Project dump (generated)
+project_dump.txt
