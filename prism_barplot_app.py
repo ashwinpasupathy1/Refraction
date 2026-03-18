@@ -6,17 +6,17 @@ Claude Prism -- main application window (macOS, tabbed ttk layout).
 
 Module structure
 ----------------
-prism_barplot_app.py     -- this file; App class + PLOT_REGISTRY + icon helpers
-prism_widgets.py         -- design-system tokens, PButton/PEntry/PCheckbox etc.
-prism_validators.py      -- standalone spreadsheet validation functions
-prism_results.py         -- results-panel population, export, and copy helpers
-prism_functions.py       -- matplotlib plot functions (22 chart types)
-prism_canvas_renderer.py -- tk.Canvas bar/grouped-bar renderer (live rescale)
+prism_barplot_app.py  -- this file; App class + PLOT_REGISTRY + icon helpers
+prism_widgets.py      -- design-system tokens, PButton/PEntry/PCheckbox etc.
+prism_validators.py   -- standalone spreadsheet validation functions
+prism_results.py      -- results-panel population, export, and copy helpers
+prism_functions.py    -- matplotlib plot functions (29 chart types)
+prism_tabs.py         -- TabState, TabManager, TabBar (plot tab system)
 
 The App class imports from all four companion modules so each can be
 developed, tested, and documented independently.
 """
-import collections, json, math, os, threading, traceback
+import collections, json, math, os, threading, traceback, uuid
 
 _pd_module = None
 def _pd():
@@ -264,6 +264,7 @@ from prism_registry import (
     PlotTypeConfig, _REGISTRY_SPECS,
     ERROR_TYPE_MAP, STATS_TEST_MAP, MARKER_STYLE_MAP, PAD,
 )
+from prism_tabs import TabState, TabManager, TabBar
 
 PLOT_REGISTRY: list = []  # populated after App class definition so fn_name can be resolved
 
@@ -1432,8 +1433,8 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         self._kw_history      = collections.deque(maxlen=10)  # undo stack
         self._results_tsv_data = ""
         self._popup_count = 0   # number of open popup dialogs
-        self._bar_renderer        = None   # CanvasRenderer instance (bar canvas mode)
-        self._canvas_mode         = True   # True = use tk.Canvas for bar charts
+        self._tab_manager:         TabManager | None = None   # set in _build_right_pane
+        self._switching_tabs       = False   # True while TabManager.switch_to restores vars
         self._preview_after_id    = None   # pending after() id for live preview debounce
         self._live_preview_enabled = True  # can be toggled by user preference
         ttk.Style().theme_use("aqua")
@@ -1572,8 +1573,8 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         if hasattr(self, "_xl_lo"):
             self._tog_xlim()
 
-    def _reset_tab_state(self):
-        """Called after a chart-type tab switch.
+    def _reset_chart_type_state(self):
+        """Called after a chart-type change (or new tab).
         Resets all UI variables to factory defaults, clears the cached spreadsheet,
         and locks the form until the user selects a new file for this chart type."""
         # Reset every UI variable to its factory default first
@@ -1597,6 +1598,32 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                      "_zoom_out_btn", "_export_btn", "_copy_svg_btn"):
             if hasattr(self, attr):
                 getattr(self, attr).config(state="disabled")
+
+    def _sb_select_silent(self, idx: int) -> None:
+        """Update sidebar highlight and form pane without triggering a chart-type reset.
+
+        Used by TabManager.switch_to so that switching tabs does not wipe the
+        restored form state.
+        """
+        if hasattr(self, "_sb_select"):
+            self._sb_select(idx)
+        if hasattr(self, "_sb_show_pane"):
+            self._sb_show_pane(idx)
+        # Explicitly does NOT call _on_chart_type_change / _reset_chart_type_state
+
+    def _sync_active_tab_label(self) -> None:
+        """Keep the active tab's label in sync with the chart title field."""
+        if getattr(self, "_switching_tabs", False):
+            return
+        if self._tab_manager is None:
+            return
+        tab = self._tab_manager.active
+        if tab is None:
+            return
+        raw   = self._vars["title"].get().strip()
+        label = raw if raw else "Untitled"
+        tab.label = label
+        self._tab_manager.update_label(tab.tab_id, label)
 
     def _lock_form(self):
         self._set_form_state("disabled")
@@ -1922,17 +1949,6 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                                     state="disabled", width=2)
         self._zoom_in_btn.pack(side="right", padx=(4, 0))
 
-        # Canvas-mode toggle — shows 🎨 when active (tk.Canvas renderer for bars)
-        self._canvas_mode_btn = PButton(
-            bot, text="🎨", style="ghost", width=2,
-            command=self._toggle_canvas_mode,
-        )
-        self._canvas_mode_btn.pack(side="right", padx=(2, 0))
-        _create_tooltip(self._canvas_mode_btn,
-                        "Canvas mode: click bars to recolor live\n"
-                        "(bar charts only — export still uses matplotlib)")
-        self._canvas_mode_btn.config(relief="sunken")   # starts active
-
         self._run_btn = PButton(bot, text="Generate Plot", style="primary", command=self._run)
         self._run_btn.pack(side="right", padx=(6, 0))
         _create_tooltip(self._run_btn, "Generate Plot  (⌘R)")
@@ -2170,13 +2186,21 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         _show_pane(0)
         _sb_select(0)
 
-        def _on_tab_change(e=None):
+        # Expose closures so _sb_select_silent can call them directly
+        self._sb_select    = _sb_select
+        self._sb_show_pane = _show_pane
+
+        def _on_chart_type_change(e=None, from_tab_switch=False):
             idx = _current_idx[0]
             key = _tab_map.get(idx, "bar")
             self._plot_type.set(key)
             if key in self._all_tabs_map:
                 self._build_tab_content(key)
-            self.after(0, self._reset_tab_state)
+            if not from_tab_switch:
+                self.after(0, self._reset_chart_type_state)
+
+        # Keep backward-compat alias used in a few other places
+        _on_tab_change = _on_chart_type_change
 
         _pane_cache = {}
         def _invalidate_pane_cache(e=None):
@@ -2385,9 +2409,19 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         _build_tab_content("bar")
 
     def _build_right_pane(self, paned):
-        """Build the scrollable plot canvas on the right side of the split."""
+        """Build the tab bar and scrollable plot canvas on the right side of the split."""
         self._right_pane = right_outer = ttk.Frame(paned)
         paned.add(right_outer, minsize=300)
+
+        # ── Tab bar ───────────────────────────────────────────────────────────
+        self._tab_bar_widget = TabBar(
+            right_outer,
+            on_select=lambda tab_id: self._tab_manager.switch_to(tab_id),
+            on_close=lambda tab_id: self._tab_manager.close_tab(tab_id),
+            on_new=lambda: self._tab_manager.new_tab("bar"),
+            on_reorder=lambda f, t: self._tab_manager.reorder(f, t),
+        )
+        self._tab_bar_widget.pack(fill="x", side="top")
 
         # ── Results panel  -  pinned at the bottom, hidden until first run ──────
         self._results_visible = False
@@ -2449,13 +2483,9 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         right_vsb.config(command=self._plot_canvas.yview)
         right_hsb.config(command=self._plot_canvas.xview)
 
-        self._plot_frame    = ttk.Frame(self._plot_canvas)
-        self._plot_frame_id = self._plot_canvas.create_window(
-            (0, 0), window=self._plot_frame, anchor="nw")
-        self._plot_frame.bind("<Configure>", lambda e:
-            self._plot_canvas.configure(scrollregion=self._plot_canvas.bbox("all")))
-        self._canvas_widget = None
-        self._fig           = None
+        self._plot_frame    = None   # points to active tab's plot_frame; set by TabManager
+        self._canvas_widget = None   # FigureCanvasTkAgg; updated on tab switch
+        self._fig           = None   # matplotlib Figure; updated on tab switch
         self._zoom_level    = 1.0
 
         self._empty_state_frame = ttk.Frame(self._plot_canvas)
@@ -2478,6 +2508,11 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                   text="Browse for an Excel file on the left,\nthen click Generate Plot",
                   font=("Helvetica Neue", 13), foreground="#bbbbbb",
                   justify="center").pack(pady=(6, 0))
+
+        # ── Tab manager ───────────────────────────────────────────────────────
+        # Created after _plot_canvas exists; opens with one bar-chart tab.
+        self._tab_manager = TabManager(self, self._tab_bar_widget, self._plot_canvas)
+        self._tab_manager.new_tab("bar")
 
     # ── Tab builders ──────────────────────────────────────────────────────────
 
@@ -6441,11 +6476,23 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         import copy
         self._kw_history.append(copy.deepcopy(kw))
         self._undo_btn.config(state="normal")
+
+        # Tag this render job to the active tab for thread safety
+        tab    = self._tab_manager.active if self._tab_manager else None
+        job_id = uuid.uuid4().hex
+        if tab is not None:
+            tab.render_job_id = job_id
+
         self._running = True
         self._run_btn.config(state="disabled")
         self._set_status("Generating plot...")
         self._start_spinner()
-        threading.Thread(target=self._do_run, args=(kw,), daemon=True).start()
+        tab_id = tab.tab_id if tab is not None else None
+        threading.Thread(
+            target=self._do_run,
+            args=(kw, tab_id, job_id),
+            daemon=True,
+        ).start()
 
     def _undo(self):
         """Re-run the previous plot configuration (⌘Z)."""
@@ -6461,7 +6508,16 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         self._start_spinner()
         if len(self._kw_history) < 2:
             self._undo_btn.config(state="disabled")
-        threading.Thread(target=self._do_run, args=(copy.deepcopy(kw),), daemon=True).start()
+        tab    = self._tab_manager.active if self._tab_manager else None
+        job_id = uuid.uuid4().hex
+        if tab is not None:
+            tab.render_job_id = job_id
+        tab_id = tab.tab_id if tab is not None else None
+        threading.Thread(
+            target=self._do_run,
+            args=(copy.deepcopy(kw), tab_id, job_id),
+            daemon=True,
+        ).start()
 
     def _get_var(self, key, default=None):
         """Safely get a tkvar value, returning default if not present."""
@@ -6761,7 +6817,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         except Exception:
             return None
 
-    def _do_run(self, kw):
+    def _do_run(self, kw, tab_id=None, job_id=None):
         try:
             pd = _pd()  # cached  -  no overhead after first call
             self._plt.close("all")
@@ -6851,8 +6907,9 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             _pt = pt
             _kw = kw
             import copy as _copy
-            _kw_snap = _copy.deepcopy(kw)   # freeze for canvas-mode scene build
-            self.after(0, lambda: self._embed_plot(fig, groups, kw=_kw_snap))
+            _kw_snap = _copy.deepcopy(kw)
+            self.after(0, lambda: self._embed_plot(
+                fig, groups, kw=_kw_snap, tab_id=tab_id, job_id=job_id))
             # Re-enabled: populate results panel after plot embeds
             self.after(80, lambda: self._populate_results(_ep, _sh, _pt, _kw_snap))
             pass
@@ -6863,26 +6920,38 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             self.after(0, lambda: messagebox.showerror("Runtime error", err))
             self.after(0, self._reset_btn)
 
-    def _embed_plot(self, fig, groups=None, kw=None):
+    def _embed_plot(self, fig, groups=None, kw=None, tab_id=None, job_id=None):
         """
-        Display *fig* in the right pane.
-
-        For bar charts when canvas-mode is active the tk.Canvas CanvasRenderer
-        is used instead of FigureCanvasTkAgg.  The matplotlib *fig* is always
-        retained in self._fig so that export (PNG / SVG / …) still works.
+        Display *fig* in the right pane, routed to the correct tab.
 
         Parameters
         ----------
         fig    : matplotlib Figure
         groups : list of group names (for control-group dropdown)
-        kw     : the full plot kwargs dict — needed by canvas-mode to rebuild
-                 the BarScene without re-reading matplotlib internals.
+        kw     : full plot kwargs dict (used for pick-event recoloring)
+        tab_id : tab this render belongs to (thread-safety guard)
+        job_id : render job id (superseded-job guard)
         """
         try:
             from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+            # ── Validate: discard stale or orphaned renders ───────────────────
+            if self._tab_manager is not None and tab_id is not None:
+                tab = self._tab_manager.get_tab(tab_id)
+                if tab is None or tab.render_job_id != job_id:
+                    import matplotlib.pyplot as _plt
+                    _plt.close(fig)
+                    return
+                target_frame = tab.plot_frame
+            else:
+                # Fallback if tabs not yet initialised (should not happen in practice)
+                target_frame = self._plot_frame
+                tab = None
+
             # Always keep the mpl figure for export
             self._fig = fig
+            if tab is not None:
+                tab.fig = fig
 
             # Hide the empty state overlay
             try:
@@ -6891,35 +6960,57 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             except Exception:
                 pass
 
-            # ── Canvas-mode branch (bar + grouped_bar) ───────────────────────
-            _used_canvas = False
-            _pt = self._plot_type.get()
-            if self._canvas_mode and kw is not None and _pt in ("bar", "grouped_bar"):
-                _used_canvas = self._try_canvas_embed(fig, kw)
+            # ── Render via FigureCanvasTkAgg ──────────────────────────────────
+            for child in target_frame.winfo_children():
+                child.destroy()
+            self._canvas_widget = None
+            self._zoom_level    = 1.0
 
-            # ── Fallback: matplotlib Agg via FigureCanvasTkAgg ───────────────
-            if not _used_canvas:
-                for child in self._plot_frame.winfo_children():
-                    child.destroy()
-                self._bar_renderer  = None
-                self._canvas_widget = None
-                self._zoom_level    = 1.0
-
-                canvas = FigureCanvasTkAgg(fig, master=self._plot_frame)
+            canvas = FigureCanvasTkAgg(fig, master=target_frame)
+            canvas.draw()
+            # Re-run tight_layout now that the figure is attached to a real
+            # renderer so tick labels, titles, and axis labels are never clipped.
+            try:
+                fig.tight_layout(pad=1.2)
                 canvas.draw()
-                # Re-run tight_layout now that the figure is attached to a real
-                # renderer so tick labels, titles, and axis labels are never clipped.
-                try:
-                    fig.tight_layout(pad=1.2)
-                    canvas.draw()
-                except Exception:
-                    pass
-                canvas.get_tk_widget().pack(padx=8, pady=(2, 8))
-                self._canvas_widget = canvas
+            except Exception:
+                pass
+            canvas.get_tk_widget().pack(padx=8, pady=(2, 8))
+            self._canvas_widget = canvas
+            self._plot_frame    = target_frame   # keep self._plot_frame pointing at active tab
+            if tab is not None:
+                tab.canvas_widget = canvas
 
-                self._plot_frame.update_idletasks()
-                self._plot_canvas.configure(
-                    scrollregion=self._plot_canvas.bbox("all"))
+            target_frame.update_idletasks()
+            self._plot_canvas.configure(
+                scrollregion=self._plot_canvas.bbox("all"))
+
+            # ── mpl_connect pick-event recoloring (bar / grouped_bar) ────────
+            _pt = self._plot_type.get()
+            if kw is not None and _pt in ("bar", "grouped_bar"):
+                ax = fig.axes[0] if fig.axes else None
+                if ax is not None:
+                    for patch in ax.patches:
+                        patch.set_picker(True)
+
+                    def _on_pick(event, _canvas=canvas):
+                        patch = event.artist
+                        from tkinter import colorchooser
+                        import matplotlib.colors as _mc
+                        try:
+                            hex_color = _mc.to_hex(patch.get_facecolor())
+                        except Exception:
+                            hex_color = "#888888"
+                        result = colorchooser.askcolor(
+                            color=hex_color,
+                            title="Choose bar color",
+                            parent=self,
+                        )
+                        if result and result[1]:
+                            patch.set_facecolor(result[1])
+                            _canvas.draw_idle()
+
+                    canvas.mpl_connect("pick_event", _on_pick)
 
             if groups:
                 opts = list(groups)
@@ -6931,9 +7022,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                     self._vars["control"].set(opts[0])
                 self._tog_control()
 
-            mode_hint = ("  ·  click a bar to recolor"
-                         if _used_canvas else "")
-            self._set_status(f"Done{mode_hint}")
+            self._set_status("Done  ·  click a bar to recolor" if _pt in ("bar", "grouped_bar") else "Done")
             self._export_btn.config(state="normal")
             self._copy_btn.config(state="normal")
             self._copy_transparent_btn.config(state="normal")
@@ -6958,38 +7047,8 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         self._zoom_plot_factor(1.1 if raw > 0 else 0.9)
 
     def _zoom_plot_factor(self, factor):
-        """Apply a zoom multiplier directly (e.g. 1.1 = 10% zoom in).
-
-        In canvas-mode the zoom is delegated to the CanvasRenderer via
-        rescale(); in Agg-mode it resizes the FigureCanvasTkAgg widget.
-        """
-        if self._fig is None:
-            return
-        # ── Canvas-mode zoom ──────────────────────────────────────────────────
-        if self._bar_renderer is not None:
-            rh = self._bar_renderer.rescale_handle
-            if rh is None:
-                return
-            self._zoom_level = getattr(self, "_zoom_level", 1.0) * factor
-            self._zoom_level = max(0.25, min(4.0, self._zoom_level))
-            new_w = max(250, int(rh.canvas_w * factor))
-            new_h = max(200, int(rh.canvas_h * factor))
-            new_rh = rh.set_canvas_size(new_w, new_h)
-            # Resize the tk.Canvas widget itself
-            for child in self._plot_frame.winfo_children():
-                try:
-                    child.config(width=new_w, height=new_h)
-                    break
-                except Exception:
-                    pass
-            self._bar_renderer.rescale(new_rh)
-            self._plot_frame.update_idletasks()
-            self._plot_canvas.configure(
-                scrollregion=self._plot_canvas.bbox("all"))
-            self._set_status(f"Zoom: {self._zoom_level:.0%}  (Ctrl+scroll to zoom)")
-            return
-        # ── Agg-mode zoom ─────────────────────────────────────────────────────
-        if self._canvas_widget is None:
+        """Apply a zoom multiplier directly (e.g. 1.1 = 10% zoom in)."""
+        if self._fig is None or self._canvas_widget is None:
             return
         self._zoom_level = getattr(self, "_zoom_level", 1.0) * factor
         self._zoom_level = max(0.25, min(4.0, self._zoom_level))
@@ -7022,23 +7081,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         if self._fig is None:
             return
         self._zoom_level = 1.0
-        if self._bar_renderer is not None:
-            # Canvas-mode: rescale back to original scene dimensions
-            rh = self._bar_renderer.rescale_handle
-            if rh is not None:
-                scene = self._bar_renderer._scene
-                orig_rh = rh.set_canvas_size(scene.canvas_w, scene.canvas_h)
-                for child in self._plot_frame.winfo_children():
-                    try:
-                        child.config(width=scene.canvas_w, height=scene.canvas_h)
-                        break
-                    except Exception:
-                        pass
-                self._bar_renderer.rescale(orig_rh)
-                self._plot_frame.update_idletasks()
-                self._plot_canvas.configure(
-                    scrollregion=self._plot_canvas.bbox("all"))
-        elif self._canvas_widget is not None:
+        if self._canvas_widget is not None:
             self._apply_zoom()
         self._plot_canvas.xview_moveto(0)
         self._plot_canvas.yview_moveto(0)
@@ -7065,6 +7108,12 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             if v is not None:
                 v.trace_add("write", lambda *_, _k=key: self._schedule_preview())
 
+        # Keep the active tab's label in sync with the chart title field.
+        # Guarded by _switching_tabs so tab-switch var restores don't corrupt labels.
+        title_v = self._vars.get("title")
+        if title_v is not None:
+            title_v.trace_add("write", lambda *_: self._sync_active_tab_label())
+
     def _schedule_preview(self):
         """Cancel any pending preview and schedule a new one in 400 ms."""
         if not self._live_preview_enabled:
@@ -7087,204 +7136,22 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             if excel and excel.get().strip():
                 self._run()
 
-    # ── Canvas-mode renderer helpers ──────────────────────────────────────────
-
-    def _toggle_canvas_mode(self):
-        """Toggle between tk.Canvas renderer and matplotlib FigureCanvasTkAgg."""
-        self._canvas_mode = not self._canvas_mode
-        try:
-            if self._canvas_mode:
-                self._canvas_mode_btn.config(relief="sunken")
-                self._set_status("Canvas mode ON  (click a bar to recolor)")
-            else:
-                self._canvas_mode_btn.config(relief="raised")
-                self._set_status("Canvas mode OFF  (matplotlib Agg renderer)")
-        except Exception:
-            pass
-        # Re-render with the new mode if a fig is already shown
-        if self._fig is not None and self._plot_type.get() in ("bar", "grouped_bar"):
-            # Rebuild from the last kw_history entry
-            if self._kw_history:
-                import copy, threading
-                kw = copy.deepcopy(self._kw_history[-1])
-                self._running = True
-                self._run_btn.config(state="disabled")
-                self._start_spinner()
-                threading.Thread(target=self._do_run, args=(kw,), daemon=True).start()
-
-    def _try_canvas_embed(self, fig, kw: dict) -> bool:
-        """
-        Embed a bar or grouped-bar chart via the canvas renderer.
-
-        Dispatches to:
-          CanvasRenderer        for plot_type == "bar"
-          GroupedCanvasRenderer for plot_type == "grouped_bar"
-
-        Wires <Button-1>, <B1-Motion>, <ButtonRelease-1> so the renderer
-        owns all drag interactions (Y-scale, bar-width for bar charts).
-
-        Returns True on success, False on any failure (falls through to Agg).
-        """
-        try:
-            from prism_canvas_renderer import (
-                build_bar_scene,      CanvasRenderer,
-                build_grouped_bar_scene, GroupedCanvasRenderer,
-                ClickResult,
-            )
-        except ImportError:
-            return False
-
-        try:
-            import tkinter as tk
-
-            for child in self._plot_frame.winfo_children():
-                child.destroy()
-            self._bar_renderer  = None
-            self._canvas_widget = None
-            self._zoom_level    = 1.0
-
-            self._plot_frame.update_idletasks()
-            pw = max(400, self._plot_canvas.winfo_width()  - 24 or 540)
-            ph = max(360, self._plot_canvas.winfo_height() - 24 or 500)
-
-            pt = self._plot_type.get()
-
-            if pt == "grouped_bar":
-                scene    = build_grouped_bar_scene(kw, pw, ph)
-                renderer = GroupedCanvasRenderer
-                tip_text = (
-                    "Click bar  \u2192  recolor\n"
-                    "Drag \u25b2 (top of Y axis)  \u2192  rescale Y\n"
-                    "Ctrl+scroll  \u2192  zoom")
-            else:
-                scene    = build_bar_scene(kw, pw, ph)
-                renderer = CanvasRenderer
-                tip_text = (
-                    "Click bar  \u2192  recolor\n"
-                    "Drag \u25b2 (top of Y axis)  \u2192  rescale Y\n"
-                    "Drag blue strip (bar right edge)  \u2192  resize bar width\n"
-                    "Ctrl+scroll  \u2192  zoom")
-
-            tk_canvas = tk.Canvas(self._plot_frame, width=pw, height=ph,
-                                  bg="white", highlightthickness=0)
-            tk_canvas.pack(padx=8, pady=(2, 8))
-
-            rend = renderer(tk_canvas, scene)
-            rend.render()
-            self._bar_renderer = rend
-
-            # ── Mouse events delegated to renderer ───────────────────────────
-            def _on_press(event):
-                if self._bar_renderer is None:
-                    return
-                result = self._bar_renderer.on_press(event)
-                if result.kind == "bar" and result.bar_tag:
-                    self._recolor_bar_dialog(result.bar_tag)
-
-            def _on_motion(event):
-                if self._bar_renderer is not None:
-                    self._bar_renderer.on_motion(event)
-
-            def _on_release(event):
-                if self._bar_renderer is not None:
-                    self._bar_renderer.on_release(event)
-
-            tk_canvas.bind("<Button-1>",        _on_press)
-            tk_canvas.bind("<B1-Motion>",        _on_motion)
-            tk_canvas.bind("<ButtonRelease-1>",  _on_release)
-            _create_tooltip(tk_canvas, tip_text)
-
-            # ── Ctrl+scroll zoom ─────────────────────────────────────────────
-            def _on_ctrl_scroll(event):
-                if self._bar_renderer is None:
-                    return
-                rh = self._bar_renderer.rescale_handle
-                if rh is None:
-                    return
-                factor = 1.1 if event.delta > 0 else 0.9
-                new_w  = max(250, int(rh.canvas_w * factor))
-                new_h  = max(200, int(rh.canvas_h * factor))
-                new_rh = rh.set_canvas_size(new_w, new_h)
-                tk_canvas.config(width=new_w, height=new_h)
-                self._bar_renderer.rescale(new_rh)
-                self._plot_frame.update_idletasks()
-                self._plot_canvas.configure(
-                    scrollregion=self._plot_canvas.bbox("all"))
-
-            tk_canvas.bind("<Control-MouseWheel>", _on_ctrl_scroll)
-
-            self._plot_frame.update_idletasks()
-            self._plot_canvas.configure(
-                scrollregion=self._plot_canvas.bbox("all"))
-            return True
-
-        except Exception:
-            self._set_status("Canvas embed failed, falling back to Agg",
-                             err=True)
-            return False
-
-    def _recolor_bar_dialog(self, bar_tag: str):
-        """
-        Open a native colour picker and recolor the given bar live.
-        Works for both BarScene (bar_N tags) and GroupedBarScene (gbar_N_M tags).
-        Does NOT re-run matplotlib — only the tk.Canvas item changes.
-        """
-        if self._bar_renderer is None:
-            return
-        from tkinter import colorchooser
-        current = self._bar_renderer.current_color(bar_tag) or "#888888"
-        scene = self._bar_renderer._scene
-
-        # Resolve human-readable name from either scene type
-        name = bar_tag
-        if hasattr(scene, "element_by_tag"):        # BarScene
-            el = scene.element_by_tag(bar_tag)
-            if el:
-                name = el.group
-        elif hasattr(scene, "group_by_tag"):         # GroupedBarScene
-            g = scene.group_by_tag(bar_tag)
-            if g:
-                name = f"{g.category} / {g.subgroup}"
-
-        result = colorchooser.askcolor(
-            color=current,
-            title=f"Recolor — {name}",
-            parent=self,
-        )
-        if result and result[1]:
-            new_hex = result[1]
-            self._bar_renderer.recolor(bar_tag, new_hex)
-            self._set_status(f"Recolored '{name}' → {new_hex}")
+    # ── (canvas-mode renderer removed in Phase 1; replaced by mpl_connect) ───
 
 
 
     def _copy_to_clipboard(self):
-        """Copy the current plot to the macOS clipboard as a PNG image.
-
-        In canvas-mode, tries snapshot_png() first so live recolors and
-        bar-width/Y-axis changes are captured.  Falls back to matplotlib figure.
-        """
+        """Copy the current plot to the macOS clipboard as a PNG image."""
         if self._fig is None:
             return
         try:
             import io, subprocess, tempfile
             from PIL import Image
 
-            png_bytes = None
-
-            # ── Canvas-mode: capture live canvas state (P11-d) ───────────────
-            if self._bar_renderer is not None:
-                try:
-                    png_bytes = self._bar_renderer.snapshot_png()
-                except Exception:
-                    pass
-
-            # ── Fallback: render matplotlib figure ────────────────────────────
-            if png_bytes is None:
-                buf = io.BytesIO()
-                self._fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
-                buf.seek(0)
-                png_bytes = buf.getvalue()
+            buf = io.BytesIO()
+            self._fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+            buf.seek(0)
+            png_bytes = buf.getvalue()
 
             img = Image.open(io.BytesIO(png_bytes))
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
@@ -7295,8 +7162,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                  f'set the clipboard to (read (POSIX file "{tmp_path}") as «class PNGf»)'],
                 check=True, capture_output=True)
             os.unlink(tmp_path)
-            src = "canvas" if self._bar_renderer is not None else "figure"
-            self._set_status(f"Copied PNG to clipboard ✓  ({src})")
+            self._set_status("Copied PNG to clipboard ✓")
         except Exception as ex:
             self._set_status(f"Copy failed: {ex}", err=True)
 
