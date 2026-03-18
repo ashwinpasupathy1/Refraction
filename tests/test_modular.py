@@ -592,6 +592,394 @@ run("Utility functions in prism_widgets all have docstrings",
     test_utility_functions_have_docstrings)
 
 
+# ═════════════════════════════════════════════════════════════════════════════
+# Section 13 — prism_tabs: TabState, TabManager, TabBar
+# ═════════════════════════════════════════════════════════════════════════════
+section("prism_tabs: TabState defaults")
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import prism_tabs as pt
+from prism_tabs import TabState, TabManager, TabBar, draw_tab_icon
+
+
+def _make_tabstate(tab_id="t1", chart_type="bar", chart_type_idx=0,
+                   label="Untitled", validated=False, plot_frame=None):
+    """Helper: build a TabState with sensible defaults."""
+    import tkinter as tk
+    from tkinter import ttk
+    root = tk.Tk()
+    root.withdraw()
+    frame = plot_frame or ttk.Frame(root)
+    tab = TabState(
+        tab_id=tab_id,
+        chart_type=chart_type,
+        chart_type_idx=chart_type_idx,
+        label=label,
+        vars_snapshot={},
+        file_path="",
+        sheet_name="",
+        validated=validated,
+        plot_frame=frame,
+    )
+    return tab, root
+
+
+def test_tabstate_field_defaults():
+    tab, root = _make_tabstate()
+    try:
+        assert tab.render_job_id is None
+        assert tab.fig is None
+        assert tab.canvas_widget is None
+        assert tab.vars_snapshot == {}
+        assert tab.file_path == ""
+        assert tab.validated is False
+    finally:
+        root.destroy()
+run("TabState: render_job_id, fig, canvas_widget start as None", test_tabstate_field_defaults)
+
+
+def test_tabstate_fields_set_correctly():
+    tab, root = _make_tabstate(tab_id="abc", chart_type="scatter",
+                                chart_type_idx=4, label="My Plot")
+    try:
+        assert tab.tab_id == "abc"
+        assert tab.chart_type == "scatter"
+        assert tab.chart_type_idx == 4
+        assert tab.label == "My Plot"
+    finally:
+        root.destroy()
+run("TabState: constructor fields stored correctly", test_tabstate_fields_set_correctly)
+
+
+def test_tabstate_plot_frame_stored():
+    import tkinter as tk
+    from tkinter import ttk
+    root = tk.Tk(); root.withdraw()
+    frame = ttk.Frame(root)
+    tab = TabState(
+        tab_id="x", chart_type="bar", chart_type_idx=0,
+        label="U", vars_snapshot={}, file_path="",
+        sheet_name="", validated=False, plot_frame=frame,
+    )
+    try:
+        assert tab.plot_frame is frame
+    finally:
+        root.destroy()
+run("TabState: plot_frame reference is preserved", test_tabstate_plot_frame_stored)
+
+
+def test_tabstate_render_job_id_mutable():
+    tab, root = _make_tabstate()
+    try:
+        tab.render_job_id = "deadbeef"
+        assert tab.render_job_id == "deadbeef"
+        tab.render_job_id = None
+        assert tab.render_job_id is None
+    finally:
+        root.destroy()
+run("TabState: render_job_id can be mutated", test_tabstate_render_job_id_mutable)
+
+
+def test_tabstate_fig_mutable():
+    tab, root = _make_tabstate()
+    try:
+        sentinel = object()
+        tab.fig = sentinel
+        assert tab.fig is sentinel
+    finally:
+        root.destroy()
+run("TabState: fig field can be assigned", test_tabstate_fig_mutable)
+
+
+# ── TabManager ────────────────────────────────────────────────────────────────
+section("prism_tabs: TabManager")
+
+
+def _make_mock_app():
+    """Build a minimal mock App object for TabManager tests."""
+    import tkinter as tk
+    from tkinter import ttk
+    root = tk.Tk()
+    root.withdraw()
+
+    class _MockApp:
+        _vars           = {}
+        _validated      = False
+        _file_selected  = False
+        _switching_tabs = False
+        _live_preview_enabled = True
+        _preview_after_id = None
+        _plot_frame     = None
+        _canvas_widget  = None
+        _fig            = None
+
+        def _lock_form(self):      pass
+        def _unlock_form(self):    pass
+        def _sb_select_silent(self, idx): pass
+        def _reset_chart_type_state(self): pass
+        def after_cancel(self, id): pass
+
+        def after(self, ms, fn=None):
+            if fn: fn()
+
+        def _run_btn_configure(self, **kw): pass
+
+    app = _MockApp()
+    # Give the run button a stub
+    app._run_btn = type("_Btn", (), {"config": lambda s, **kw: None})()
+    return app, root
+
+
+def test_tabmanager_new_tab_creates_state():
+    app, root = _make_mock_app()
+    canvas = root  # use root as a stand-in canvas (won't render but won't crash)
+    try:
+        bar = TabBar(root, on_select=lambda x: None, on_close=lambda x: None,
+                     on_new=lambda: None, on_reorder=lambda a, b: None)
+        import tkinter as tk
+        plot_canvas = tk.Canvas(root)
+        mgr = TabManager(app, bar, plot_canvas)
+        tab = mgr.new_tab("bar")
+        assert tab is not None
+        assert tab.chart_type == "bar"
+        assert tab.tab_id is not None
+        assert len(tab.tab_id) == 32   # uuid4 hex
+        assert len(mgr.all_tabs) == 1
+    finally:
+        root.destroy()
+run("TabManager.new_tab: creates TabState with correct fields", test_tabmanager_new_tab_creates_state)
+
+
+def test_tabmanager_active_after_new():
+    app, root = _make_mock_app()
+    try:
+        bar = TabBar(root, on_select=lambda x: None, on_close=lambda x: None,
+                     on_new=lambda: None, on_reorder=lambda a, b: None)
+        import tkinter as tk
+        plot_canvas = tk.Canvas(root)
+        mgr = TabManager(app, bar, plot_canvas)
+        tab = mgr.new_tab("bar")
+        assert mgr.active is tab
+    finally:
+        root.destroy()
+run("TabManager.active: points to the newly created tab", test_tabmanager_active_after_new)
+
+
+def test_tabmanager_get_tab():
+    app, root = _make_mock_app()
+    try:
+        bar = TabBar(root, on_select=lambda x: None, on_close=lambda x: None,
+                     on_new=lambda: None, on_reorder=lambda a, b: None)
+        import tkinter as tk
+        plot_canvas = tk.Canvas(root)
+        mgr = TabManager(app, bar, plot_canvas)
+        tab = mgr.new_tab("scatter")
+        found = mgr.get_tab(tab.tab_id)
+        assert found is tab
+        assert mgr.get_tab("nonexistent") is None
+    finally:
+        root.destroy()
+run("TabManager.get_tab: returns correct tab or None", test_tabmanager_get_tab)
+
+
+def test_tabmanager_two_tabs():
+    app, root = _make_mock_app()
+    try:
+        bar = TabBar(root, on_select=lambda x: None, on_close=lambda x: None,
+                     on_new=lambda: None, on_reorder=lambda a, b: None)
+        import tkinter as tk
+        plot_canvas = tk.Canvas(root)
+        mgr = TabManager(app, bar, plot_canvas)
+        t1 = mgr.new_tab("bar")
+        t2 = mgr.new_tab("scatter")
+        assert len(mgr.all_tabs) == 2
+        assert mgr.active is t2
+    finally:
+        root.destroy()
+run("TabManager: two tabs; active is the most recent", test_tabmanager_two_tabs)
+
+
+def test_tabmanager_update_label():
+    app, root = _make_mock_app()
+    try:
+        bar = TabBar(root, on_select=lambda x: None, on_close=lambda x: None,
+                     on_new=lambda: None, on_reorder=lambda a, b: None)
+        import tkinter as tk
+        plot_canvas = tk.Canvas(root)
+        mgr = TabManager(app, bar, plot_canvas)
+        tab = mgr.new_tab("bar")
+        mgr.update_label(tab.tab_id, "My Chart")
+        assert tab.label == "My Chart"
+    finally:
+        root.destroy()
+run("TabManager.update_label: updates TabState.label", test_tabmanager_update_label)
+
+
+def test_tabmanager_reorder():
+    app, root = _make_mock_app()
+    try:
+        bar = TabBar(root, on_select=lambda x: None, on_close=lambda x: None,
+                     on_new=lambda: None, on_reorder=lambda a, b: None)
+        import tkinter as tk
+        plot_canvas = tk.Canvas(root)
+        mgr = TabManager(app, bar, plot_canvas)
+        t1 = mgr.new_tab("bar")
+        t2 = mgr.new_tab("scatter")
+        t3 = mgr.new_tab("box")
+        # reorder: move index 0 to index 2
+        mgr.reorder(0, 2)
+        keys = [t.chart_type for t in mgr.all_tabs]
+        assert keys == ["scatter", "box", "bar"]
+    finally:
+        root.destroy()
+run("TabManager.reorder: moves tab from index 0 to 2", test_tabmanager_reorder)
+
+
+def test_tabmanager_reorder_noop():
+    app, root = _make_mock_app()
+    try:
+        bar = TabBar(root, on_select=lambda x: None, on_close=lambda x: None,
+                     on_new=lambda: None, on_reorder=lambda a, b: None)
+        import tkinter as tk
+        plot_canvas = tk.Canvas(root)
+        mgr = TabManager(app, bar, plot_canvas)
+        t1 = mgr.new_tab("bar")
+        t2 = mgr.new_tab("scatter")
+        mgr.reorder(1, 1)   # same index — no-op
+        assert [t.chart_type for t in mgr.all_tabs] == ["bar", "scatter"]
+    finally:
+        root.destroy()
+run("TabManager.reorder: same-index reorder is a no-op", test_tabmanager_reorder_noop)
+
+
+def test_tabmanager_all_tabs_is_copy():
+    app, root = _make_mock_app()
+    try:
+        bar = TabBar(root, on_select=lambda x: None, on_close=lambda x: None,
+                     on_new=lambda: None, on_reorder=lambda a, b: None)
+        import tkinter as tk
+        plot_canvas = tk.Canvas(root)
+        mgr = TabManager(app, bar, plot_canvas)
+        mgr.new_tab("bar")
+        snapshot = mgr.all_tabs
+        mgr.new_tab("scatter")
+        assert len(snapshot) == 1          # snapshot is not mutated
+        assert len(mgr.all_tabs) == 2
+    finally:
+        root.destroy()
+run("TabManager.all_tabs: returns a copy (not a live reference)", test_tabmanager_all_tabs_is_copy)
+
+
+# ── TabBar ────────────────────────────────────────────────────────────────────
+section("prism_tabs: TabBar")
+
+
+def test_tabbar_constructs():
+    import tkinter as tk
+    root = tk.Tk(); root.withdraw()
+    try:
+        bar = TabBar(root, on_select=lambda x: None, on_close=lambda x: None,
+                     on_new=lambda: None, on_reorder=lambda a, b: None)
+        assert isinstance(bar, tk.Canvas)
+    finally:
+        root.destroy()
+run("TabBar: constructs as tk.Canvas without error", test_tabbar_constructs)
+
+
+def test_tabbar_set_tabs_empty():
+    import tkinter as tk
+    root = tk.Tk(); root.withdraw()
+    try:
+        bar = TabBar(root, on_select=lambda x: None, on_close=lambda x: None,
+                     on_new=lambda: None, on_reorder=lambda a, b: None)
+        bar.set_tabs([])   # should not raise
+        assert bar._tabs == []
+    finally:
+        root.destroy()
+run("TabBar.set_tabs: empty list does not raise", test_tabbar_set_tabs_empty)
+
+
+def test_tabbar_set_active():
+    import tkinter as tk
+    root = tk.Tk(); root.withdraw()
+    try:
+        bar = TabBar(root, on_select=lambda x: None, on_close=lambda x: None,
+                     on_new=lambda: None, on_reorder=lambda a, b: None)
+        bar.set_active("test-id")
+        assert bar._active_id == "test-id"
+    finally:
+        root.destroy()
+run("TabBar.set_active: stores the active tab_id", test_tabbar_set_active)
+
+
+def test_tabbar_update_label():
+    import tkinter as tk
+    from tkinter import ttk
+    root = tk.Tk(); root.withdraw()
+    try:
+        bar = TabBar(root, on_select=lambda x: None, on_close=lambda x: None,
+                     on_new=lambda: None, on_reorder=lambda a, b: None)
+        frame = ttk.Frame(root)
+        tab = TabState(
+            tab_id="t99", chart_type="bar", chart_type_idx=0,
+            label="Old", vars_snapshot={}, file_path="",
+            sheet_name="", validated=False, plot_frame=frame,
+        )
+        bar.set_tabs([tab])
+        bar.update_label("t99", "New Label")
+        assert tab.label == "New Label"
+    finally:
+        root.destroy()
+run("TabBar.update_label: mutates the TabState label", test_tabbar_update_label)
+
+
+# ── draw_tab_icon ─────────────────────────────────────────────────────────────
+section("prism_tabs: draw_tab_icon")
+
+
+def test_draw_tab_icon_does_not_raise():
+    import tkinter as tk
+    root = tk.Tk(); root.withdraw()
+    try:
+        c = tk.Canvas(root, width=50, height=50)
+        for key in ("bar", "line", "scatter", "box", "violin", "heatmap",
+                    "kaplan_meier", "histogram", "forest_plot", "grouped_bar",
+                    "unknown_type"):
+            draw_tab_icon(c, 5, 5, key, size=14)   # must not raise
+    finally:
+        root.destroy()
+run("draw_tab_icon: all known chart types draw without error", test_draw_tab_icon_does_not_raise)
+
+
+def test_draw_tab_icon_creates_items():
+    import tkinter as tk
+    root = tk.Tk(); root.withdraw()
+    try:
+        c = tk.Canvas(root, width=50, height=50)
+        before = len(c.find_all())
+        draw_tab_icon(c, 0, 0, "bar", size=14)
+        after  = len(c.find_all())
+        assert after > before, "draw_tab_icon should create canvas items"
+    finally:
+        root.destroy()
+run("draw_tab_icon: creates at least one canvas item", test_draw_tab_icon_creates_items)
+
+
+# ── prism_tabs module integrity ───────────────────────────────────────────────
+section("prism_tabs: module integrity")
+
+
+def test_prism_tabs_module_docstring():
+    assert pt.__doc__ and len(pt.__doc__) > 50
+run("prism_tabs has a non-trivial module docstring", test_prism_tabs_module_docstring)
+
+
+def test_prism_tabs_exports():
+    for name in ("TabState", "TabManager", "TabBar", "draw_tab_icon"):
+        assert hasattr(pt, name), f"prism_tabs missing export: {name}"
+run("prism_tabs exports TabState, TabManager, TabBar, draw_tab_icon", test_prism_tabs_exports)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────────────────────
