@@ -6033,6 +6033,11 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             if hasattr(self, "_bus"):
                 self._bus.emit("plot.completed", kw=_kw_snap)
         except Exception:
+            # Close any figure that fn() may have created before the error
+            try:
+                self._plt.close("all")
+            except Exception:
+                pass
             err = traceback.format_exc()
             short = err.strip().splitlines()[-1]
             if hasattr(self, "_bus"):
@@ -6197,6 +6202,12 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         except Exception:
             err = traceback.format_exc()
             self._set_status(f"Embed error: {err.strip().splitlines()[-1]}", err=True)
+            # Close the figure if embedding failed — avoids silent leak
+            try:
+                import matplotlib.pyplot as _plt
+                _plt.close(fig)
+            except Exception:
+                pass
         finally:
             self._reset_btn()
 
