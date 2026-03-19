@@ -1,4 +1,4 @@
-# Claude Plotter — Project Context for Claude Code
+# Spectra (Claude Plotter) — Project Context for Claude Code
 
 GraphPad Prism-style scientific plotting application for macOS.
 Built entirely by Claude (Anthropic) with Ashwin Pasupathy.
@@ -8,36 +8,37 @@ Built entirely by Claude (Anthropic) with Ashwin Pasupathy.
 ## The one rule before every commit
 
 ```bash
-python3 run_all.py   # must print 0 failures — currently 531 total tests
+python3 run_all.py   # must print 0 failures
 ```
 
 Never commit if core tests fail. Never skip it. If tests regress, fix them
 before doing anything else.
-
-**Note:** 9 phase3_plotly tests require the `plotly` package and will fail if
-not installed. Canvas renderer tests (~109) require a display. Core suites
-(comprehensive, p1p2p3, control, modular, stats_verify) must always pass.
 
 ---
 
 ## Commands
 
 ```bash
-# Run the full test suite (531 tests across 7 suites, ~25 seconds)
+# Run the full test suite (5 suites, ~30 seconds)
 python3 run_all.py
 
 # Run a single suite
 python3 run_all.py comprehensive      # 309 tests — all chart types + stats engine
-python3 run_all.py p1p2p3             #  80 tests — style params
-python3 run_all.py control            #  20 tests — control-group logic
-python3 run_all.py canvas_renderer    # 109 tests — tk.Canvas renderer (needs display)
-python3 run_all.py modular            #  74 tests — widgets/validators/results/tabs
-python3 run_all.py stats_verify       #  37 tests — statistical verification
-python3 run_all.py phase3_plotly      #  11 tests — Plotly specs + server (needs plotly)
+python3 run_all.py stats              #  57 tests — statistical verification + control logic
+python3 run_all.py validators         #  35 tests — spreadsheet validators
+python3 run_all.py specs              #  11+ tests — Plotly spec builders + server (needs plotly)
+python3 run_all.py api                #  18 tests — FastAPI endpoint tests
 
-# Launch the app (needs a display — use xvfb-run on headless systems)
-python3 plotter_barplot_app.py
-# On headless CI:  xvfb-run python3 plotter_barplot_app.py
+# Launch the app
+python3 plotter_barplot_app.py        # Tk desktop app
+python3 plotter_desktop.py            # Desktop entry point (pywebview + FastAPI)
+python3 plotter_web_server.py         # Standalone web server (no Tk)
+
+# One-command setup (installs Python deps + npm build)
+./setup.sh
+
+# Build macOS .app bundle (PyInstaller + optional DMG)
+./build_app.sh
 
 # Quick syntax check of all modules
 python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plotter_results, plotter_registry, plotter_tabs, plotter_app_icons, plotter_presets, plotter_session, plotter_events, plotter_types, plotter_undo, plotter_errors, plotter_comparisons, plotter_project, plotter_import_pzfx, plotter_wiki_content, plotter_app_wiki, plotter_server, plotter_webview, plotter_plotly_theme, plotter_spec_bar, plotter_spec_grouped_bar, plotter_spec_line, plotter_spec_scatter, plotter_web_server; print('OK')"
@@ -80,7 +81,39 @@ plotter_spec_grouped_bar.py    57 lines   Grouped bar Plotly spec builder
 plotter_spec_line.py           55 lines   Line graph Plotly spec builder
 plotter_spec_scatter.py        58 lines   Scatter plot Plotly spec builder
 
-# ── Phase 4 — Deployment ──────────────────────────────────────────
+# ── Phase 5 — All 29 Plotly spec builders ─────────────────────────
+plotter_spec_box.py            55 lines   Box plot Plotly spec builder
+plotter_spec_violin.py         58 lines   Violin plot Plotly spec builder
+plotter_spec_histogram.py      55 lines   Histogram Plotly spec builder
+plotter_spec_dot_plot.py       61 lines   Dot plot Plotly spec builder
+plotter_spec_raincloud.py      88 lines   Raincloud Plotly spec builder
+plotter_spec_qq.py             77 lines   Q-Q plot Plotly spec builder
+plotter_spec_ecdf.py           56 lines   ECDF Plotly spec builder
+plotter_spec_before_after.py   69 lines   Before/After Plotly spec builder
+plotter_spec_repeated_measures.py 77 lines Repeated Measures Plotly spec builder
+plotter_spec_subcolumn.py      71 lines   Subcolumn scatter Plotly spec builder
+plotter_spec_stacked_bar.py    57 lines   Stacked bar Plotly spec builder
+plotter_spec_area.py           53 lines   Area chart Plotly spec builder
+plotter_spec_lollipop.py       66 lines   Lollipop Plotly spec builder
+plotter_spec_waterfall.py      54 lines   Waterfall Plotly spec builder
+plotter_spec_pyramid.py        71 lines   Pyramid Plotly spec builder
+plotter_spec_kaplan_meier.py  105 lines   Kaplan-Meier Plotly spec builder
+plotter_spec_heatmap.py        49 lines   Heatmap Plotly spec builder
+plotter_spec_bland_altman.py   64 lines   Bland-Altman Plotly spec builder
+plotter_spec_forest_plot.py    73 lines   Forest plot Plotly spec builder
+plotter_spec_bubble.py         71 lines   Bubble chart Plotly spec builder
+plotter_spec_curve_fit.py      83 lines   Curve fit Plotly spec builder
+plotter_spec_column_stats.py   73 lines   Column statistics Plotly spec builder
+plotter_spec_contingency.py    45 lines   Contingency Plotly spec builder
+plotter_spec_chi_square_gof.py 68 lines   Chi-Square GoF Plotly spec builder
+plotter_spec_two_way_anova.py  57 lines   Two-Way ANOVA Plotly spec builder
+
+# ── Phase 6 — Desktop + Deployment ────────────────────────────────
+plotter_desktop.py            183 lines   Desktop entry point (pywebview + FastAPI)
+setup.sh                      159 lines   One-command setup script
+build_app.sh                  323 lines   PyInstaller + optional DMG builder
+
+# ── Phase 4 — Web Deployment ──────────────────────────────────────
 plotter_web_server.py          49 lines   Standalone web server entry point (no Tk)
 plotter_web/                              React SPA (Vite + TypeScript + Plotly.js)
 Dockerfile                                Docker deployment config
@@ -89,15 +122,19 @@ requirements-web.txt                      Web-only dependencies (no Tk/matplotli
 
 # ── Test infrastructure ────────────────────────────────────────────
 tests/plotter_test_harness.py 363 lines   Shared test bootstrap (imports once)
-run_all.py                    112 lines   7-suite unified test runner
+run_all.py                    112 lines   5-suite unified test runner
 tests/test_comprehensive.py 1,341 lines   Main chart function tests (309 tests)
-tests/test_canvas_renderer.py 1,306 lines  Canvas renderer (109 tests, needs display)
-tests/test_modular.py       1,057 lines   Widgets / validators / results / tabs (74)
-tests/test_p1_p2_p3.py        796 lines   Style parameter regressions (80 tests)
-tests/test_control.py         437 lines   Control-group statistics (20 tests)
-test_stats_verification.py    733 lines   Statistical verification (37 tests)
+tests/test_stats.py         1,200+ lines  Statistical verification + control logic (57 tests)
+tests/test_validators.py      600+ lines  Spreadsheet validator tests (35 tests)
+tests/test_api.py             500+ lines  FastAPI endpoint tests (18 tests)
+tests/test_png_render.py      450+ lines  All 29 chart PNG render tests (29 tests)
 tests/test_phase3_plotly.py   156 lines   Plotly spec builders + server (11 tests)
 tests/visual_test.py          552 lines   Visual regression tests (manual)
+
+# ── Archived ───────────────────────────────────────────────────────
+docs/archive/phase2/                      Phase 2 development notes
+docs/archive/phase3/                      Phase 3 development notes
+docs/archive/phase4/                      Phase 4 development notes
 ```
 
 ---
@@ -106,20 +143,25 @@ tests/visual_test.py          552 lines   Visual regression tests (manual)
 
 ### Rendering pipeline
 
+All 29 chart types now have Plotly spec builders, making Plotly.js the primary
+interactive rendering path for both desktop (pywebview) and web (browser) modes.
+The matplotlib/PNG path is retained as a true fallback for offline export and
+environments where Plotly is unavailable.
+
 ```
 User clicks "Generate Plot"
     ↓
 App._run()  →  App._do_run() [background thread]
-    │  calls plotter_functions.plotter_barplot(**kw)  →  matplotlib fig, ax
-    │  deepcopy(kw) → _kw_snap
-    └→ after(0) → App._embed_plot(fig, groups, kw=_kw_snap)
-                       │
-              canvas_mode && plot_type in ("bar","grouped_bar")?
-               ├─ YES → App._try_canvas_embed(fig, kw)
-               │         builds BarScene / GroupedBarScene
-               │         CanvasRenderer / GroupedCanvasRenderer
-               │         live hit-test, recolor, Y-drag, bar-width drag
-               └─ NO  → FigureCanvasTkAgg(fig)   ← standard Agg path
+    │
+    ├── Plotly path (primary — all 29 chart types):
+    │     POST /render {chart_type, kw}
+    │     → plotter_server._build_spec()
+    │     → plotter_spec_*.build_*_spec(kw)
+    │     → Plotly JSON spec → rendered by Plotly.js in webview
+    │
+    └── Matplotlib path (fallback / export):
+          plotter_functions.plotter_barplot(**kw)  →  matplotlib fig, ax
+          → FigureCanvasTkAgg(fig)  or  fig.savefig(path)
 ```
 
 ### Dependency graph
@@ -283,7 +325,7 @@ Add a test section to `test_comprehensive.py` following the existing pattern.
 At minimum: one test that renders without crashing, one that checks a specific
 visual property, one that tests the validator.
 
-Run `python3 run_all.py` — all existing 438 tests must still pass.
+Run `python3 run_all.py` — all existing tests must still pass.
 
 ---
 
@@ -391,37 +433,37 @@ is the single change needed.**
 
 ## All 29 chart types
 
-| UI Label | Registry key | Function |
-|---|---|---|
-| Bar Chart | `bar` | `plotter_barplot` |
-| Line Graph | `line` | `plotter_linegraph` |
-| Grouped Bar | `grouped_bar` | `plotter_grouped_barplot` |
-| Box Plot | `box` | `prism_boxplot` |
-| Scatter Plot | `scatter` | `prism_scatterplot` |
-| Violin Plot | `violin` | `prism_violin` |
-| Survival Curve | `kaplan_meier` | `prism_kaplan_meier` |
-| Heatmap | `heatmap` | `prism_heatmap` |
-| Two-Way ANOVA | `two_way_anova` | `prism_two_way_anova` |
-| Before / After | `before_after` | `prism_before_after` |
-| Histogram | `histogram` | `prism_histogram` |
-| Subcolumn | `subcolumn_scatter` | `prism_subcolumn_scatter` |
-| Curve Fit | `curve_fit` | `prism_curve_fit` |
-| Col Statistics | `column_stats` | `prism_column_stats` |
-| Contingency | `contingency` | `prism_contingency` |
-| Repeated Meas. | `repeated_measures` | `prism_repeated_measures` |
-| Chi-Sq GoF | `chi_square_gof` | `prism_chi_square_gof` |
-| Stacked Bar | `stacked_bar` | `prism_stacked_bar` |
-| Bubble Chart | `bubble` | `prism_bubble` |
-| Dot Plot | `dot_plot` | `prism_dot_plot` |
-| Bland-Altman | `bland_altman` | `prism_bland_altman` |
-| Forest Plot | `forest_plot` | `prism_forest_plot` |
-| Area Chart | `area_chart` | `plotter_area_chart` |
-| Raincloud | `raincloud` | `plotter_raincloud` |
-| Q-Q Plot | `qq_plot` | `plotter_qq_plot` |
-| Lollipop | `lollipop` | `plotter_lollipop` |
-| Waterfall | `waterfall` | `plotter_waterfall` |
-| Pyramid | `pyramid` | `plotter_pyramid` |
-| ECDF | `ecdf` | `plotter_ecdf` |
+| UI Label | Registry key | Function | Has Plotly Spec |
+|---|---|---|---|
+| Bar Chart | `bar` | `plotter_barplot` | Yes |
+| Line Graph | `line` | `plotter_linegraph` | Yes |
+| Grouped Bar | `grouped_bar` | `plotter_grouped_barplot` | Yes |
+| Box Plot | `box` | `plotter_boxplot` | Yes |
+| Scatter Plot | `scatter` | `plotter_scatterplot` | Yes |
+| Violin Plot | `violin` | `plotter_violin` | Yes |
+| Survival Curve | `kaplan_meier` | `plotter_kaplan_meier` | Yes |
+| Heatmap | `heatmap` | `plotter_heatmap` | Yes |
+| Two-Way ANOVA | `two_way_anova` | `plotter_two_way_anova` | Yes |
+| Before / After | `before_after` | `plotter_before_after` | Yes |
+| Histogram | `histogram` | `plotter_histogram` | Yes |
+| Subcolumn | `subcolumn_scatter` | `plotter_subcolumn_scatter` | Yes |
+| Curve Fit | `curve_fit` | `plotter_curve_fit` | Yes |
+| Col Statistics | `column_stats` | `plotter_column_stats` | Yes |
+| Contingency | `contingency` | `plotter_contingency` | Yes |
+| Repeated Meas. | `repeated_measures` | `plotter_repeated_measures` | Yes |
+| Chi-Sq GoF | `chi_square_gof` | `plotter_chi_square_gof` | Yes |
+| Stacked Bar | `stacked_bar` | `plotter_stacked_bar` | Yes |
+| Bubble Chart | `bubble` | `plotter_bubble` | Yes |
+| Dot Plot | `dot_plot` | `plotter_dot_plot` | Yes |
+| Bland-Altman | `bland_altman` | `plotter_bland_altman` | Yes |
+| Forest Plot | `forest_plot` | `plotter_forest_plot` | Yes |
+| Area Chart | `area_chart` | `plotter_area_chart` | Yes |
+| Raincloud | `raincloud` | `plotter_raincloud` | Yes |
+| Q-Q Plot | `qq_plot` | `plotter_qq_plot` | Yes |
+| Lollipop | `lollipop` | `plotter_lollipop` | Yes |
+| Waterfall | `waterfall` | `plotter_waterfall` | Yes |
+| Pyramid | `pyramid` | `plotter_pyramid` | Yes |
+| ECDF | `ecdf` | `plotter_ecdf` | Yes |
 
 ---
 
@@ -446,7 +488,24 @@ sys.exit(0 if _h.FAIL == 0 else 1)
 ```
 
 **Available fixtures**: `bar_excel`, `line_excel`, `grouped_excel`, `km_excel`,
-`heatmap_excel`, `two_way_excel`, `contingency_excel`, `with_excel`
+`heatmap_excel`, `two_way_excel`, `contingency_excel`, `bland_altman_excel`,
+`forest_excel`, `bubble_excel`, `chi_gof_excel`, `with_excel`
+
+---
+
+## Test suites
+
+| Suite | Module | Tests | What it covers |
+|---|---|---|---|
+| comprehensive | test_comprehensive | 309 | All chart types + stats engine |
+| stats | test_stats | 57 | Statistical verification + control-group logic |
+| validators | test_validators | 35 | All spreadsheet validators |
+| specs | test_phase3_plotly | 11+ | Plotly spec builders + FastAPI server |
+| api | test_api | 18 | FastAPI endpoint tests (TestClient) |
+
+Additional test files (not in run_all.py):
+- `tests/test_png_render.py` — 29 tests, one per chart type (matplotlib render)
+- `tests/visual_test.py` — manual visual regression tests
 
 ---
 
@@ -484,9 +543,9 @@ sys.exit(0 if _h.FAIL == 0 else 1)
    which merges the two-row-header grouped layout incorrectly. Results panel
    shows all numeric cells combined for grouped/stacked charts — known issue.
 
-9. **Toggling canvas mode while viewing a grouped chart** — `_toggle_canvas_mode`
-   checks `plot_type == "bar"` before re-triggering a run. Should be
-   `in ("bar", "grouped_bar")`. Known bug, not yet fixed.
+9. **Old test_canvas_renderer and test_modular** — Deleted. Replaced by
+   `tests/test_stats.py`, `tests/test_validators.py`, `tests/test_api.py`,
+   and `tests/test_png_render.py`.
 
 10. **The `_kw_snap` deep-copy** in `_do_run` is taken *after* `spec.filter_kwargs`
     strips unsupported keys. `build_bar_scene` reads `kw["excel_path"]` so the
@@ -674,7 +733,7 @@ backend with input validation and upload support.
 | `plotter_spec_lollipop.py` | `build_lollipop_spec` | Lollipop |
 | `plotter_spec_waterfall.py` | `build_waterfall_spec` | Waterfall |
 | `plotter_spec_pyramid.py` | `build_pyramid_spec` | Pyramid |
-| `plotter_spec_kaplan_meier.py` | `build_kaplan_meier_spec` | Survival curve |
+| `plotter_spec_kaplan_meier.py` | `build_kaplan_meier_spec` | Kaplan-Meier |
 | `plotter_spec_heatmap.py` | `build_heatmap_spec` | Heatmap |
 | `plotter_spec_bland_altman.py` | `build_bland_altman_spec` | Bland-Altman |
 | `plotter_spec_forest_plot.py` | `build_forest_plot_spec` | Forest plot |

@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spectra — Desktop UI Mockup</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+/* ── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #2274A5;
+  --primary-light: #3a8fc0;
+  --primary-dark: #1a5a82;
+  --bg: #ffffff;
+  --sidebar-bg: #f5f6f8;
+  --panel-bg: #fafbfc;
+  --border: #e0e3e8;
+  --text: #1a1a1a;
+  --text-muted: #6b7280;
+  --text-light: #9ca3af;
+  --accent-red: #E8453C;
+  --accent-green: #32936F;
+  --accent-orange: #F18F01;
+  --accent-purple: #A846A0;
+  --radius: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.12);
+}
+html, body { height: 100%; font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: var(--text); }
+body { display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Top Toolbar ──────────────────────────────────────────── */
+.toolbar {
+  display: flex; align-items: center; gap: 12px;
+  height: 48px; padding: 0 16px;
+  background: var(--primary); color: white;
+  box-shadow: var(--shadow);
+  z-index: 100; flex-shrink: 0;
+}
+.toolbar .app-name { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+.toolbar .app-name span { font-weight: 300; opacity: 0.8; font-size: 12px; margin-left: 6px; }
+.toolbar .spacer { flex: 1; }
+.toolbar button {
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+  color: white; padding: 6px 14px; border-radius: var(--radius);
+  font-size: 13px; cursor: pointer; font-family: inherit; transition: background 0.15s;
+}
+.toolbar button:hover { background: rgba(255,255,255,0.25); }
+.toolbar button.primary-btn { background: white; color: var(--primary); font-weight: 600; border: none; }
+.toolbar button.primary-btn:hover { background: #f0f0f0; }
+
+/* ── Main Layout ──────────────────────────────────────────── */
+.main { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Left Sidebar ─────────────────────────────────────────── */
+.sidebar {
+  width: 200px; min-width: 200px;
+  background: var(--sidebar-bg); border-right: 1px solid var(--border);
+  overflow-y: auto; flex-shrink: 0;
+  padding: 8px 0;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+.sidebar-group { margin-bottom: 4px; }
+.sidebar-group-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--text-muted); cursor: pointer; user-select: none;
+}
+.sidebar-group-header .arrow { font-size: 9px; transition: transform 0.2s; }
+.sidebar-group-header.collapsed .arrow { transform: rotate(-90deg); }
+.sidebar-items { overflow: hidden; }
+.sidebar-group-header.collapsed + .sidebar-items { display: none; }
+.sidebar-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 12px 5px 20px; font-size: 13px;
+  cursor: pointer; border-radius: 0; transition: background 0.1s;
+  color: var(--text);
+}
+.sidebar-item:hover { background: #e8ecf0; }
+.sidebar-item.active {
+  background: var(--primary); color: white; font-weight: 600;
+}
+.sidebar-item .icon { width: 18px; text-align: center; font-size: 14px; flex-shrink: 0; }
+
+/* ── Centre Chart Area ────────────────────────────────────── */
+.chart-area {
+  flex: 1; display: flex; flex-direction: column;
+  background: white; min-width: 0;
+}
+.chart-container {
+  flex: 1; padding: 16px; display: flex; align-items: center; justify-content: center;
+}
+#plotly-chart { width: 100%; height: 100%; }
+
+/* ── Right Control Panel ──────────────────────────────────── */
+.control-panel {
+  width: 260px; min-width: 260px;
+  background: var(--panel-bg); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
+}
+.tab-bar {
+  display: flex; border-bottom: 1px solid var(--border);
+  background: white; flex-shrink: 0;
+}
+.tab-bar button {
+  flex: 1; padding: 10px 0; border: none; background: transparent;
+  font-size: 12px; font-weight: 600; color: var(--text-muted);
+  cursor: pointer; border-bottom: 2px solid transparent;
+  font-family: inherit; transition: color 0.15s, border-color 0.15s;
+}
+.tab-bar button:hover { color: var(--text); }
+.tab-bar button.active { color: var(--primary); border-bottom-color: var(--primary); }
+.tab-content {
+  flex: 1; overflow-y: auto; padding: 12px 14px;
+}
+.tab-content::-webkit-scrollbar { width: 5px; }
+.tab-content::-webkit-scrollbar-thumb { background: #d0d0d0; border-radius: 3px; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+.control-section { margin-bottom: 16px; }
+.control-section h4 {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.6px; color: var(--primary); margin-bottom: 8px;
+  padding-bottom: 4px; border-bottom: 1px solid var(--border);
+}
+.control-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.control-row label { font-size: 12px; color: var(--text-muted); min-width: 65px; }
+.control-row input, .control-row select {
+  flex: 1; padding: 5px 8px; border: 1px solid var(--border);
+  border-radius: 4px; font-size: 12px; font-family: inherit;
+  background: white; color: var(--text);
+}
+.control-row input:focus, .control-row select:focus {
+  outline: none; border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(34,116,165,0.15);
+}
+.control-row input[type="checkbox"] { flex: none; width: 16px; height: 16px; accent-color: var(--primary); }
+.btn-generate {
+  display: block; width: 100%; padding: 10px;
+  background: var(--primary); color: white; border: none;
+  border-radius: var(--radius); font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: inherit; margin-top: 12px;
+  transition: background 0.15s;
+}
+.btn-generate:hover { background: var(--primary-dark); }
+
+/* ── Bottom Results Strip ─────────────────────────────────── */
+.results-strip {
+  flex-shrink: 0; border-top: 1px solid var(--border);
+  background: var(--sidebar-bg);
+}
+.results-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px; cursor: pointer; user-select: none;
+  font-size: 13px; font-weight: 600; color: var(--text-muted);
+}
+.results-header .arrow { transition: transform 0.2s; font-size: 10px; }
+.results-header.expanded .arrow { transform: rotate(180deg); }
+.results-body {
+  max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+  padding: 0 16px;
+}
+.results-body.open { max-height: 180px; padding: 8px 16px; overflow-y: auto; }
+.results-table {
+  width: 100%; border-collapse: collapse; font-size: 12px;
+}
+.results-table th {
+  text-align: left; padding: 4px 8px; font-weight: 600;
+  color: var(--primary); border-bottom: 1px solid var(--border);
+}
+.results-table td { padding: 4px 8px; border-bottom: 1px solid #f0f0f0; }
+.results-table .sig { color: var(--accent-red); font-weight: 700; }
+.results-table .ns { color: var(--text-light); }
+
+/* ── Help Panel (slide-in) ────────────────────────────────── */
+.help-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+  z-index: 200; opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+}
+.help-overlay.visible { opacity: 1; pointer-events: auto; }
+.help-panel {
+  position: fixed; top: 0; right: -380px; width: 380px; height: 100%;
+  background: white; box-shadow: var(--shadow-lg); z-index: 201;
+  display: flex; flex-direction: column;
+  transition: right 0.3s ease;
+}
+.help-panel.visible { right: 0; }
+.help-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  background: var(--primary); color: white;
+}
+.help-panel-header h3 { font-size: 16px; }
+.help-panel-header button {
+  background: transparent; border: none; color: white;
+  font-size: 20px; cursor: pointer; line-height: 1;
+}
+.help-panel-body { flex: 1; overflow-y: auto; padding: 18px; font-size: 13px; line-height: 1.6; }
+.help-panel-body h4 { color: var(--primary); margin: 14px 0 6px; font-size: 14px; }
+.help-panel-body p { margin-bottom: 10px; color: var(--text-muted); }
+.help-panel-body code {
+  background: #f3f4f6; padding: 2px 6px; border-radius: 3px;
+  font-size: 12px; color: var(--primary-dark);
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOOLBAR ═══════════════════════════════════════════════ -->
+<div class="toolbar">
+  <div class="app-name">Spectra <span>Scientific Plotting</span></div>
+  <div class="spacer"></div>
+  <button onclick="document.getElementById('fileInput').click()">📂 Open File</button>
+  <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" style="display:none">
+  <button>📤 Export PNG</button>
+  <button>📋 Copy</button>
+  <button onclick="toggleHelp()">❓ Help</button>
+</div>
+
+<!-- ═══ MAIN AREA ═════════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- ── LEFT SIDEBAR ──────────────────────────────────────── -->
+  <div class="sidebar" id="sidebar"></div>
+
+  <!-- ── CENTRE CHART ──────────────────────────────────────── -->
+  <div class="chart-area">
+    <div class="chart-container">
+      <div id="plotly-chart"></div>
+    </div>
+
+    <!-- ── BOTTOM RESULTS STRIP ──────────────────────────── -->
+    <div class="results-strip">
+      <div class="results-header" id="resultsHeader" onclick="toggleResults()">
+        <span class="arrow">▼</span> Statistical Results
+      </div>
+      <div class="results-body" id="resultsBody">
+        <table class="results-table">
+          <thead>
+            <tr><th>Comparison</th><th>Test</th><th>p-value</th><th>Significance</th><th>Effect Size</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Control vs Drug A</td><td>Welch's t-test</td><td>0.0023</td><td class="sig">**</td><td>d = 1.42</td></tr>
+            <tr><td>Control vs Drug B</td><td>Welch's t-test</td><td>0.0001</td><td class="sig">***</td><td>d = 2.85</td></tr>
+            <tr><td>Drug A vs Drug B</td><td>Welch's t-test</td><td>0.0712</td><td class="ns">ns</td><td>d = 0.68</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT CONTROL PANEL ────────────────────────────────── -->
+  <div class="control-panel">
+    <div class="tab-bar" id="tabBar">
+      <button class="active" data-tab="data">Data</button>
+      <button data-tab="axes">Axes</button>
+      <button data-tab="style">Style</button>
+      <button data-tab="stats">Stats</button>
+    </div>
+    <div class="tab-content">
+      <!-- DATA TAB -->
+      <div class="tab-pane active" id="tab-data">
+        <div class="control-section">
+          <h4>Data Source</h4>
+          <div class="control-row">
+            <label>File</label>
+            <input type="text" placeholder="sample_data.xlsx" readonly style="color: var(--text-muted);">
+          </div>
+          <div class="control-row">
+            <label>Sheet</label>
+            <select><option>Sheet1</option></select>
+          </div>
+        </div>
+        <div class="control-section">
+          <h4>Labels</h4>
+          <div class="control-row">
+            <label>Title</label>
+            <input type="text" id="titleInput" value="Treatment Response" placeholder="Chart title">
+          </div>
+          <div class="control-row">
+            <label>X Label</label>
+            <input type="text" value="Treatment Group" placeholder="X axis label">
+          </div>
+          <div class="control-row">
+            <label>Y Label</label>
+            <input type="text" value="Response (mg/dL)" placeholder="Y axis label">
+          </div>
+        </div>
+        <div class="control-section">
+          <h4>Colors</h4>
+          <div class="control-row">
+            <label>Palette</label>
+            <select>
+              <option>Prism Default</option>
+              <option>Viridis</option>
+              <option>Pastel</option>
+              <option>Monochrome</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-generate" onclick="renderChart()">Generate Plot</button>
+      </div>
+
+      <!-- AXES TAB -->
+      <div class="tab-pane" id="tab-axes">
+        <div class="control-section">
+          <h4>Y Axis</h4>
+          <div class="control-row">
+            <label>Scale</label>
+            <select><option>Linear</option><option>Log</option></select>
+          </div>
+          <div class="control-row">
+            <label>Y Min</label>
+            <input type="number" placeholder="Auto">
+          </div>
+          <div class="control-row">
+            <label>Y Max</label>
+            <input type="number" placeholder="Auto">
+          </div>
+          <div class="control-row">
+            <label>Tick Int.</label>
+            <input type="number" placeholder="Auto" step="0.5">
+          </div>
+        </div>
+        <div class="control-section">
+          <h4>X Axis</h4>
+          <div class="control-row">
+            <label>Tick Int.</label>
+            <input type="number" placeholder="Auto" step="0.5">
+          </div>
+        </div>
+        <div class="control-section">
+          <h4>Axis Style</h4>
+          <div class="control-row">
+            <label>Frame</label>
+            <select>
+              <option>Open (Prism)</option>
+              <option>Closed Box</option>
+              <option>Floating</option>
+              <option>None</option>
+            </select>
+          </div>
+          <div class="control-row">
+            <label>Ticks</label>
+            <select>
+              <option>Outward</option>
+              <option>Inward</option>
+              <option>Both</option>
+              <option>None</option>
+            </select>
+          </div>
+          <div class="control-row">
+            <input type="checkbox"> <label style="min-width: auto;">Minor ticks</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- STYLE TAB -->
+      <div class="tab-pane" id="tab-style">
+        <div class="control-section">
+          <h4>Bars</h4>
+          <div class="control-row">
+            <label>Width</label>
+            <input type="range" min="0.3" max="1.0" step="0.05" value="0.7">
+          </div>
+          <div class="control-row">
+            <label>Alpha</label>
+            <input type="range" min="0.3" max="1.0" step="0.05" value="0.85">
+          </div>
+        </div>
+        <div class="control-section">
+          <h4>Error Bars</h4>
+          <div class="control-row">
+            <label>Type</label>
+            <select>
+              <option>SEM</option>
+              <option>SD</option>
+              <option>95% CI</option>
+              <option>None</option>
+            </select>
+          </div>
+          <div class="control-row">
+            <label>Cap Size</label>
+            <input type="range" min="0" max="10" step="1" value="4">
+          </div>
+        </div>
+        <div class="control-section">
+          <h4>Data Points</h4>
+          <div class="control-row">
+            <input type="checkbox" checked> <label style="min-width: auto;">Show points</label>
+          </div>
+          <div class="control-row">
+            <label>Size</label>
+            <input type="range" min="2" max="12" step="0.5" value="6">
+          </div>
+          <div class="control-row">
+            <label>Jitter</label>
+            <input type="range" min="0" max="0.4" step="0.02" value="0.15">
+          </div>
+        </div>
+        <div class="control-section">
+          <h4>Figure</h4>
+          <div class="control-row">
+            <label>Font Size</label>
+            <input type="number" value="12" min="8" max="24" step="1">
+          </div>
+          <div class="control-row">
+            <label>Grid</label>
+            <select>
+              <option>None</option>
+              <option>Horizontal</option>
+              <option>Full</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATS TAB -->
+      <div class="tab-pane" id="tab-stats">
+        <div class="control-section">
+          <h4>Statistical Test</h4>
+          <div class="control-row">
+            <label>Test</label>
+            <select>
+              <option>Parametric</option>
+              <option>Non-parametric</option>
+              <option>Paired</option>
+              <option>Permutation</option>
+            </select>
+          </div>
+          <div class="control-row">
+            <label>Post-hoc</label>
+            <select>
+              <option>Tukey HSD</option>
+              <option>Bonferroni</option>
+              <option>Šidák</option>
+              <option>Fisher LSD</option>
+              <option>Dunnett (vs control)</option>
+            </select>
+          </div>
+          <div class="control-row">
+            <label>Correction</label>
+            <select>
+              <option>Holm-Bonferroni</option>
+              <option>Bonferroni</option>
+              <option>BH (FDR)</option>
+              <option>None</option>
+            </select>
+          </div>
+        </div>
+        <div class="control-section">
+          <h4>Control Group</h4>
+          <div class="control-row">
+            <label>Control</label>
+            <select>
+              <option>Control</option>
+              <option>Drug A</option>
+              <option>Drug B</option>
+            </select>
+          </div>
+          <div class="control-row">
+            <label>Mode</label>
+            <select>
+              <option>All pairwise</option>
+              <option>vs Control only</option>
+            </select>
+          </div>
+        </div>
+        <div class="control-section">
+          <h4>Display</h4>
+          <div class="control-row">
+            <input type="checkbox" checked> <label style="min-width: auto;">Show brackets</label>
+          </div>
+          <div class="control-row">
+            <input type="checkbox"> <label style="min-width: auto;">Show p-values</label>
+          </div>
+          <div class="control-row">
+            <input type="checkbox"> <label style="min-width: auto;">Show effect sizes</label>
+          </div>
+          <div class="control-row">
+            <input type="checkbox"> <label style="min-width: auto;">Show test name</label>
+          </div>
+          <div class="control-row">
+            <input type="checkbox"> <label style="min-width: auto;">Show NS comparisons</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HELP PANEL (slide-in) ═════════════════════════════════ -->
+<div class="help-overlay" id="helpOverlay" onclick="toggleHelp()"></div>
+<div class="help-panel" id="helpPanel">
+  <div class="help-panel-header">
+    <h3>Help & Wiki</h3>
+    <button onclick="toggleHelp()">✕</button>
+  </div>
+  <div class="help-panel-body">
+    <h4>Getting Started</h4>
+    <p>Click <strong>Open File</strong> to load an Excel spreadsheet (.xlsx) or CSV file.
+    Select a chart type from the left sidebar, configure options in the right panel,
+    then click <strong>Generate Plot</strong>.</p>
+
+    <h4>Excel Layout</h4>
+    <p>For bar, box, and violin charts, use a <strong>flat header</strong> layout:
+    Row 1 = group names, Rows 2+ = numeric values. Each column is one group.</p>
+    <p>For line and scatter charts, Column 1 = X values, Column 2+ = Y replicates.
+    Row 1 contains the X-axis label and series names.</p>
+
+    <h4>Statistical Tests</h4>
+    <p><strong>Parametric</strong> (default): Uses ANOVA + Tukey HSD for 3+ groups,
+    Welch's t-test for 2 groups. Assumes normally distributed data.</p>
+    <p><strong>Non-parametric</strong>: Uses Kruskal-Wallis + Dunn's post-hoc.
+    Appropriate for non-normal data or ordinal scales.</p>
+    <p><strong>Paired</strong>: Uses paired t-test or Wilcoxon signed-rank.
+    Requires equal group sizes (matched subjects).</p>
+
+    <h4>Multiple Comparison Corrections</h4>
+    <p><code>Holm-Bonferroni</code> (recommended): step-down procedure, controls FWER.</p>
+    <p><code>Bonferroni</code>: most conservative. <code>BH (FDR)</code>: controls
+    false discovery rate — more liberal.</p>
+
+    <h4>Effect Sizes</h4>
+    <p><strong>Cohen's d</strong>: standardized mean difference.
+    d &lt; 0.2 = negligible, 0.2–0.5 = small, 0.5–0.8 = medium, &gt; 0.8 = large.</p>
+    <p><strong>Hedges' g</strong>: bias-corrected version of Cohen's d for small samples.</p>
+
+    <h4>Keyboard Shortcuts</h4>
+    <p><code>⌘1–9</code> Switch chart type &nbsp; <code>⌘Z</code> Undo &nbsp;
+    <code>⌘⇧Z</code> Redo &nbsp; <code>⌘E</code> Export</p>
+  </div>
+</div>
+
+<script>
+/* ── Chart type data ──────────────────────────────────────── */
+const CHART_GROUPS = [
+  { name: "Column", icon: "📊", items: [
+    { key: "bar", label: "Bar Chart" },
+    { key: "stacked_bar", label: "Stacked Bar" },
+    { key: "lollipop", label: "Lollipop" },
+    { key: "waterfall", label: "Waterfall" },
+  ]},
+  { name: "XY", icon: "📈", items: [
+    { key: "line", label: "Line Graph" },
+    { key: "scatter", label: "Scatter Plot" },
+    { key: "area_chart", label: "Area Chart" },
+    { key: "curve_fit", label: "Curve Fit" },
+    { key: "bubble", label: "Bubble Chart" },
+  ]},
+  { name: "Grouped", icon: "📋", items: [
+    { key: "grouped_bar", label: "Grouped Bar" },
+    { key: "two_way_anova", label: "Two-Way ANOVA" },
+    { key: "contingency", label: "Contingency" },
+  ]},
+  { name: "Distribution", icon: "🔔", items: [
+    { key: "box", label: "Box Plot" },
+    { key: "violin", label: "Violin Plot" },
+    { key: "histogram", label: "Histogram" },
+    { key: "dot_plot", label: "Dot Plot" },
+    { key: "raincloud", label: "Raincloud" },
+    { key: "qq_plot", label: "Q-Q Plot" },
+    { key: "ecdf", label: "ECDF" },
+  ]},
+  { name: "Survival", icon: "📉", items: [
+    { key: "kaplan_meier", label: "Survival Curve" },
+  ]},
+  { name: "Correlation", icon: "🔗", items: [
+    { key: "bland_altman", label: "Bland-Altman" },
+    { key: "heatmap", label: "Heatmap" },
+  ]},
+  { name: "Other", icon: "✨", items: [
+    { key: "before_after", label: "Before / After" },
+    { key: "repeated_measures", label: "Repeated Meas." },
+    { key: "subcolumn_scatter", label: "Subcolumn" },
+    { key: "column_stats", label: "Col Statistics" },
+    { key: "chi_square_gof", label: "Chi-Sq GoF" },
+    { key: "forest_plot", label: "Forest Plot" },
+    { key: "pyramid", label: "Pyramid" },
+  ]},
+];
+
+/* ── Build sidebar ────────────────────────────────────────── */
+const sidebar = document.getElementById("sidebar");
+let activeItem = null;
+
+CHART_GROUPS.forEach(group => {
+  const groupDiv = document.createElement("div");
+  groupDiv.className = "sidebar-group";
+
+  const header = document.createElement("div");
+  header.className = "sidebar-group-header";
+  header.innerHTML = `<span class="arrow">▾</span> ${group.icon} ${group.name}`;
+  header.addEventListener("click", () => {
+    header.classList.toggle("collapsed");
+  });
+  groupDiv.appendChild(header);
+
+  const items = document.createElement("div");
+  items.className = "sidebar-items";
+  group.items.forEach(item => {
+    const el = document.createElement("div");
+    el.className = "sidebar-item";
+    if (item.key === "bar") { el.classList.add("active"); activeItem = el; }
+    el.innerHTML = `<span class="icon">${group.icon}</span> ${item.label}`;
+    el.addEventListener("click", () => {
+      if (activeItem) activeItem.classList.remove("active");
+      el.classList.add("active");
+      activeItem = el;
+    });
+    items.appendChild(el);
+  });
+  groupDiv.appendChild(items);
+  sidebar.appendChild(groupDiv);
+});
+
+/* ── Tab switching ────────────────────────────────────────── */
+document.querySelectorAll(".tab-bar button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-bar button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+/* ── Results strip toggle ─────────────────────────────────── */
+function toggleResults() {
+  const header = document.getElementById("resultsHeader");
+  const body = document.getElementById("resultsBody");
+  header.classList.toggle("expanded");
+  body.classList.toggle("open");
+}
+
+/* ── Help panel toggle ────────────────────────────────────── */
+function toggleHelp() {
+  document.getElementById("helpOverlay").classList.toggle("visible");
+  document.getElementById("helpPanel").classList.toggle("visible");
+}
+
+/* ── Render demo chart ────────────────────────────────────── */
+function renderChart() {
+  const title = document.getElementById("titleInput").value || "Treatment Response";
+  const groups = ["Control", "Drug A", "Drug B"];
+  const means = [5.2, 8.7, 12.1];
+  const sems = [0.8, 1.1, 0.9];
+  const colors = ["#E8453C", "#2274A5", "#32936F"];
+
+  // Jittered individual data points
+  const allX = [], allY = [], allColors = [];
+  const rng = (seed) => { let s = seed; return () => { s = (s * 16807) % 2147483647; return s / 2147483647; }; };
+  groups.forEach((g, gi) => {
+    const r = rng(42 + gi * 100);
+    for (let i = 0; i < 10; i++) {
+      allX.push(g);
+      allY.push(means[gi] + (r() - 0.5) * sems[gi] * 5);
+      allColors.push(colors[gi]);
+    }
+  });
+
+  const traces = groups.map((g, i) => ({
+    type: "bar",
+    name: g,
+    x: [g],
+    y: [means[i]],
+    error_y: { type: "data", array: [sems[i]], visible: true, thickness: 1.5, width: 4 },
+    marker: { color: colors[i], opacity: 0.85, line: { width: 1, color: colors[i].replace(/[0-9a-f]{2}$/i, '80') } },
+    width: 0.55,
+    showlegend: false,
+  }));
+
+  // Add jittered points
+  traces.push({
+    type: "scatter",
+    mode: "markers",
+    x: allX,
+    y: allY,
+    marker: { color: allColors, size: 6, opacity: 0.7, line: { width: 0.5, color: "#333" } },
+    showlegend: false,
+    hoverinfo: "y",
+  });
+
+  const layout = {
+    title: { text: title, font: { family: "Arial", size: 16, color: "#1a1a1a" }, x: 0.5 },
+    xaxis: {
+      title: { text: "Treatment Group", font: { family: "Arial", size: 13 }, standoff: 10 },
+      showline: true, linewidth: 1, linecolor: "#333",
+      showgrid: false, zeroline: false,
+      tickfont: { family: "Arial", size: 12 },
+    },
+    yaxis: {
+      title: { text: "Response (mg/dL)", font: { family: "Arial", size: 13 }, standoff: 10 },
+      showline: true, linewidth: 1, linecolor: "#333",
+      showgrid: false, zeroline: false,
+      tickfont: { family: "Arial", size: 12 },
+      ticks: "outside", ticklen: 5,
+      range: [0, 18],
+    },
+    plot_bgcolor: "white",
+    paper_bgcolor: "white",
+    font: { family: "Arial" },
+    margin: { l: 60, r: 30, t: 50, b: 50 },
+    // Prism open-spine: hide top and right borders
+    shapes: [],
+    annotations: [
+      // Significance brackets
+      { x: "Control", y: 14.5, xref: "x", yref: "y", text: "", showarrow: false },
+      {
+        x: 0.167, y: 0.88, xref: "paper", yref: "paper",
+        text: "**", font: { size: 14, color: "#E8453C" }, showarrow: false,
+      },
+      {
+        x: 0.5, y: 0.95, xref: "paper", yref: "paper",
+        text: "***", font: { size: 14, color: "#E8453C" }, showarrow: false,
+      },
+    ],
+  };
+
+  const config = {
+    responsive: true,
+    displayModeBar: true,
+    modeBarButtonsToRemove: ["lasso2d", "select2d", "autoScale2d"],
+    displaylogo: false,
+  };
+
+  Plotly.newPlot("plotly-chart", traces, layout, config);
+}
+
+// Render on load
+renderChart();
+// Auto-expand results strip
+setTimeout(() => toggleResults(), 500);
+</script>
+</body>
+</html>
