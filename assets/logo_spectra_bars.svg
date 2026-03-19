@@ -1,0 +1,26 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Spectra — Spectrum Bars icon -->
+  <!-- Dark navy rounded background -->
+  <rect width="1024" height="1024" rx="220" fill="#0D1B2A"/>
+
+  <!-- Subtle baseline axis -->
+  <rect x="160" y="752" width="704" height="8" rx="4" fill="white" opacity="0.25"/>
+
+  <!-- Bar 1 — violet -->
+  <rect x="178" y="502" width="108" height="250" rx="14" fill="#7B2FBE"/>
+  <!-- Bar 2 — blue -->
+  <rect x="322" y="382" width="108" height="370" rx="14" fill="#2274A5"/>
+  <!-- Bar 3 — teal/cyan -->
+  <rect x="466" y="242" width="108" height="510" rx="14" fill="#00A878"/>
+  <!-- Bar 4 — amber -->
+  <rect x="610" y="332" width="108" height="420" rx="14" fill="#F5A623"/>
+  <!-- Bar 5 — coral -->
+  <rect x="738" y="432" width="108" height="320" rx="14" fill="#E8453C"/>
+
+  <!-- Error bar caps on bars (publication style detail) -->
+  <rect x="205" y="494" width="54" height="5" rx="2" fill="white" opacity="0.6"/>
+  <rect x="349" y="374" width="54" height="5" rx="2" fill="white" opacity="0.6"/>
+  <rect x="493" y="234" width="54" height="5" rx="2" fill="white" opacity="0.6"/>
+  <rect x="637" y="324" width="54" height="5" rx="2" fill="white" opacity="0.6"/>
+  <rect x="765" y="424" width="54" height="5" rx="2" fill="white" opacity="0.6"/>
+</svg>

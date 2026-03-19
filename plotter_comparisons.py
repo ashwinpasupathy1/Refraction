@@ -3,7 +3,7 @@ plotter_comparisons.py
 ======================
 Custom pairwise comparison selection for statistical brackets.
 Enables users to choose exactly which group pairs to test,
-like GraphPad Prism's comparison selector.
+similar to a comparison selector in statistical software.
 """
 from dataclasses import dataclass, field
 from itertools import combinations

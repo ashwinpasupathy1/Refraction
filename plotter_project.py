@@ -1,7 +1,7 @@
 """
 plotter_project.py
 ==================
-Save/load .cplot project files for Claude Plotter.
+Save/load .cplot project files for Spectra.
 A .cplot file is a ZIP archive containing:
   manifest.json    - version, timestamp, app version
   state.json       - all UI variable values
@@ -191,7 +191,7 @@ def extract_to_temp_excel(cplot_path):
                         ws.cell(row=row_idx, column=col_idx,
                                 value=val if val else "")
 
-        temp_dir = tempfile.mkdtemp(prefix="claude_plotter_")
+        temp_dir = tempfile.mkdtemp(prefix="spectra_")
         temp_path = os.path.join(temp_dir, "project_data.xlsx")
         wb.save(temp_path)
         return temp_path

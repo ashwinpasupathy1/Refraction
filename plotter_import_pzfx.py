@@ -1,10 +1,10 @@
 """
 plotter_import_pzfx.py
 ======================
-Import GraphPad Prism .pzfx (XML) files into Claude Plotter.
+Import .pzfx (XML) files into Spectra.
 
 Extracts data tables, group names, titles, and maps TableType
-to Claude Plotter chart types. Writes data to a temp .xlsx file.
+to Spectra chart types. Writes data to a temp .xlsx file.
 
 Does NOT import (with user warning):
 - Color/styling (Prism uses internal palette indices)
@@ -46,7 +46,7 @@ class PzfxImportResult:
     errors: list = field(default_factory=list)
 
 
-# Prism TableType to Claude Plotter chart type mapping
+# Prism TableType to Spectra chart type mapping
 TABLE_TYPE_MAP = {
     "OneWay": "bar",
     "TwoWay": "grouped_bar",
@@ -147,7 +147,7 @@ def _table_to_rows(table):
     """Convert a PzfxTable to row-major data for Excel.
 
     Returns (rows, chart_type) where rows[0] is the header.
-    Layout matches Claude Plotter's expected Excel format.
+    Layout matches Spectra's expected Excel format.
     """
     chart_type = TABLE_TYPE_MAP.get(table.table_type, "bar")
 
@@ -300,7 +300,7 @@ def import_pzfx(file_path):
                     ws.cell(row=ri, column=ci,
                             value=str(val) if val else "")
 
-        temp_dir = tempfile.mkdtemp(prefix="claude_plotter_import_")
+        temp_dir = tempfile.mkdtemp(prefix="spectra_import_")
         temp_path = os.path.join(temp_dir, "imported_data.xlsx")
         wb.save(temp_path)
         result.temp_excel_path = temp_path

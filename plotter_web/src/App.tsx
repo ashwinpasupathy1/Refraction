@@ -84,7 +84,7 @@ export default function App() {
     <div className="app-shell">
       {/* Header */}
       <header className="app-header">
-        <h1>Claude Plotter</h1>
+        <h1>Spectra</h1>
         <span className="app-header-sub">
           {serverOnline
             ? `${chartTypes.length} chart types`

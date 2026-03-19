@@ -1,7 +1,7 @@
 """
 prism_tabs.py
 =============
-Tab system for Claude Plotter.
+Tab system for Spectra.
 
 Three classes:
   TabState    — dataclass holding per-tab identity and form state

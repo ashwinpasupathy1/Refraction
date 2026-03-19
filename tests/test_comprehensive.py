@@ -1,7 +1,7 @@
 """
 comprehensive_tests.py
 ======================
-Exhaustive test suite for Claude Plotter / plotter_functions.py.
+Exhaustive test suite for Spectra / plotter_functions.py.
 
 Two completely independent datasets (DATASET_A = biological/clinical,
 DATASET_B = environmental/engineering) are used for every chart type

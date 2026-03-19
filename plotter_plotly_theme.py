@@ -1,16 +1,16 @@
-"""Prism-style Plotly theme matching Claude Plotter's matplotlib style."""
+"""Plotly theme matching Spectra's matplotlib style."""
 
-PRISM_PALETTE = [
+SPECTRA_PALETTE = [
     "#E8453C", "#2274A5", "#32936F", "#F18F01", "#A846A0",
     "#6B4226", "#048A81", "#D4AC0D", "#3B1F2B", "#44BBA4",
 ]
 
-PRISM_TEMPLATE = {
+SPECTRA_TEMPLATE = {
     "layout": {
         "font": {"family": "Arial, sans-serif", "size": 12, "color": "#222222"},
         "paper_bgcolor": "white",
         "plot_bgcolor": "white",
-        "colorway": PRISM_PALETTE,
+        "colorway": SPECTRA_PALETTE,
         "xaxis": {
             "showgrid": False,
             "zeroline": False,

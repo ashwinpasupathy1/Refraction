@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-prism_barplot_app.py
-====================
-Claude Plotter -- main application window (macOS, tabbed ttk layout).
+plotter_barplot_app.py
+======================
+Spectra -- main application window (macOS, tabbed ttk layout).
 
 Module structure
 ----------------
-prism_barplot_app.py  -- this file; App class + PLOT_REGISTRY + icon helpers
-prism_widgets.py      -- design-system tokens, PButton/PEntry/PCheckbox etc.
-prism_validators.py   -- standalone spreadsheet validation functions
-prism_results.py      -- results-panel population, export, and copy helpers
+plotter_barplot_app.py  -- this file; App class + PLOT_REGISTRY + icon helpers
+plotter_widgets.py      -- design-system tokens, PButton/PEntry/PCheckbox etc.
+plotter_validators.py   -- standalone spreadsheet validation functions
+plotter_results.py      -- results-panel population, export, and copy helpers
 plotter_functions.py    -- matplotlib plot functions (29 chart types)
-prism_tabs.py         -- TabState, TabManager, TabBar (plot tab system)
+plotter_tabs.py         -- TabState, TabManager, TabBar (plot tab system)
 
 The App class imports from all four companion modules so each can be
 developed, tested, and documented independently.
@@ -285,7 +285,7 @@ _VAR_DEFAULTS: dict = {
 }
 
 
-PREFS_PATH = os.path.expanduser("~/Library/Preferences/claude_plotter.json")
+PREFS_PATH = os.path.expanduser("~/Library/Preferences/spectra.json")
 
 def _load_prefs():
     try:
@@ -381,7 +381,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         super().__init__()
         # Hide window during build to avoid visible resize animation
         self.withdraw()
-        self.title("Claude Plotter")
+        self.title("Spectra")
         self.resizable(True, True)
         self._pf              = None
         self._pf_ready        = False
@@ -911,7 +911,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         help_menu.add_command(label="Help Analyze…",
                               command=self._help_analyze)
         help_menu.add_separator()
-        help_menu.add_command(label="About Claude Plotter",
+        help_menu.add_command(label="About Spectra",
                               command=self._show_about)
         menubar.add_cascade(label="Help", menu=help_menu)
 
@@ -1624,7 +1624,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         tk.Label(hdr, text="📖  Reference Wiki",
                  bg="#2274A5", fg="white",
                  font=("Helvetica Neue", 15, "bold")).pack(side="left", padx=18, pady=12)
-        tk.Label(hdr, text="scipy · GraphPad Prism 11 Statistics Guide",
+        tk.Label(hdr, text="scipy · Statistics Reference",
                  bg="#2274A5", fg="#a8cce0",
                  font=("Helvetica Neue", 11)).pack(side="left", padx=(0, 18), pady=12)
 
@@ -1752,7 +1752,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             lbl.pack(anchor="w", padx=28, pady=(0, 4))
 
         def plotter_link(page_slug, link_text):
-            """Clickable hyperlink to a GraphPad Prism 11 Statistics Guide page."""
+            """Clickable hyperlink to a statistics reference page."""
             import webbrowser
             url = f"https://www.graphpad.com/guides/prism/latest/statistics/{page_slug}"
             lbl = tk.Label(frame, text=f"📎 {link_text}",
@@ -1795,9 +1795,9 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         h2("Independent Samples t-test  (Parametric, 2 groups)")
         tag("scipy.stats.ttest_ind", "#2274A5")
         scipy_entry(_st.ttest_ind, "ttest_ind")
-        body("Welch's t-test (unequal variances) is the default in GraphPad Prism "
-             "since version 8. It does not assume equal standard deviations and is "
-             "preferred over Student's t-test in most practical situations.")
+        body("Welch's t-test (unequal variances) does not assume equal standard "
+             "deviations and is preferred over Student's t-test in most practical "
+             "situations.")
         plotter_link("stat_qa_choosing_a_test_to_compare_.htm",
                    "Prism 11: Choosing a test to compare two groups")
 
@@ -1903,7 +1903,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         scipy_entry(_st.levene, "levene")
         body("Prism 11 uses Brown-Forsythe and Bartlett's tests for homoscedasticity, "
              "not Levene's. Brown-Forsythe (median-centred) is more robust to non-normality. "
-             "Claude Plotter uses Levene's as an equivalent diagnostic.")
+             "Spectra uses Levene's as an equivalent diagnostic.")
         plotter_link("stat_checklist_1wayanova.htm",
                    "Prism 11: Equal variance assumption (Brown-Forsythe / Bartlett)")
 
@@ -1921,7 +1921,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         tag("η² = SS_effect / SS_total", "#6B4226")
         body("Proportion of total variance explained by a factor. η² = 0.01: small, "
              "0.06: medium, 0.14: large (Cohen). For one-way ANOVA η² = partial η². "
-             "For two-way ANOVA Claude Plotter reports partial η² (effect SS / (effect SS + error SS)).")
+             "For two-way ANOVA Spectra reports partial η² (effect SS / (effect SS + error SS)).")
         plotter_link("stat_options_tab_one-way_anova.htm",
                    "Prism 11: Eta squared and omega squared")
 
@@ -3046,7 +3046,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         """Synchronize the Comparison Mode radio buttons and Control Group dropdown
         so every visible state is consistent and logically valid.
 
-        Consistency rules (mirrors GraphPad Prism behaviour):
+        Consistency rules:
 
         HIDDEN entirely (comparison_mode radio + control group section invisible):
           - One-sample test  ->  each group vs μ₀, no group-to-group comparison
@@ -3227,7 +3227,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
         desktop = os.path.join(os.path.expanduser("~"), "Desktop")
         ts      = datetime.now().strftime("%Y%m%d_%H%M%S")
-        fname   = f"claude_plotter_template_{mode}_{ts}.xlsx"
+        fname   = f"spectra_template_{mode}_{ts}.xlsx"
         path    = os.path.join(desktop, fname)
 
         wb = openpyxl.Workbook()
@@ -4626,8 +4626,8 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         """Shared parametric/nonparametric/paired decision tree.
         Returns (rec_title, reasoning, test, posthoc, mc).
 
-        Aligned with GraphPad Prism 11 Statistics Guide:
-        - 2 groups: Welch's t-test (default since Prism 8, handles unequal variances)
+        Statistical decision tree:
+        - 2 groups: Welch's t-test (handles unequal variances)
         - 3+ groups, normal + equal var: One-way ANOVA + Tukey HSD (all-pairwise)
         - 3+ groups, normal + unequal var: Welch's ANOVA (Brown-Forsythe)  -  note only,
           app falls back to Parametric (one-way ANOVA) since Welch's ANOVA is not yet
@@ -4683,7 +4683,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 reasoning.append(("ℹ", "Multiple conditions, same subjects. Prism 11 uses "
                                    "repeated-measures one-way ANOVA with optional "
                                    "Geisser-Greenhouse correction for non-sphericity. "
-                                   "Claude Plotter uses pairwise paired t-tests with "
+                                   "Spectra uses pairwise paired t-tests with "
                                    "Holm correction as a robust equivalent."))
             else:
                 test, rec_title = "Non-parametric", "Friedman test + Dunn's post-hoc (Holm corrected)"
@@ -4697,7 +4697,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 test, rec_title = "Parametric", "Welch's unpaired t-test"
                 reasoning.append((" -> ", "RECOMMENDATION: Welch's unpaired t-test (parametric)"))
                 reasoning.append(("ℹ", "Two groups, normally distributed. Welch's t-test "
-                                   "is the default in GraphPad Prism since version 8  -  it "
+                                   "is the recommended default  -  it "
                                    "does not assume equal variances, so it is correct "
                                    "regardless of the Levene result."))
                 if levene_p is not None and levene_p < 0.05:
@@ -5549,10 +5549,9 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         ref_frm = tk.Frame(body, bg="#f0f0f0")
         ref_frm.pack(fill="x", padx=PAD2, pady=(8, 4))
         tk.Label(ref_frm,
-                 text="ℹ  Follows GraphPad Prism's 'Analyze > Statistical comparisons' "
-                      "decision logic. Welch's t-test is the Prism default (v8+) as it "
-                      "does not assume equal variances. You can override any setting in "
-                      "the Stats tab before generating the plot.",
+                 text="ℹ  Follows standard statistical decision logic. Welch's t-test "
+                      "is the default as it does not assume equal variances. You can "
+                      "override any setting in the Stats tab before generating the plot.",
                  bg="#f0f0f0", fg="#666666", wraplength=560, justify="left",
                  font=("Helvetica Neue", 10)
                  ).pack(anchor="w", padx=12, pady=8)
@@ -6447,11 +6446,11 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         src_path  = self._vars.get("excel_path", tk.StringVar()).get().strip()
         if title_str:
             safe = "".join(c if c.isalnum() or c in " _-" else "_" for c in title_str).strip()
-            default_name = safe[:60] or "claude_plotter"
+            default_name = safe[:60] or "spectra"
         elif src_path:
             default_name = os.path.splitext(os.path.basename(src_path))[0][:60]
         else:
-            default_name = f"claude_plotter_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            default_name = f"spectra_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         path = filedialog.asksaveasfilename(
             initialdir=desktop, initialfile=f"{default_name}.png",
             defaultextension=".png",
@@ -6515,17 +6514,17 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         """About dialog."""
         from tkinter import messagebox
         messagebox.showinfo(
-            "About Claude Plotter",
-            "Claude Plotter\n\n"
-            "A GraphPad Prism-style data visualization application.\n\n"
+            "About Spectra",
+            "Spectra\n\n"
+            "A publication-quality scientific plotting application.\n\n"
             "Designed and implemented by Claude (Anthropic).\n"
             "Commissioned by Ashwin Pasupathy.\n\n"
             "MIT License\n\n"
-            "22 chart types · Statistical tests · Publication-ready export"
+            "29 chart types · Statistical tests · Publication-ready export"
         )
 
     def _export_all_pdf(self):
-        """Export all 22 chart types as a multi-page PDF showcase (P20)."""
+        """Export all 29 chart types as a multi-page PDF showcase."""
         if self._pf is None:
             from tkinter import messagebox
             messagebox.showerror("Not ready", "Functions not loaded yet.")
@@ -6540,7 +6539,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             title="Save Chart Showcase PDF",
             defaultextension=".pdf",
             filetypes=[("PDF", "*.pdf")],
-            initialfile="claude_plotter_showcase.pdf"
+            initialfile="spectra_showcase.pdf"
         )
         if not out_path:
             return
@@ -6572,7 +6571,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         path = filedialog.asksaveasfilename(
             title="Save Project",
             defaultextension=".cplot",
-            filetypes=[("Claude Plotter Project", "*.cplot"), ("All files", "*.*")],
+            filetypes=[("Spectra Project", "*.cplot"), ("All files", "*.*")],
         )
         if not path:
             return
@@ -6617,7 +6616,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
         path = filedialog.askopenfilename(
             title="Open Project",
-            filetypes=[("Claude Plotter Project", "*.cplot"), ("All files", "*.*")],
+            filetypes=[("Spectra Project", "*.cplot"), ("All files", "*.*")],
         )
         if not path:
             return
@@ -6657,7 +6656,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             messagebox.showerror("Open failed", str(exc))
 
     def _open_pzfx(self):
-        """Import a GraphPad Prism .pzfx file."""
+        """Import a .pzfx file."""
         from tkinter import filedialog, messagebox
         try:
             from plotter_import_pzfx import import_pzfx
@@ -6667,7 +6666,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
         path = filedialog.askopenfilename(
             title="Import .pzfx File",
-            filetypes=[("GraphPad Prism", "*.pzfx"), ("All files", "*.*")],
+            filetypes=[("Prism (.pzfx)", "*.pzfx"), ("All files", "*.*")],
         )
         if not path:
             return

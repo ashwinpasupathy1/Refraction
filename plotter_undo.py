@@ -1,4 +1,4 @@
-"""plotter_undo.py — Command-pattern undo/redo system for Claude Plotter."""
+"""plotter_undo.py — Command-pattern undo/redo system for Spectra."""
 
 import time
 from dataclasses import dataclass, field

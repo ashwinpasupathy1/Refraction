@@ -1,7 +1,7 @@
 """
 run_all.py
 ==========
-Unified test runner for all Claude Plotter / Spectra test suites.
+Unified test runner for all Spectra test suites.
 
 Runs all five suites in a single Python process sharing the already-loaded
 plotter_functions module (saves ~3–5 s vs running each file separately).
@@ -70,7 +70,7 @@ def run_suite(module_name: str, label: str) -> tuple[int, int, list]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Claude Plotter unified test runner")
+    parser = argparse.ArgumentParser(description="Spectra unified test runner")
     parser.add_argument("suites", nargs="*",
                         help="Suite name(s): comprehensive / stats / validators / "
                              "specs / api "

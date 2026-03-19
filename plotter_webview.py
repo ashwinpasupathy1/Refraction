@@ -135,7 +135,7 @@ class PlotterWebView:
             def _create():
                 if url:
                     self._window = webview.create_window(
-                        "Claude Plotter",
+                        "Spectra",
                         url=url,
                         width=900, height=700,
                         resizable=True,
@@ -143,7 +143,7 @@ class PlotterWebView:
                 else:
                     html = _HTML_TEMPLATE.format(PORT=self._port)
                     self._window = webview.create_window(
-                        "Claude Plotter",
+                        "Spectra",
                         html=html,
                         width=900, height=700,
                         resizable=True,

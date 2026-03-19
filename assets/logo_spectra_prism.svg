@@ -1,0 +1,62 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Spectra — Prism dispersing light icon -->
+
+  <!-- Gradient definitions -->
+  <defs>
+    <!-- Spectral fan gradient for dispersed light -->
+    <linearGradient id="spectrumTop" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#7B2FBE" stop-opacity="0.9"/>
+      <stop offset="25%"  stop-color="#2274A5" stop-opacity="0.9"/>
+      <stop offset="50%"  stop-color="#00A878" stop-opacity="0.9"/>
+      <stop offset="75%"  stop-color="#F5A623" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#E8453C" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="spectrumFan" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%"   stop-color="#7B2FBE"/>
+      <stop offset="20%"  stop-color="#2274A5"/>
+      <stop offset="45%"  stop-color="#00A878"/>
+      <stop offset="70%"  stop-color="#F5A623"/>
+      <stop offset="100%" stop-color="#E8453C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Deep dark background -->
+  <rect width="1024" height="1024" rx="220" fill="#0B1120"/>
+
+  <!-- Incoming white beam (left side) -->
+  <rect x="100" y="492" width="200" height="40" rx="6" fill="white" opacity="0.85"/>
+
+  <!-- Prism triangle (center) — equilateral-ish, pointing right -->
+  <!-- Triangle vertices: top (380,230), bottom (380,794), right apex (620,512) -->
+  <polygon points="380,230 380,794 620,512"
+           fill="#1A2F4A" stroke="white" stroke-width="10" stroke-linejoin="round" opacity="0.95"/>
+
+  <!-- Inner prism face — subtle highlight -->
+  <polygon points="390,260 390,764 600,512"
+           fill="none" stroke="white" stroke-width="2" stroke-linejoin="round" opacity="0.15"/>
+
+  <!-- Dispersed spectrum beams (fan from prism apex outward right) -->
+  <!-- Each beam: a thin trapezoid from the prism apex point -->
+  <!-- Violet beam — top-most -->
+  <polygon points="620,512  870,210  920,230  640,512"
+           fill="#7B2FBE" opacity="0.88"/>
+  <!-- Indigo/blue beam -->
+  <polygon points="620,512  880,330  920,350  648,512"
+           fill="#2274A5" opacity="0.88"/>
+  <!-- Teal/green beam -->
+  <polygon points="620,512  900,460  920,490  660,512"
+           fill="#00A878" opacity="0.88"/>
+  <!-- Amber beam -->
+  <polygon points="620,512  900,534  920,565  660,512"
+           fill="#F5A623" opacity="0.88"/>
+  <!-- Orange beam -->
+  <polygon points="620,512  880,665  920,680  648,512"
+           fill="#F07B1B" opacity="0.88"/>
+  <!-- Red beam — bottom-most -->
+  <polygon points="620,512  870,790  910,810  640,512"
+           fill="#E8453C" opacity="0.88"/>
+
+  <!-- Subtle glow at prism apex -->
+  <circle cx="620" cy="512" r="22" fill="white" opacity="0.18"/>
+  <circle cx="620" cy="512" r="10" fill="white" opacity="0.35"/>
+</svg>

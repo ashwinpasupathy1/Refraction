@@ -1,7 +1,7 @@
 """
 prism_test_harness.py
 =====================
-Shared harness, fixtures, and bootstrap for all Claude Plotter test suites.
+Shared harness, fixtures, and bootstrap for all Spectra test suites.
 
 Importing this module:
   • Locates and imports plotter_functions (works from both the work dir and the

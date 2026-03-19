@@ -1,4 +1,4 @@
-"""plotter_types.py — Typed dataclasses for Claude Plotter plot requests."""
+"""plotter_types.py — Typed dataclasses for Spectra plot requests."""
 
 import json
 from dataclasses import dataclass, field, asdict

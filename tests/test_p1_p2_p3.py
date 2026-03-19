@@ -2,7 +2,7 @@
 test_p1_p2_p3.py
 ================
 Tests for Priority 1 (styling), Priority 2 (new stats), and Priority 3
-(new chart types) additions to Claude Plotter.
+(new chart types) additions to Spectra.
 
 Run:
   python3 test_p1_p2_p3.py

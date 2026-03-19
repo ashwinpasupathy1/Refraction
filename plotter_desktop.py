@@ -1,4 +1,4 @@
-"""Phase 6 desktop entry point for Claude Plotter.
+"""Phase 6 desktop entry point for Spectra.
 
 Starts the FastAPI server in a background daemon thread, waits for it to be
 ready, then opens a full-screen pywebview window pointing at the React SPA
@@ -28,7 +28,7 @@ _log = logging.getLogger(__name__)
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 _DEFAULT_PORT = 7331
-_WINDOW_TITLE = "Claude Plotter"
+_WINDOW_TITLE = "Spectra"
 _WINDOW_WIDTH = 1200
 _WINDOW_HEIGHT = 800
 _HEALTH_TIMEOUT = 30      # seconds to wait for server readiness
@@ -39,7 +39,7 @@ _HEALTH_INTERVAL = 0.25   # seconds between health-check polls
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Claude Plotter — desktop launcher (pywebview, no Tk)",
+        description="Spectra — desktop launcher (pywebview, no Tk)",
     )
     parser.add_argument(
         "--port",
@@ -106,7 +106,7 @@ def _print_banner(port: int) -> None:
     url = f"http://127.0.0.1:{port}"
     print()
     print("╔══════════════════════════════════════════╗")
-    print("║          Claude Plotter  (Phase 6)       ║")
+    print("║              Spectra  (Phase 6)            ║")
     print("╠══════════════════════════════════════════╣")
     print(f"║  URL : {url:<34}║")
     print("║  Mode: pywebview desktop (no Tk)         ║")
@@ -153,7 +153,7 @@ def main() -> None:
     port: int = args.port
 
     # 1. Start the FastAPI server in a daemon thread.
-    print(f"Starting Claude Plotter server on port {port}…")
+    print(f"Starting Spectra server on port {port}…")
     _start_server(port)
 
     # 2. Wait for the server to accept connections before opening the window.
@@ -176,7 +176,7 @@ def main() -> None:
     _open_window(port)
 
     # 5. Window closed — daemon thread exits automatically.
-    print("Claude Plotter closed.")
+    print("Spectra closed.")
 
 
 if __name__ == "__main__":

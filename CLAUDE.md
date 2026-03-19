@@ -23,7 +23,7 @@ before doing anything else.
 python3 run_all.py
 
 # Run a single suite
-python3 run_all.py comprehensive      # 309 tests — all chart types + stats engine
+python3 run_all.py comprehensive      # 175 tests — all chart types + stats engine
 python3 run_all.py stats              #  57 tests — statistical verification + control logic
 python3 run_all.py validators         #  35 tests — spreadsheet validators
 python3 run_all.py specs              #  11+ tests — Plotly spec builders + server (needs plotly)
@@ -50,7 +50,7 @@ python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plott
 
 ```
 # ── Core application ──────────────────────────────────────────────
-plotter_barplot_app.py      6,688 lines   App class, sidebar, all UI wiring
+plotter_barplot_app.py      6,700 lines   App class, sidebar, all UI wiring
 plotter_functions.py        6,553 lines   29 matplotlib chart functions + stats
 plotter_widgets.py            952 lines   _DS tokens, PButton/PEntry/PCheckbox etc.
 plotter_validators.py         518 lines   Standalone spreadsheet validators
@@ -122,8 +122,8 @@ requirements-web.txt                      Web-only dependencies (no Tk/matplotli
 
 # ── Test infrastructure ────────────────────────────────────────────
 tests/plotter_test_harness.py 363 lines   Shared test bootstrap (imports once)
-run_all.py                    112 lines   5-suite unified test runner
-tests/test_comprehensive.py 1,341 lines   Main chart function tests (309 tests)
+run_all.py                    117 lines   5-suite unified test runner
+tests/test_comprehensive.py 1,341 lines   Main chart function tests (438 tests)
 tests/test_stats.py         1,200+ lines  Statistical verification + control logic (57 tests)
 tests/test_validators.py      600+ lines  Spreadsheet validator tests (35 tests)
 tests/test_api.py             500+ lines  FastAPI endpoint tests (18 tests)

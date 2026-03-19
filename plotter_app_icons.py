@@ -1,4 +1,4 @@
-"""plotter_app_icons.py — Chart-type icon drawing functions for Claude Plotter sidebar."""
+"""plotter_app_icons.py — Chart-type icon drawing functions for Spectra sidebar."""
 
 SB_ITEM_H    = 56
 SB_ICON_SIZE = 28

@@ -1,4 +1,4 @@
-"""plotter_errors.py — Centralized error handling and logging for Claude Plotter."""
+"""plotter_errors.py — Centralized error handling and logging for Spectra."""
 
 import logging
 import logging.handlers
@@ -6,11 +6,11 @@ import os
 import threading
 import traceback
 
-LOG_PATH = os.path.expanduser("~/Library/Logs/claude_plotter.log")
+LOG_PATH = os.path.expanduser("~/Library/Logs/spectra.log")
 
 # Set up logging
 os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
-_logger = logging.getLogger("claude_plotter")
+_logger = logging.getLogger("spectra")
 _logger.setLevel(logging.DEBUG)
 
 if not _logger.handlers:

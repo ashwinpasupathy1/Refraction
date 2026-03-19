@@ -1,4 +1,4 @@
-"""plotter_session.py — Session persistence for Claude Plotter."""
+"""plotter_session.py — Session persistence for Spectra."""
 
 import json
 import logging
@@ -8,7 +8,7 @@ import time
 _log = logging.getLogger(__name__)
 
 PREFS_PATH = os.path.expanduser(
-    "~/Library/Preferences/claude_plotter_session.json"
+    "~/Library/Preferences/spectra_session.json"
 )
 
 

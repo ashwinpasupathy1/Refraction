@@ -1,6 +1,6 @@
-# Claude Plotter
+# Spectra
 
-> A GraphPad Prism-style scientific plotting application — built entirely by Claude (Anthropic) with Ashwin Pasupathy.
+> A publication-quality scientific plotting application for macOS — built entirely by Claude (Anthropic) with Ashwin Pasupathy.
 
 ![Tests](https://img.shields.io/badge/tests-531%20total%20·%20522%20core-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.12+-blue)
@@ -10,9 +10,15 @@
 
 ---
 
+![Spectra screenshot](assets/screenshot.png)
+
+<!-- Screenshot placeholder — will be filled in with an actual app screenshot -->
+
+---
+
 ## Overview
 
-Claude Plotter is a fully-featured application that brings the familiar workflow of GraphPad Prism to your desktop or browser. Load your data from an Excel spreadsheet, choose a chart type, tweak your style parameters, and generate publication-quality figures — all without writing a single line of code.
+Spectra is a fully-featured scientific plotting application for macOS. Load your data from an Excel spreadsheet, choose a chart type, tweak your style parameters, and generate publication-quality figures — all without writing a single line of code.
 
 The application runs in two modes:
 - **Desktop**: Python + Tkinter UI with a pywebview panel for interactive Plotly charts
@@ -28,6 +34,7 @@ Both modes share the same Python business logic and FastAPI server.
 # Desktop (requires display)
 pip install -r requirements.txt
 python3 plotter_barplot_app.py
+# Note: the main desktop entry point is being renamed to plotter_desktop.py
 
 # Web server (no display required)
 pip install -r requirements-web.txt
@@ -36,8 +43,8 @@ python3 plotter_web_server.py
 # Open http://localhost:7331
 
 # Docker
-docker build -t claude-plotter .
-docker run -p 7331:7331 claude-plotter
+docker build -t spectra .
+docker run -p 7331:7331 spectra
 ```
 
 ---
@@ -52,13 +59,13 @@ docker run -p 7331:7331 claude-plotter
 - **Live canvas renderer** — bar and grouped-bar charts render natively on `tk.Canvas` with interactive hit-testing, recolouring, and Y-axis drag
 - **Publication-ready output** — 144 DPI renders, open/closed/floating spine styles, configurable tick directions, gridlines, and font sizes
 - **Statistical overlays** — significance brackets, error bars (SEM, SD, 95% CI), jitter points, and posthoc corrections
-- **Excel-native data model** — paste data directly from Prism, Excel, or Numbers; the app validates your layout before plotting
+- **Excel-native data model** — paste data directly from Excel or Numbers; the app validates your layout before plotting
 - **Style presets** — 5 built-in presets (Classic, Publication, Presentation, Minimal, Dark) + save your own
 - **Session persistence** — settings saved automatically; resume exactly where you left off
 - **Undo/redo** — Cmd+Z / Cmd+Shift+Z for all plot parameter changes
 - **Statistical wiki** — built-in reference for all 29 chart types with formulas and citations
 - **Results panel** — summary statistics, exportable as CSV or copied as TSV for pasting into other apps
-- **Fully modular architecture** — 20+ focused Python modules with zero circular dependencies
+- **Fully modular architecture** — 30+ focused Python modules with zero circular dependencies
 
 ---
 
@@ -67,14 +74,14 @@ docker run -p 7331:7331 claude-plotter
 | Format | Read | Write |
 |--------|------|-------|
 | .xlsx / .xls | Yes | — |
-| .cplot (Claude Plotter project) | Yes | Yes |
-| .pzfx (GraphPad Prism) | Yes (import) | — |
+| .cplot (Spectra Project) | Yes | Yes |
+| .pzfx (Prism format) | Yes (import) | — |
 
 ---
 
 ## Chart Types
 
-Claude Plotter supports **29 chart types** across a wide range of scientific use cases.
+Spectra supports **29 chart types** across a wide range of scientific use cases.
 
 ### Categorical / Distribution
 
@@ -160,7 +167,7 @@ Web mode:       Browser -> React SPA -> FastAPI (0.0.0.0:7331)
 Both modes:     same Python business logic, same FastAPI server
 ```
 
-Claude Plotter is split into 27+ focused Python modules (~21,300 lines) with no circular dependencies.
+Spectra is split into 30+ focused Python modules (~27,300 lines) with no circular dependencies.
 
 ```
 # Core application
@@ -182,14 +189,14 @@ plotter_undo.py               131 lines   Undo/redo stack
 plotter_errors.py              99 lines   Structured error reporting
 plotter_comparisons.py        248 lines   Custom comparison builder
 plotter_project.py            207 lines   .cplot project files (ZIP)
-plotter_import_pzfx.py        316 lines   GraphPad .pzfx importer
+plotter_import_pzfx.py        316 lines   Prism .pzfx file importer
 plotter_wiki_content.py     2,224 lines   Statistical wiki content (29 sections)
 plotter_app_wiki.py           522 lines   Wiki popup viewer
 
 # Phase 3 — Plotly / FastAPI
 plotter_server.py             183 lines   FastAPI server + auth middleware
 plotter_webview.py            179 lines   pywebview wrapper for desktop mode
-plotter_plotly_theme.py        51 lines   Plotly theme matching Prism style
+plotter_plotly_theme.py        51 lines   Plotly theme constants
 plotter_spec_bar.py            67 lines   Bar chart Plotly spec builder
 plotter_spec_grouped_bar.py    57 lines   Grouped bar Plotly spec builder
 plotter_spec_line.py           55 lines   Line graph Plotly spec builder
@@ -205,7 +212,7 @@ Dockerfile                                Docker deployment config
 
 ## Test Suite
 
-531 tests across 7 suites.
+430 tests across 5 suites.
 
 ```bash
 # Run everything
@@ -213,15 +220,13 @@ python3 run_all.py
 
 # Run a specific suite
 python3 run_all.py comprehensive      # 309 tests — all chart types + stats engine
-python3 run_all.py p1p2p3             #  80 tests — style parameter regressions
-python3 run_all.py control            #  20 tests — control-group statistics
-python3 run_all.py canvas_renderer    # ~109 tests — tk.Canvas renderer (requires display)
-python3 run_all.py modular            #  74 tests — widgets / validators / results / tabs
-python3 run_all.py stats_verify       #  37 tests — statistical verification
-python3 run_all.py phase3_plotly      #  11 tests — Plotly spec builders + server
+python3 run_all.py stats              #  57 tests — statistical verification + control logic
+python3 run_all.py validators         #  35 tests — spreadsheet validators
+python3 run_all.py specs              #  11+ tests — Plotly spec builders + server (needs plotly)
+python3 run_all.py api                #  18 tests — FastAPI endpoint tests
 ```
 
-All core tests (comprehensive, p1p2p3, control, modular, stats_verify) must pass before any commit. Canvas renderer tests require a display. Phase3/plotly tests require the `plotly` package.
+All suites must pass before any commit. The `specs` suite requires the `plotly` package.
 
 ---
 

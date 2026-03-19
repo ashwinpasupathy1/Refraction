@@ -1,7 +1,7 @@
 """
 prism_validators.py
 ===================
-Standalone spreadsheet validation functions for Claude Plotter.
+Standalone spreadsheet validation functions for Spectra.
 
 Each validate_* function accepts a raw pandas DataFrame (read with
 header=None so row indices are preserved) and returns a

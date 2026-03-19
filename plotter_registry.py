@@ -1,7 +1,7 @@
 """
 prism_registry.py
 =================
-Chart-type registry for Claude Plotter.
+Chart-type registry for Spectra.
 
 Contains:
 - PlotTypeConfig  — dataclass describing one chart type's UI contract
