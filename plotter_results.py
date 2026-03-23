@@ -1,7 +1,7 @@
 """
-prism_results.py
-================
-Results panel logic for Claude Plotter — decoupled from the App class.
+plotter_results.py
+==================
+Results panel logic for Refraction — decoupled from the App class.
 
 The three public functions receive the ``app`` object (an App instance)
 as their first argument so they can read ``app._results_inner``,
@@ -379,7 +379,7 @@ def export_results_csv(app):
         title="Save Results as CSV",
         defaultextension=".csv",
         filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-        initialfile="prism_results.csv"
+        initialfile="refraction_results.csv"
     )
     if not path:
         return

@@ -1,4 +1,4 @@
-# Spectra (Claude Plotter) — Project Context for Claude Code
+# Refraction — Project Context for Claude Code
 
 GraphPad Prism-style scientific plotting application for macOS.
 Built entirely by Claude (Anthropic) with Ashwin Pasupathy.
@@ -41,7 +41,7 @@ python3 plotter_web_server.py         # Standalone web server (no Tk)
 ./build_app.sh
 
 # Quick syntax check of all modules
-python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plotter_results, plotter_registry, plotter_tabs, plotter_app_icons, plotter_presets, plotter_session, plotter_events, plotter_types, plotter_undo, plotter_errors, plotter_comparisons, plotter_project, plotter_import_pzfx, plotter_wiki_content, plotter_app_wiki, plotter_server, plotter_webview, plotter_plotly_theme, plotter_spec_bar, plotter_spec_grouped_bar, plotter_spec_line, plotter_spec_scatter, plotter_web_server; print('OK')"
+python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plotter_results, plotter_registry, plotter_tabs, plotter_app_icons, plotter_presets, plotter_session, plotter_events, plotter_types, plotter_undo, plotter_errors, plotter_comparisons, plotter_project, plotter_import_pzfx, plotter_wiki_content, plotter_app_wiki, plotter_server, plotter_webview, plotter_plotly_theme, plotter_spec_bar, plotter_spec_grouped_bar, plotter_spec_line, plotter_spec_scatter, plotter_web_server, plotter_export; print('OK')"
 ```
 
 ---
@@ -50,11 +50,12 @@ python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plott
 
 ```
 # ── Core application ──────────────────────────────────────────────
-plotter_barplot_app.py      6,688 lines   App class, sidebar, all UI wiring
+plotter_barplot_app.py      6,700 lines   App class, sidebar, all UI wiring
 plotter_functions.py        6,553 lines   29 matplotlib chart functions + stats
 plotter_widgets.py            952 lines   _DS tokens, PButton/PEntry/PCheckbox etc.
 plotter_validators.py         518 lines   Standalone spreadsheet validators
 plotter_results.py            401 lines   Results panel: populate / export / copy
+plotter_export.py             170 lines   Journal export presets (Nature/Science/Cell) + kaleido
 
 # ── Phase 2 infrastructure modules ────────────────────────────────
 plotter_registry.py           475 lines   PlotTypeConfig registry (29 entries)
@@ -122,8 +123,8 @@ requirements-web.txt                      Web-only dependencies (no Tk/matplotli
 
 # ── Test infrastructure ────────────────────────────────────────────
 tests/plotter_test_harness.py 363 lines   Shared test bootstrap (imports once)
-run_all.py                    112 lines   5-suite unified test runner
-tests/test_comprehensive.py 1,341 lines   Main chart function tests (309 tests)
+run_all.py                    117 lines   5-suite unified test runner
+tests/test_comprehensive.py 1,341 lines   Main chart function tests (438 tests)
 tests/test_stats.py         1,200+ lines  Statistical verification + control logic (57 tests)
 tests/test_validators.py      600+ lines  Spreadsheet validator tests (35 tests)
 tests/test_api.py             500+ lines  FastAPI endpoint tests (18 tests)
@@ -658,6 +659,47 @@ enabling both desktop (pywebview) and web (browser) modes.
 22. **`plotter_server.py` vs `plotter_web_server.py`** — `plotter_server.py`
     defines the FastAPI app and endpoints. `plotter_web_server.py` is a thin
     entry point that imports and runs it for standalone web deployment.
+
+---
+
+## Journal Export (plotter_export.py)
+
+`plotter_export.py` provides publication-quality figure export with presets for
+Nature, Science, and Cell journals.
+
+### Journal dimension presets
+
+| Journal | Single col | Double col | Max height | Min font | DPI |
+|---------|-----------|------------|------------|----------|-----|
+| Nature  | 89 mm      | 183 mm     | 247 mm     | 7 pt     | 300 |
+| Science | 55 mm      | 182 mm     | 245 mm     | 7 pt     | 300 |
+| Cell    | 85 mm      | 174 mm     | 235 mm     | 7 pt     | 300 |
+
+### Export path priority
+
+1. **kaleido** (primary) — uses last stored `_last_kw` + `_last_chart_type` to
+   rebuild the Plotly spec and export via `plotly.io.write_image()`. Supports
+   PNG, SVG, PDF. Enforces journal font family (Arial) and minimum font size.
+2. **matplotlib** (fallback) — resizes the `self._fig` in memory and calls
+   `fig.savefig()`. Used when kaleido is not installed or spec rebuild fails.
+3. **HTML** — always uses Plotly's `fig.write_html()` (no kaleido required).
+
+### Key functions in plotter_export.py
+
+| Function | Purpose |
+|---|---|
+| `export_plotly(spec_json, path, journal, col_label, dpi)` | Export via kaleido |
+| `export_matplotlib(mpl_fig, path, journal, col_label, dpi)` | Export via matplotlib |
+| `kaleido_available()` | Returns True if kaleido is installed |
+| `JOURNAL_PRESETS` | Dict of journal dimension data |
+
+### App integration
+
+- `App._last_kw` and `App._last_chart_type` are stored in `_embed_plot` after
+  every successful render.
+- `App._download_png()` → `App._show_export_dialog()` — opens the journal export
+  dialog; tries kaleido first, falls back to matplotlib.
+- Keyboard shortcut: **Cmd+E** opens the export dialog.
 
 ---
 

@@ -1,7 +1,7 @@
 """
 plotter_app_wiki.py
 ===================
-Statistical reference wiki popup for Claude Plotter.
+Statistical reference wiki popup for Refraction.
 Two-pane Toplevel: TOC sidebar + scrollable content.
 LaTeX rendered via matplotlib mathtext engine.
 """
@@ -72,7 +72,7 @@ def open_wiki_popup(parent_window, track_popup_fn=None, bind_scroll_fn=None):
 
     # ── window setup ────────────────────────────────────────────────
     win = tk.Toplevel(parent_window)
-    win.title("Claude Plotter — Statistical Reference")
+    win.title("Refraction — Statistical Reference")
     win.geometry("920x660")
     win.minsize(640, 400)
     win.configure(bg="white")

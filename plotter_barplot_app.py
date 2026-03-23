@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-prism_barplot_app.py
-====================
-Claude Plotter -- main application window (macOS, tabbed ttk layout).
+plotter_barplot_app.py
+======================
+Refraction -- main application window (macOS, tabbed ttk layout).
 
 Module structure
 ----------------
-prism_barplot_app.py  -- this file; App class + PLOT_REGISTRY + icon helpers
-prism_widgets.py      -- design-system tokens, PButton/PEntry/PCheckbox etc.
-prism_validators.py   -- standalone spreadsheet validation functions
-prism_results.py      -- results-panel population, export, and copy helpers
+plotter_barplot_app.py  -- this file; App class + PLOT_REGISTRY + icon helpers
+plotter_widgets.py      -- design-system tokens, PButton/PEntry/PCheckbox etc.
+plotter_validators.py   -- standalone spreadsheet validation functions
+plotter_results.py      -- results-panel population, export, and copy helpers
 plotter_functions.py    -- matplotlib plot functions (29 chart types)
-prism_tabs.py         -- TabState, TabManager, TabBar (plot tab system)
+plotter_tabs.py         -- TabState, TabManager, TabBar (plot tab system)
 
 The App class imports from all four companion modules so each can be
 developed, tested, and documented independently.
@@ -50,7 +50,7 @@ try:
         PAD,
     )
 except ImportError as _e:
-    print(f"[prism] warning: prism_widgets not found ({_e})")
+    print(f"[refraction] warning: plotter_widgets not found ({_e})")
 
 try:
     from plotter_validators import (
@@ -61,14 +61,14 @@ try:
     )
     _VALIDATORS_AVAILABLE = True
 except ImportError as _e:
-    print(f"[prism] warning: prism_validators not found ({_e})")
+    print(f"[refraction] warning: plotter_validators not found ({_e})")
     _VALIDATORS_AVAILABLE = False
 
 try:
     from plotter_results import populate_results, export_results_csv, copy_results_tsv
     _RESULTS_AVAILABLE = True
 except ImportError as _e:
-    print(f"[prism] warning: prism_results not found ({_e})")
+    print(f"[refraction] warning: plotter_results not found ({_e})")
     _RESULTS_AVAILABLE = False
 
 try:
@@ -174,7 +174,7 @@ def _lbl(parent, row, key, font_size=13):
 
 
 # ---------------------------------------------------------------------------
-# Plot type registry  -  edit prism_registry.py to add new chart types
+# Plot type registry  -  edit plotter_registry.py to add new chart types
 # ---------------------------------------------------------------------------
 
 from plotter_registry import (
@@ -285,7 +285,7 @@ _VAR_DEFAULTS: dict = {
 }
 
 
-PREFS_PATH = os.path.expanduser("~/Library/Preferences/claude_plotter.json")
+PREFS_PATH = os.path.expanduser("~/Library/Preferences/refraction.json")
 
 def _load_prefs():
     try:
@@ -381,11 +381,15 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         super().__init__()
         # Hide window during build to avoid visible resize animation
         self.withdraw()
-        self.title("Claude Plotter")
+        self.title("Refraction")
         self.resizable(True, True)
         self._pf              = None
         self._pf_ready        = False
         self._running         = False
+        # Excel parse cache — keyed by (path, sheet); avoids re-reading the
+        # same file on consecutive renders (e.g. changing only style options).
+        self._parse_cache_key = None
+        self._parse_cache_df  = None
         self._vars            = {}
         self._file_selected   = False
         self._validated       = False
@@ -488,16 +492,16 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             self.iconphoto(True, photo)
 
     def _watch_dock_icon(self):
-        """Re-apply the dock icon on a timer while heavy imports run, then
-        once more after they finish, and again 1 s later as a safety net.
+        """Re-apply the dock icon on a timer while heavy imports run.
 
-        Why multiple restores?
-          • matplotlib.pyplot import touches NSApplication  ->  resets icon
-          • seaborn import does the same
-          • openpyxl's first read can trigger a secondary Cocoa event loop tick
+        matplotlib/seaborn/openpyxl each touch NSApplication on first import,
+        resetting the dock icon.  The watcher fires every 200 ms until the
+        module import background thread signals it is done (_pf_ready=True),
+        then does one final restore after a short settling delay.
 
-        The watcher fires every 200 ms (was 250) so it catches any reset
-        within one animation frame.
+        Note: since matplotlib is now deferred to first export, the icon is
+        only at risk from openpyxl during startup — the watcher still handles
+        that correctly.
         """
         set_dock_icon()
         if not self._pf_ready:
@@ -537,28 +541,25 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
     def _do_import(self):
         try:
-            import matplotlib
-            matplotlib.use("Agg")   # belt-and-suspenders alongside MPLBACKEND env var
+            # Import plotter_functions module only — matplotlib/seaborn/scipy
+            # are NOT loaded here.  They load lazily on first export call via
+            # pf._ensure_imports().  This keeps startup fast and keeps matplotlib
+            # completely out of memory during normal (Plotly-rendered) sessions.
             import plotter_functions as pf
             self._pf = pf
-            # ── _ensure_imports() loads matplotlib.pyplot + seaborn ──────────
-            # These must complete BEFORE _pf_ready flips so that _watch_dock_icon
-            # is still running if Cocoa resets the icon during seaborn init.
-            pf._ensure_imports()
-            self._plt = pf.plt
-            self._pd  = pf.pd
-            # All heavy imports done  -  safe to mark ready and stop the watcher
+            # pandas is lightweight and needed immediately for file validation.
+            import pandas as _pandas_mod
+            self._pd = _pandas_mod
+            # _plt stays None until first matplotlib export — callers must guard:
+            #   if self._plt is not None: self._plt.close(...)
+            self._plt = None
             self._pf_ready = True
-            # One final dock-icon restore after everything settles
             self.after(0, set_dock_icon)
-            # Enable Generate Plot if a file was already validated while loading
             def _check_ready():
                 if self._validated:
                     self._run_btn.config(state="normal", text="Generate Plot")
                 else:
                     self._run_btn.config(state="disabled", text="Generate Plot")
-                # Swatches skipped their custom-palette render during import
-                # (to avoid the deadlock).  Now matplotlib is loaded, refresh them.
                 self._vars["color"].set(self._vars["color"].get())
                 self._sync_analyze_btn()
             self.after(0, _check_ready)
@@ -911,7 +912,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         help_menu.add_command(label="Help Analyze…",
                               command=self._help_analyze)
         help_menu.add_separator()
-        help_menu.add_command(label="About Claude Plotter",
+        help_menu.add_command(label="About Refraction",
                               command=self._show_about)
         menubar.add_cascade(label="Help", menu=help_menu)
 
@@ -1552,6 +1553,8 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         self._plot_frame    = None   # points to active tab's plot_frame; set by TabManager
         self._canvas_widget = None   # FigureCanvasTkAgg; updated on tab switch
         self._fig           = None   # matplotlib Figure; updated on tab switch
+        self._last_kw       = None   # kw dict from last successful render (for export)
+        self._last_chart_type = None # chart type from last successful render
         self._zoom_level    = 1.0
 
         self._empty_state_frame = ttk.Frame(self._plot_canvas)
@@ -1624,7 +1627,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         tk.Label(hdr, text="📖  Reference Wiki",
                  bg="#2274A5", fg="white",
                  font=("Helvetica Neue", 15, "bold")).pack(side="left", padx=18, pady=12)
-        tk.Label(hdr, text="scipy · GraphPad Prism 11 Statistics Guide",
+        tk.Label(hdr, text="scipy · Statistics Reference",
                  bg="#2274A5", fg="#a8cce0",
                  font=("Helvetica Neue", 11)).pack(side="left", padx=(0, 18), pady=12)
 
@@ -1752,14 +1755,11 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             lbl.pack(anchor="w", padx=28, pady=(0, 4))
 
         def plotter_link(page_slug, link_text):
-            """Clickable hyperlink to a GraphPad Prism 11 Statistics Guide page."""
-            import webbrowser
-            url = f"https://www.graphpad.com/guides/prism/latest/statistics/{page_slug}"
+            """Reference label (non-clickable) for statistics documentation."""
             lbl = tk.Label(frame, text=f"📎 {link_text}",
-                           font=("Helvetica Neue", 11, "underline"),
-                           fg="#2274A5", bg="white", cursor="hand2")
+                           font=("Helvetica Neue", 11),
+                           fg="#6B7280", bg="white")
             lbl.pack(anchor="w", padx=28, pady=(0, 6))
-            lbl.bind("<Button-1>", lambda e: webbrowser.open(url))
 
         def scipy_entry(fn, label_text, use_sections=("Notes",)):
             import inspect, re
@@ -1795,9 +1795,9 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         h2("Independent Samples t-test  (Parametric, 2 groups)")
         tag("scipy.stats.ttest_ind", "#2274A5")
         scipy_entry(_st.ttest_ind, "ttest_ind")
-        body("Welch's t-test (unequal variances) is the default in GraphPad Prism "
-             "since version 8. It does not assume equal standard deviations and is "
-             "preferred over Student's t-test in most practical situations.")
+        body("Welch's t-test (unequal variances) does not assume equal standard "
+             "deviations and is preferred over Student's t-test in most practical "
+             "situations.")
         plotter_link("stat_qa_choosing_a_test_to_compare_.htm",
                    "Prism 11: Choosing a test to compare two groups")
 
@@ -1903,7 +1903,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         scipy_entry(_st.levene, "levene")
         body("Prism 11 uses Brown-Forsythe and Bartlett's tests for homoscedasticity, "
              "not Levene's. Brown-Forsythe (median-centred) is more robust to non-normality. "
-             "Claude Plotter uses Levene's as an equivalent diagnostic.")
+             "Refraction uses Levene's as an equivalent diagnostic.")
         plotter_link("stat_checklist_1wayanova.htm",
                    "Prism 11: Equal variance assumption (Brown-Forsythe / Bartlett)")
 
@@ -1921,7 +1921,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         tag("η² = SS_effect / SS_total", "#6B4226")
         body("Proportion of total variance explained by a factor. η² = 0.01: small, "
              "0.06: medium, 0.14: large (Cohen). For one-way ANOVA η² = partial η². "
-             "For two-way ANOVA Claude Plotter reports partial η² (effect SS / (effect SS + error SS)).")
+             "For two-way ANOVA Refraction reports partial η² (effect SS / (effect SS + error SS)).")
         plotter_link("stat_options_tab_one-way_anova.htm",
                    "Prism 11: Eta squared and omega squared")
 
@@ -3046,7 +3046,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         """Synchronize the Comparison Mode radio buttons and Control Group dropdown
         so every visible state is consistent and logically valid.
 
-        Consistency rules (mirrors GraphPad Prism behaviour):
+        Consistency rules:
 
         HIDDEN entirely (comparison_mode radio + control group section invisible):
           - One-sample test  ->  each group vs μ₀, no group-to-group comparison
@@ -3227,7 +3227,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
         desktop = os.path.join(os.path.expanduser("~"), "Desktop")
         ts      = datetime.now().strftime("%Y%m%d_%H%M%S")
-        fname   = f"claude_plotter_template_{mode}_{ts}.xlsx"
+        fname   = f"refraction_template_{mode}_{ts}.xlsx"
         path    = os.path.join(desktop, fname)
 
         wb = openpyxl.Workbook()
@@ -3472,6 +3472,10 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         reset_sheet=True   ->  set sheet var to first sheet (new file load)
         reset_sheet=False  ->  keep current sheet selection (sheet change trigger)
         """
+        # Invalidate the Excel parse cache whenever the file or sheet changes
+        # so _do_run always reads fresh data for the new file.
+        self._parse_cache_key = None
+        self._parse_cache_df  = None
         # openpyxl first import can trigger a Cocoa tick that resets the dock icon.
         self.after(100, set_dock_icon)
         try:
@@ -4626,8 +4630,8 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         """Shared parametric/nonparametric/paired decision tree.
         Returns (rec_title, reasoning, test, posthoc, mc).
 
-        Aligned with GraphPad Prism 11 Statistics Guide:
-        - 2 groups: Welch's t-test (default since Prism 8, handles unequal variances)
+        Statistical decision tree:
+        - 2 groups: Welch's t-test (handles unequal variances)
         - 3+ groups, normal + equal var: One-way ANOVA + Tukey HSD (all-pairwise)
         - 3+ groups, normal + unequal var: Welch's ANOVA (Brown-Forsythe)  -  note only,
           app falls back to Parametric (one-way ANOVA) since Welch's ANOVA is not yet
@@ -4683,7 +4687,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 reasoning.append(("ℹ", "Multiple conditions, same subjects. Prism 11 uses "
                                    "repeated-measures one-way ANOVA with optional "
                                    "Geisser-Greenhouse correction for non-sphericity. "
-                                   "Claude Plotter uses pairwise paired t-tests with "
+                                   "Refraction uses pairwise paired t-tests with "
                                    "Holm correction as a robust equivalent."))
             else:
                 test, rec_title = "Non-parametric", "Friedman test + Dunn's post-hoc (Holm corrected)"
@@ -4697,7 +4701,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 test, rec_title = "Parametric", "Welch's unpaired t-test"
                 reasoning.append((" -> ", "RECOMMENDATION: Welch's unpaired t-test (parametric)"))
                 reasoning.append(("ℹ", "Two groups, normally distributed. Welch's t-test "
-                                   "is the default in GraphPad Prism since version 8  -  it "
+                                   "is the recommended default  -  it "
                                    "does not assume equal variances, so it is correct "
                                    "regardless of the Levene result."))
                 if levene_p is not None and levene_p < 0.05:
@@ -5549,10 +5553,9 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         ref_frm = tk.Frame(body, bg="#f0f0f0")
         ref_frm.pack(fill="x", padx=PAD2, pady=(8, 4))
         tk.Label(ref_frm,
-                 text="ℹ  Follows GraphPad Prism's 'Analyze > Statistical comparisons' "
-                      "decision logic. Welch's t-test is the Prism default (v8+) as it "
-                      "does not assume equal variances. You can override any setting in "
-                      "the Stats tab before generating the plot.",
+                 text="ℹ  Follows standard statistical decision logic. Welch's t-test "
+                      "is the default as it does not assume equal variances. You can "
+                      "override any setting in the Stats tab before generating the plot.",
                  bg="#f0f0f0", fg="#666666", wraplength=560, justify="left",
                  font=("Helvetica Neue", 10)
                  ).pack(anchor="w", padx=12, pady=8)
@@ -5937,12 +5940,31 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         except Exception:
             return None
 
+    def _ensure_matplotlib(self):
+        """Lazily load matplotlib/seaborn and update self._plt.
+
+        Called by export functions and (temporarily) by _do_run while the
+        matplotlib rendering path is still in use.  Safe to call multiple
+        times — subsequent calls are a no-op once self._plt is set.
+        """
+        if self._plt is None and self._pf is not None:
+            self._pf._ensure_imports()          # loads plt, seaborn, scipy
+            self._plt = self._pf.plt
+            # Suppress any dock-icon reset caused by seaborn init
+            self.after(200, set_dock_icon)
+
     def _do_run(self, kw, tab_id=None, job_id=None):
         try:
             if hasattr(self, "_bus"):
                 self._bus.emit("plot.started", kw=kw)
             pd = _pd()  # cached  -  no overhead after first call
-            self._plt.close("all")
+            # Ensure matplotlib is loaded for the chart render.
+            # TODO (Path A): replace this call with a Plotly spec builder so
+            # that _ensure_matplotlib() is never called during normal rendering
+            # and only fires on explicit export.
+            self._ensure_matplotlib()
+            if self._plt is not None:
+                self._plt.close("all")
 
             # Strip internal-only keys before passing to plot functions
             ylim_data_min = kw.pop("_ylim_data_min", False)
@@ -5960,13 +5982,35 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             show_norm_warn = kw.pop("show_normality_warning", True)
             self._pf.__show_normality_warning__ = show_norm_warn
 
+            # ── Excel parse cache ─────────────────────────────────────────────
+            # Read the file at most once per render.  If the same (path, sheet)
+            # was used last time, reuse the cached DataFrame so that consecutive
+            # renders (e.g. changing only colour or font size) skip disk I/O.
+            # Cache is a single slot; it is invalidated whenever path or sheet
+            # changes.  Thread-safe because _do_run is always serialised by the
+            # self._running flag (only one render runs at a time).
+            _excel_path  = kw.get("excel_path", "")
+            _excel_sheet = kw.get("sheet", 0)
+            _cache_key   = (_excel_path, _excel_sheet)
+            if self._parse_cache_key != _cache_key:
+                try:
+                    self._parse_cache_df  = pd.read_excel(
+                        _excel_path, sheet_name=_excel_sheet, header=None)
+                    self._parse_cache_key = _cache_key
+                except Exception:
+                    self._parse_cache_df  = None
+                    self._parse_cache_key = None
+                    _log.debug("App._do_run: could not pre-read Excel file", exc_info=True)
+
+            # Derive group names from cached header row (fast — no second read)
             groups = []
-            try:
-                df_g   = pd.read_excel(kw["excel_path"], sheet_name=kw.get("sheet", 0),
-                                       header=None, nrows=1)
-                groups = [str(c) for c in df_g.iloc[0].dropna().tolist()]
-            except Exception:
-                _log.debug("App._do_run: could not read group names from header row", exc_info=True)
+            if self._parse_cache_df is not None:
+                try:
+                    groups = [str(c) for c in
+                              self._parse_cache_df.iloc[0].dropna().tolist()]
+                except Exception:
+                    _log.debug("App._do_run: could not read group names from header row",
+                               exc_info=True)
 
             pt   = self._plot_type.get()
             spec = next((s for s in _REGISTRY_SPECS if s.key == pt), _REGISTRY_SPECS[0])
@@ -6037,6 +6081,13 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             if hasattr(self, "_bus"):
                 self._bus.emit("plot.completed", kw=_kw_snap)
         except Exception:
+            # Close any figure that fn() may have created before the error.
+            # Guard against None — matplotlib may not be loaded yet.
+            try:
+                if self._plt is not None:
+                    self._plt.close("all")
+            except Exception:
+                pass
             err = traceback.format_exc()
             short = err.strip().splitlines()[-1]
             if hasattr(self, "_bus"):
@@ -6100,6 +6151,17 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             self._fig = fig
             if tab is not None:
                 tab.fig = fig
+
+            # Store last successful render state for journal export
+            if kw:
+                import copy as _copy_embed
+                self._last_kw = _copy_embed.deepcopy(kw)
+            _pt_web = kw.get("plot_type", "") if kw else ""
+            if not _pt_web and hasattr(self, "_plot_type"):
+                _pt_web = self._plot_type.get()
+            if hasattr(_pt_web, "get"):
+                _pt_web = _pt_web.get()
+            self._last_chart_type = str(_pt_web) if _pt_web else None
 
             # Phase 3: try Plotly webview for priority chart types
             _pt_web = kw.get("plot_type", "") if kw else ""
@@ -6201,6 +6263,12 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         except Exception:
             err = traceback.format_exc()
             self._set_status(f"Embed error: {err.strip().splitlines()[-1]}", err=True)
+            # Close the figure if embedding failed — avoids silent leak
+            try:
+                import matplotlib.pyplot as _plt
+                _plt.close(fig)
+            except Exception:
+                pass
         finally:
             self._reset_btn()
 
@@ -6422,56 +6490,205 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             self._results_visible = True
 
     def _populate_results(self, excel_path, sheet, plot_type, kw_snapshot):
-        """Delegate to the standalone populate_results() in prism_results.py."""
+        """Delegate to the standalone populate_results() in plotter_results.py."""
         if _RESULTS_AVAILABLE:
             populate_results(self, excel_path, sheet, plot_type, kw_snapshot)
 
     def _export_results_csv(self):
-        """Delegate to the standalone export_results_csv() in prism_results.py."""
+        """Delegate to the standalone export_results_csv() in plotter_results.py."""
         if _RESULTS_AVAILABLE:
             export_results_csv(self)
         else:
             self._set_status("Results module not available.", err=True)
 
     def _copy_results_tsv(self):
-        """Delegate to the standalone copy_results_tsv() in prism_results.py."""
+        """Delegate to the standalone copy_results_tsv() in plotter_results.py."""
         if _RESULTS_AVAILABLE:
             copy_results_tsv(self)
 
     def _download_png(self):
-        if self._fig is None: return
-        from datetime import datetime
-        desktop = os.path.join(os.path.expanduser("~"), "Desktop")
-        # Pre-fill with plot title or source filename
-        title_str = self._vars.get("title", tk.StringVar()).get().strip()
-        src_path  = self._vars.get("excel_path", tk.StringVar()).get().strip()
-        if title_str:
-            safe = "".join(c if c.isalnum() or c in " _-" else "_" for c in title_str).strip()
-            default_name = safe[:60] or "claude_plotter"
-        elif src_path:
-            default_name = os.path.splitext(os.path.basename(src_path))[0][:60]
-        else:
-            default_name = f"claude_plotter_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        path = filedialog.asksaveasfilename(
-            initialdir=desktop, initialfile=f"{default_name}.png",
-            defaultextension=".png",
-            filetypes=[("PNG image", "*.png"),
-                       ("TIFF image", "*.tiff"),
-                       ("EPS vector", "*.eps"),
-                       ("SVG vector", "*.svg"),
-                       ("PDF", "*.pdf"),
-                       ("All files", "*.*")],
-            title="Save plot")
-        if path:
-            ext = os.path.splitext(path)[1].lower()
-            if ext == ".png":
-                dpi = 600
-            elif ext == ".tiff":
-                dpi = 300
+        """Open the journal export dialog, then save the figure."""
+        if self._fig is None and self._last_kw is None:
+            from tkinter import messagebox
+            messagebox.showwarning("Nothing to export", "Generate a plot first.")
+            return
+        self._show_export_dialog()
+
+    def _show_export_dialog(self):
+        """Show a journal-preset export dialog and save the figure."""
+        import importlib
+        from tkinter import messagebox, filedialog
+
+        try:
+            import plotter_export as _pe
+        except ImportError:
+            messagebox.showerror("Export error", "plotter_export module not found.")
+            return
+
+        # ── Build dialog ───────────────────────────────────────────────────────
+        dlg = tk.Toplevel(self)
+        dlg.title("Export Figure")
+        dlg.resizable(False, False)
+        dlg.grab_set()
+
+        pad = dict(padx=10, pady=5)
+
+        # Journal row
+        tk.Label(dlg, text="Journal preset:", anchor="w").grid(
+            row=0, column=0, sticky="w", **pad)
+        journal_var = tk.StringVar(value="Custom")
+        journal_cb  = ttk.Combobox(
+            dlg, textvariable=journal_var, state="readonly", width=22,
+            values=["Custom"] + list(_pe.JOURNAL_PRESETS.keys()))
+        journal_cb.grid(row=0, column=1, sticky="w", **pad)
+
+        # Column width row (only active when journal ≠ Custom)
+        tk.Label(dlg, text="Column width:", anchor="w").grid(
+            row=1, column=0, sticky="w", **pad)
+        col_var = tk.StringVar()
+        col_cb  = ttk.Combobox(dlg, textvariable=col_var, state="disabled", width=22)
+        col_cb.grid(row=1, column=1, sticky="w", **pad)
+
+        # Info label
+        info_var = tk.StringVar(value="")
+        tk.Label(dlg, textvariable=info_var, foreground="#666", font=("Arial", 9),
+                 anchor="w", wraplength=300).grid(
+            row=2, column=0, columnspan=2, sticky="w", padx=10, pady=2)
+
+        def _update_cols(*_):
+            j = journal_var.get()
+            if j == "Custom":
+                col_cb.config(state="disabled", values=[])
+                col_var.set("")
+                info_var.set("")
+                dpi_cb.config(state="readonly")
             else:
-                dpi = 150
-            self._fig.savefig(path, dpi=dpi, bbox_inches="tight")
-            self._set_status(f"Saved  -  {os.path.basename(path)}")
+                opts = list(_pe.JOURNAL_PRESETS[j]["columns"].keys())
+                col_cb.config(state="readonly", values=opts)
+                if not col_var.get() or col_var.get() not in opts:
+                    col_var.set(opts[0])
+                p = _pe.JOURNAL_PRESETS[j]
+                dpi_var.set(str(p["dpi"]))
+                dpi_cb.config(state="disabled")
+                info_var.set(
+                    f"{j}: {p['font']} ≥{p['min_font']}pt · "
+                    f"{p['dpi']} DPI · max height {p['max_h_mm']} mm")
+
+        journal_var.trace_add("write", _update_cols)
+
+        # Format row
+        tk.Label(dlg, text="Format:", anchor="w").grid(
+            row=3, column=0, sticky="w", **pad)
+        fmt_var = tk.StringVar(value="PNG (high-res)")
+        ttk.Combobox(
+            dlg, textvariable=fmt_var, state="readonly", width=22,
+            values=["PNG (high-res)", "SVG (vector)", "PDF", "HTML (interactive)"]
+        ).grid(row=3, column=1, sticky="w", **pad)
+
+        # DPI row (disabled when a journal preset is active — preset DPI takes precedence)
+        tk.Label(dlg, text="DPI (PNG only):", anchor="w").grid(
+            row=4, column=0, sticky="w", **pad)
+        dpi_var = tk.StringVar(value="300")
+        dpi_cb = ttk.Combobox(
+            dlg, textvariable=dpi_var, state="readonly", width=22,
+            values=["150", "300", "600"])
+        dpi_cb.grid(row=4, column=1, sticky="w", **pad)
+
+        # ── Export action ──────────────────────────────────────────────────────
+        def _do_export():
+            journal = journal_var.get()
+            col     = col_var.get() if journal != "Custom" else None
+            fmt     = fmt_var.get()
+            try:
+                dpi = int(dpi_var.get())
+            except ValueError:
+                dpi = 300
+
+            _fmt_map = {
+                "PNG (high-res)":      (".png",  "PNG image",  "*.png"),
+                "SVG (vector)":        (".svg",  "SVG vector", "*.svg"),
+                "PDF":                 (".pdf",  "PDF",        "*.pdf"),
+                "HTML (interactive)":  (".html", "HTML",       "*.html"),
+            }
+            ext, desc, glob = _fmt_map.get(fmt, (".png", "PNG image", "*.png"))
+
+            from datetime import datetime
+            desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+            title_str = self._vars.get("title", tk.StringVar()).get().strip()
+            src_path  = self._vars.get("excel_path", tk.StringVar()).get().strip()
+            if title_str:
+                safe = "".join(c if c.isalnum() or c in " _-" else "_"
+                               for c in title_str).strip()
+                default_name = safe[:60] or "refraction"
+            elif src_path:
+                default_name = os.path.splitext(os.path.basename(src_path))[0][:60]
+            else:
+                default_name = f"refraction_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+            path = filedialog.asksaveasfilename(
+                parent=dlg,
+                initialdir=desktop,
+                initialfile=f"{default_name}{ext}",
+                defaultextension=ext,
+                filetypes=[(desc, glob), ("All files", "*.*")],
+                title="Save figure")
+            if not path:
+                return
+
+            dlg.destroy()
+
+            # Try kaleido first if we have the last kw + chart type
+            _used_kaleido = False
+            if (ext != ".tiff" and
+                    self._last_kw is not None and
+                    self._last_chart_type is not None and
+                    _pe.kaleido_available()):
+                try:
+                    import json as _json
+                    from plotter_server import _build_spec
+                    spec_json = _build_spec(self._last_chart_type, self._last_kw)
+                    _spec_obj = _json.loads(spec_json)
+                    if "error" not in _spec_obj:
+                        _pe.export_plotly(
+                            spec_json, path,
+                            journal=journal if journal != "Custom" else None,
+                            col_label=col,
+                            dpi=dpi)
+                        self._set_status(f"Saved  ·  {os.path.basename(path)}")
+                        _used_kaleido = True
+                except Exception as exc:
+                    _log.warning("Kaleido export failed (%s), falling back to matplotlib", exc)
+
+            # Matplotlib fallback
+            if not _used_kaleido:
+                self._ensure_matplotlib()
+                if self._fig is None:
+                    messagebox.showerror("Export failed",
+                        "No rendered figure available. Generate a plot first.")
+                    return
+                try:
+                    _pe.export_matplotlib(
+                        self._fig, path,
+                        journal=journal if journal != "Custom" else None,
+                        col_label=col,
+                        dpi=dpi)
+                    self._set_status(f"Saved  ·  {os.path.basename(path)}")
+                except Exception as exc:
+                    messagebox.showerror("Export failed", str(exc))
+
+        # ── Buttons ────────────────────────────────────────────────────────────
+        btn_frame = tk.Frame(dlg)
+        btn_frame.grid(row=5, column=0, columnspan=2, pady=(10, 8))
+        ttk.Button(btn_frame, text="Export", command=_do_export).pack(
+            side="left", padx=6)
+        ttk.Button(btn_frame, text="Cancel", command=dlg.destroy).pack(
+            side="left", padx=6)
+
+        # Centre dialog over main window
+        dlg.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width()  - dlg.winfo_width())  // 2
+        y = self.winfo_y() + (self.winfo_height() - dlg.winfo_height()) // 2
+        dlg.geometry(f"+{x}+{y}")
 
 
     def _start_spinner(self):
@@ -6515,17 +6732,17 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         """About dialog."""
         from tkinter import messagebox
         messagebox.showinfo(
-            "About Claude Plotter",
-            "Claude Plotter\n\n"
-            "A GraphPad Prism-style data visualization application.\n\n"
+            "About Refraction",
+            "Refraction\n\n"
+            "A publication-quality scientific plotting application.\n\n"
             "Designed and implemented by Claude (Anthropic).\n"
             "Commissioned by Ashwin Pasupathy.\n\n"
             "MIT License\n\n"
-            "22 chart types · Statistical tests · Publication-ready export"
+            "29 chart types · Statistical tests · Publication-ready export"
         )
 
     def _export_all_pdf(self):
-        """Export all 22 chart types as a multi-page PDF showcase (P20)."""
+        """Export all 29 chart types as a multi-page PDF showcase."""
         if self._pf is None:
             from tkinter import messagebox
             messagebox.showerror("Not ready", "Functions not loaded yet.")
@@ -6540,7 +6757,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             title="Save Chart Showcase PDF",
             defaultextension=".pdf",
             filetypes=[("PDF", "*.pdf")],
-            initialfile="claude_plotter_showcase.pdf"
+            initialfile="refraction_showcase.pdf"
         )
         if not out_path:
             return
@@ -6572,7 +6789,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         path = filedialog.asksaveasfilename(
             title="Save Project",
             defaultextension=".cplot",
-            filetypes=[("Claude Plotter Project", "*.cplot"), ("All files", "*.*")],
+            filetypes=[("Refraction Project", "*.cplot"), ("All files", "*.*")],
         )
         if not path:
             return
@@ -6617,7 +6834,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
         path = filedialog.askopenfilename(
             title="Open Project",
-            filetypes=[("Claude Plotter Project", "*.cplot"), ("All files", "*.*")],
+            filetypes=[("Refraction Project", "*.cplot"), ("All files", "*.*")],
         )
         if not path:
             return
@@ -6657,7 +6874,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             messagebox.showerror("Open failed", str(exc))
 
     def _open_pzfx(self):
-        """Import a GraphPad Prism .pzfx file."""
+        """Import a .pzfx file."""
         from tkinter import filedialog, messagebox
         try:
             from plotter_import_pzfx import import_pzfx
@@ -6667,7 +6884,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
         path = filedialog.askopenfilename(
             title="Import .pzfx File",
-            filetypes=[("GraphPad Prism", "*.pzfx"), ("All files", "*.*")],
+            filetypes=[("Prism (.pzfx)", "*.pzfx"), ("All files", "*.*")],
         )
         if not path:
             return

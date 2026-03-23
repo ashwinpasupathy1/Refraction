@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build_app.sh — Build Claude Plotter as a macOS .app and optional .dmg
+# build_app.sh — Build Refraction as a macOS .app and optional .dmg
 #
 # Usage:
 #   ./build_app.sh           # build .app only
@@ -68,7 +68,7 @@ done
 
 echo ""
 echo -e "${BOLD}╔══════════════════════════════════════╗${NC}"
-echo -e "${BOLD}║      Claude Plotter — App Builder    ║${NC}"
+echo -e "${BOLD}║        Refraction — App Builder         ║${NC}"
 echo -e "${BOLD}╚══════════════════════════════════════╝${NC}"
 echo ""
 
@@ -117,15 +117,14 @@ fi
 info "  plotter_desktop.py: found"
 
 # spec file
-if [ ! -f "claude_plotter.spec" ]; then
-    die "claude_plotter.spec not found. Has it been deleted?"
+if [ ! -f "refraction.spec" ]; then
+    die "refraction.spec not found. Has it been deleted?"
 fi
-info "  claude_plotter.spec: found"
+info "  refraction.spec: found"
 
 # icon (optional — warn but continue)
-if [ ! -f "assets/icon.icns" ]; then
-    warn "assets/icon.icns not found. The app will use PyInstaller's default icon."
-    warn "To add one: mkdir -p assets && cp your_icon.icns assets/icon.icns"
+if [ ! -f "assets/AppIcon.icns" ]; then
+    warn "assets/AppIcon.icns not found. Run: python3 generate_refraction_logos.py"
 fi
 
 success "All required prerequisites satisfied."
@@ -158,17 +157,17 @@ echo ""
 
 # ── 3. Run PyInstaller ────────────────────────────────────────────────────────
 info "Running PyInstaller..."
-python3 -m PyInstaller claude_plotter.spec \
+python3 -m PyInstaller refraction.spec \
     --noconfirm \
     --log-level WARN
 
 echo ""
 
 # ── 4. Verify output ──────────────────────────────────────────────────────────
-APP_BUNDLE="$SCRIPT_DIR/dist/Claude Plotter.app"
+APP_BUNDLE="$SCRIPT_DIR/dist/Refraction.app"
 
 if [ ! -d "$APP_BUNDLE" ]; then
-    die "Build finished but 'dist/Claude Plotter.app' not found. Check PyInstaller output above."
+    die "Build finished but 'dist/Refraction.app' not found. Check PyInstaller output above."
 fi
 
 # Calculate bundle size (du -sh gives human-readable total)
@@ -236,7 +235,7 @@ ENTITLEMENTS
             success "Notarization complete and stapled."
         else
             info "Skipping notarization (set NOTARY_KEYCHAIN_PROFILE to enable)."
-            info "To set up: xcrun notarytool store-credentials 'claude-plotter' \\"
+            info "To set up: xcrun notarytool store-credentials 'refraction' \\"
             info "  --apple-id your@email.com --team-id TEAMID --password app-specific-pwd"
         fi
     fi
@@ -248,20 +247,20 @@ if [ "$BUILD_DMG" = true ]; then
     echo ""
     info "Building DMG installer..."
 
-    DMG_PATH="$SCRIPT_DIR/dist/Claude Plotter.dmg"
+    DMG_PATH="$SCRIPT_DIR/dist/Refraction.dmg"
     rm -f "$DMG_PATH"
 
     if command -v create-dmg &>/dev/null; then
         # Pretty DMG with Applications shortcut and layout
         info "  Using create-dmg for styled installer..."
         create-dmg \
-            --volname "Claude Plotter" \
+            --volname "Refraction" \
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon-size 100 \
-            --icon "Claude Plotter.app" 150 190 \
+            --icon "Refraction.app" 150 190 \
             --app-drop-link 450 190 \
-            --hide-extension "Claude Plotter.app" \
+            --hide-extension "Refraction.app" \
             --no-internet-enable \
             "$DMG_PATH" \
             "$APP_BUNDLE" \
@@ -271,7 +270,7 @@ if [ "$BUILD_DMG" = true ]; then
                     true  # DMG was created despite exit code
                 else
                     warn "create-dmg failed. Falling back to hdiutil..."
-                    hdiutil create -volname "Claude Plotter" \
+                    hdiutil create -volname "Refraction" \
                         -srcfolder "$APP_BUNDLE" \
                         -ov -format UDZO \
                         "$DMG_PATH"
@@ -281,7 +280,7 @@ if [ "$BUILD_DMG" = true ]; then
         # Fallback: plain DMG via hdiutil
         info "  create-dmg not found. Using hdiutil (plain DMG, no styling)."
         info "  For a prettier DMG: brew install create-dmg"
-        hdiutil create -volname "Claude Plotter" \
+        hdiutil create -volname "Refraction" \
             -srcfolder "$APP_BUNDLE" \
             -ov -format UDZO \
             "$DMG_PATH"
@@ -318,6 +317,6 @@ echo "    cp -r \"$APP_BUNDLE\" /Applications/"
 if [ -n "$DMG_PATH" ] && [ -f "$DMG_PATH" ]; then
     echo ""
     info "To distribute:"
-    echo "    Share dist/Claude Plotter.dmg"
+    echo "    Share dist/Refraction.dmg"
 fi
 echo ""

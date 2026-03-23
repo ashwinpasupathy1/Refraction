@@ -1,0 +1,37 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Spectra — "S" lettermark with spectral gradient -->
+
+  <defs>
+    <linearGradient id="sGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#7B2FBE"/>
+      <stop offset="25%"  stop-color="#2274A5"/>
+      <stop offset="50%"  stop-color="#00A878"/>
+      <stop offset="75%"  stop-color="#F5A623"/>
+      <stop offset="100%" stop-color="#E8453C"/>
+    </linearGradient>
+    <!-- Clip path for the S shape (using text) -->
+    <clipPath id="sClip">
+      <text x="160" y="720"
+            font-family="'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
+            font-weight="800"
+            font-size="680"
+            letter-spacing="-20">S</text>
+    </clipPath>
+  </defs>
+
+  <!-- Deep dark background -->
+  <rect width="1024" height="1024" rx="220" fill="#0B1120"/>
+
+  <!-- Spectrum fill clipped to the S shape -->
+  <rect width="1024" height="1024" fill="url(#sGradient)" clip-path="url(#sClip)"/>
+
+  <!-- Subtle bottom label -->
+  <text x="512" y="920"
+        font-family="'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
+        font-weight="300"
+        font-size="72"
+        letter-spacing="22"
+        fill="white"
+        opacity="0.55"
+        text-anchor="middle">SPECTRA</text>
+</svg>

@@ -1,4 +1,4 @@
-"""plotter_events.py — Lightweight publish/subscribe event bus for Claude Plotter."""
+"""plotter_events.py — Lightweight publish/subscribe event bus for Refraction."""
 
 import collections
 import logging

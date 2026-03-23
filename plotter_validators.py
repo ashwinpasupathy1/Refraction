@@ -1,7 +1,7 @@
 """
-prism_validators.py
-===================
-Standalone spreadsheet validation functions for Claude Plotter.
+plotter_validators.py
+=====================
+Standalone spreadsheet validation functions for Refraction.
 
 Each validate_* function accepts a raw pandas DataFrame (read with
 header=None so row indices are preserved) and returns a
@@ -38,7 +38,7 @@ from __future__ import annotations
 
 
 # ---------------------------------------------------------------------------
-# Lazy pandas access (mirrors the _pd() pattern in prism_barplot_app)
+# Lazy pandas access (mirrors the _pd() pattern in plotter_barplot_app)
 # ---------------------------------------------------------------------------
 
 def _pd():
@@ -127,6 +127,16 @@ def validate_flat_header(df,
             errors.append(
                 f"Column '{ch}' contains non-numeric values: "
                 f"{non_num}. All data values (rows 2+) must be numbers.")
+            continue
+        num_vals = col_vals.apply(lambda v: float(v))
+        if len(num_vals) == 1:
+            warnings.append(
+                f"Column '{ch}' has only 1 value. "
+                "Statistical tests require at least 2 values per group.")
+        elif len(num_vals) > 1 and num_vals.nunique() == 1:
+            warnings.append(
+                f"Column '{ch}' has all identical values ({num_vals.iloc[0]}). "
+                "Standard deviation is zero — t-tests and ANOVA will produce NaN or fail.")
 
     if df.shape[1] < min_groups:
         warnings.append(

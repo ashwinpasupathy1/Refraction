@@ -1,9 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec file for Claude Plotter
+# PyInstaller spec file for Refraction
 # Targets macOS .app bundle with bundled React SPA
 #
 # Usage:
-#   pyinstaller claude_plotter.spec
+#   pyinstaller refraction.spec
 #
 # Prerequisites:
 #   pip install pyinstaller
@@ -18,7 +18,7 @@ block_cipher = None
 # ── Paths ────────────────────────────────────────────────────────────────────
 HERE = os.path.dirname(os.path.abspath(SPEC))  # noqa: F821 — SPEC is PyInstaller built-in
 WEB_DIST = os.path.join(HERE, "plotter_web", "dist")
-ICON_PATH = os.path.join(HERE, "assets", "icon.icns")
+ICON_PATH = os.path.join(HERE, "assets", "AppIcon.icns")
 
 # ── Hidden imports ────────────────────────────────────────────────────────────
 # All plotter_* modules are imported lazily or via importlib; list them
@@ -191,7 +191,7 @@ exe = EXE(  # noqa: F821
     a.scripts,
     [],
     exclude_binaries=True,   # binaries go into COLLECT / .app bundle
-    name="Claude Plotter",
+    name="Refraction",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -209,19 +209,19 @@ coll = COLLECT(  # noqa: F821
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="Claude Plotter",
+    name="Refraction",
 )
 
 # ── macOS .app bundle ─────────────────────────────────────────────────────────
 app = BUNDLE(  # noqa: F821
     coll,
-    name="Claude Plotter.app",
+    name="Refraction.app",
     icon=ICON_PATH if os.path.exists(ICON_PATH) else None,
-    bundle_identifier="com.claudeplotter.app",
+    bundle_identifier="com.refraction.app",
     info_plist={
         # Display name shown in Finder and Dock
-        "CFBundleName": "Claude Plotter",
-        "CFBundleDisplayName": "Claude Plotter",
+        "CFBundleName": "Refraction",
+        "CFBundleDisplayName": "Refraction",
         # Version / build strings
         "CFBundleVersion": "1.0.0",
         "CFBundleShortVersionString": "1.0.0",
@@ -245,8 +245,8 @@ app = BUNDLE(  # noqa: F821
         # Document types handled (optional — .cplot project files)
         "CFBundleDocumentTypes": [
             {
-                "CFBundleTypeName": "Claude Plotter Project",
-                "CFBundleTypeExtensions": ["cplot"],
+                "CFBundleTypeName": "Refraction Project",
+                "CFBundleTypeExtensions": ["cplot", "refraction"],
                 "CFBundleTypeRole": "Editor",
                 "LSHandlerRank": "Owner",
             },

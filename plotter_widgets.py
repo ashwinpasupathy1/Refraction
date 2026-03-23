@@ -1,11 +1,11 @@
 """
-prism_widgets.py
-================
+plotter_widgets.py
+==================
 Design-system tokens, custom Tkinter widget classes, and shared UI helpers
-for Claude Plotter.
+for Refraction.
 
 Everything in this module is *display-only* — no plot logic, no file I/O,
-no scientific computation.  Import it from ``prism_barplot_app`` so that
+no scientific computation.  Import it from ``plotter_barplot_app`` so that
 the App class stays focused on application logic.
 
 Public surface

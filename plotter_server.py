@@ -1,4 +1,4 @@
-"""FastAPI server for Claude Plotter — serves Plotly chart specs
+"""FastAPI server for Refraction — serves Plotly chart specs
 and receives edit events from the pywebview frontend."""
 
 import json
@@ -56,7 +56,7 @@ def _make_app():
 
     API_KEY = os.environ.get("PLOTTER_API_KEY", "")
 
-    api = FastAPI(title="Claude Plotter API", version="1.0.0")
+    api = FastAPI(title="Refraction API", version="1.0.0")
 
     api.add_middleware(
         CORSMiddleware,
@@ -124,7 +124,7 @@ def _make_app():
     # ── File upload ──────────────────────────────────────────────
     from fastapi import UploadFile, File as FastAPIFile
 
-    UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "claude-plotter-uploads")
+    UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "refraction-uploads")
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     @api.post("/upload")

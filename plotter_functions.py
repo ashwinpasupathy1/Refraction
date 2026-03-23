@@ -1,7 +1,7 @@
 """
 plotter_functions.py
 ------------------
-Plots GraphPad Prism-style bar and line graphs.
+Plots publication-quality bar and line graphs.
 Extracted from prism_barplot_final_updated.ipynb.
 """
 
@@ -1308,7 +1308,7 @@ def plotter_barplot(
     bracket_style: str = "lines",
     xtick_labels: list = None,
 ):
-    """Plot a GraphPad Prism-style bar graph with significance brackets."""
+    """Plot a publication-quality bar graph with significance brackets."""
 
     group_order, groups, bar_colors, _, _ = _base_plot_setup(
         excel_path, sheet, color, None, figsize)
@@ -1525,7 +1525,7 @@ def plotter_linegraph(
     ref_vline_label: str = "",
 ):
     """
-    Plot a GraphPad Prism-style multi-series line graph with numeric X axis.
+    Plot a publication-quality multi-series line graph with numeric X axis.
 
     Expected Excel layout:
       Row 1  : Col 1 = X-axis label (or blank), Cols 2+ = series names
@@ -1719,7 +1719,7 @@ def plotter_grouped_barplot(
     horizontal: bool = False,
 ):
     """
-    Plot a GraphPad Prism-style grouped bar chart.
+    Plot a publication-quality grouped bar chart.
 
     Expected Excel layout:
       Row 1  : x-axis category names (one per column, repeated across subgroups)
@@ -2160,7 +2160,7 @@ def _hedges_g(a: np.ndarray, b: np.ndarray) -> float:
     where m = n1 + n2 − 2 (degrees of freedom).
 
     Reference: Hedges (1981) Biometrics 37:149–164.
-    GraphPad Prism 9+ reports Hedges' g as the default effect size for
+    Hedges' g is the standard effect size for
     independent-samples comparisons.
     """
     d = _cohens_d(a, b)
@@ -2181,7 +2181,7 @@ def _rank_biserial_r(a: np.ndarray, b: np.ndarray) -> float:
     Positive r means group a tends to have larger values.
 
     Reference: Cureton (1956) Psychometrika 21:287–290.
-    GraphPad Prism reports this as the effect size for nonparametric
+    This is the standard effect size for nonparametric
     two-group comparisons.
     """
     n1, n2 = len(a), len(b)
@@ -2212,7 +2212,7 @@ def add_effect_sizes(ax, sig_results, groups, x_positions, font_size=10):
     """Annotate a corner text box with Hedges' g for each significant pair.
 
     Uses Hedges' g (bias-corrected Cohen's d) as the effect size measure,
-    matching GraphPad Prism 9+ default behaviour.  For large samples
+    following standard practice.  For large samples
     (n1+n2 ≥ 50) Cohen's d and Hedges' g are nearly identical.
     """
     lines = []
@@ -2283,7 +2283,7 @@ def plotter_boxplot(
     xtick_labels: list = None,
 ):
     """
-    Plot a GraphPad Prism-style box-and-whisker plot.
+    Plot a publication-quality box-and-whisker plot.
 
     Same Excel layout as bar chart:
       Row 1  : group/category names
@@ -2448,7 +2448,7 @@ def plotter_scatterplot(
     ref_vline_label: str = "",
 ):
     """
-    Plot a GraphPad Prism-style XY scatter plot with optional regression and
+    Plot a publication-quality XY scatter plot with optional regression and
     correlation annotation.
 
     Expected Excel layout — same as line graph:
@@ -2666,7 +2666,7 @@ def plotter_violin(
     xtick_labels: list = None,
 ):
     """
-    Plot a GraphPad Prism-style violin plot.
+    Plot a publication-quality violin plot.
 
     Same Excel layout as bar chart:
       Row 1  : group/category names
@@ -3046,7 +3046,7 @@ def plotter_heatmap(
     spine_width: float = 0.8,
 ):
     """
-    Plot a GraphPad Prism-style heat map.
+    Plot a publication-quality heat map.
 
     Expected Excel layout:
       Row 1    : Optional blank/label in A1, then column labels across B1, C1, ...
@@ -3105,7 +3105,7 @@ def plotter_heatmap(
         "Mako":               "mako",
         "Plasma":             "plasma",
         "Coolwarm":           "coolwarm",
-        "Spectral":           "Spectral_r",
+        "Spectral":              "Spectral_r",
         "YlOrRd":             "YlOrRd",
         "Blues":              "Blues",
         "Greens":             "Greens",
@@ -3207,8 +3207,7 @@ def _twoway_anova(df, dv, factor_a, factor_b):
 
     Type III SS (partial): each effect is tested after removing it from the
     full model that still includes all other effects (including the
-    interaction term).  This matches the default in GraphPad Prism,
-    SPSS, and SAS PROC GLM.
+    interaction term).  This matches the default in SPSS and SAS PROC GLM.
 
     eta2        = SS_effect / SS_total      (classical η²)
     eta2_partial = SS_effect / (SS_effect + SS_error)  (partial ηp²,
@@ -3458,7 +3457,7 @@ def plotter_two_way_anova(
             ax.bar(xi, m, width=bar_width * 0.9,
                    color=c, edgecolor=_darken_color(c),
                    linewidth=0.8, zorder=3)
-            _draw_bar_errorbar(ax, xi, cell_data, error, yscale, cap_size=4.0)
+            _draw_bar_errorbar(ax, xi, cell_data, error, yscale, cap_size=cap_size)
             bar_tops[(a_val, b_val)] = m + err
 
             if show_points and len(cell_data) > 0:
@@ -6486,7 +6485,7 @@ def export_all_charts_pdf(output_path: str, excel_path: str,
         # Cover page
         fig_cover, ax_cover = plt.subplots(figsize=figsize, dpi=_DPI)
         ax_cover.axis("off")
-        ax_cover.text(0.5, 0.60, "Claude Plotter", transform=ax_cover.transAxes,
+        ax_cover.text(0.5, 0.60, "Refraction", transform=ax_cover.transAxes,
                       ha="center", va="center", fontsize=28, fontweight="bold",
                       fontfamily=_get_font(), color="#2274A5")
         ax_cover.text(0.5, 0.48, "Chart Type Showcase", transform=ax_cover.transAxes,
@@ -6546,8 +6545,8 @@ def export_all_charts_pdf(output_path: str, excel_path: str,
 
         # PDF metadata
         d = pdf.infodict()
-        d["Title"] = "Claude Plotter — Chart Showcase"
+        d["Title"] = "Refraction — Chart Showcase"
         d["Author"] = "Claude (Anthropic) / Ashwin Pasupathy"
-        d["Subject"] = "GraphPad Prism-style charts"
+        d["Subject"] = "Publication-quality scientific charts"
 
     return output_path

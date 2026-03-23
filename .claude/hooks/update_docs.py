@@ -2,7 +2,7 @@
 """
 update_docs.py
 ==============
-SessionStart hook for Claude Plotter.
+SessionStart hook for Refraction.
 Runs once at the start of each new session to refresh README.md and CLAUDE.md
 with current file line counts and registered chart type counts.
 
@@ -18,23 +18,22 @@ ROOT = Path(__file__).parent.parent.parent  # .claude/hooks/ -> project root
 # ── Source files tracked in the File Map ─────────────────────────────────────
 SOURCE_FILES = [
     "plotter_barplot_app.py",
-    "prism_registry.py",
+    "plotter_registry.py",
     "plotter_functions.py",
-    "plotter_canvas_renderer.py",
-    "prism_widgets.py",
-    "prism_validators.py",
-    "prism_results.py",
-    "tests/prism_test_harness.py",
+    "plotter_widgets.py",
+    "plotter_validators.py",
+    "plotter_results.py",
+    "tests/plotter_test_harness.py",
     "run_all.py",
 ]
 
-# ── Test suites (files moved to tests/ subfolder) ─────────────────────────────
+# ── Test suites (files in tests/ subfolder) ───────────────────────────────────
 TEST_FILES = {
-    "comprehensive":   "tests/test_comprehensive.py",
-    "canvas_renderer": "tests/test_canvas_renderer.py",
-    "modular":         "tests/test_modular.py",
-    "p1p2p3":          "tests/test_p1_p2_p3.py",
-    "control":         "tests/test_control.py",
+    "comprehensive": "tests/test_comprehensive.py",
+    "stats":         "tests/test_stats.py",
+    "validators":    "tests/test_validators.py",
+    "specs":         "tests/test_phase3_plotly.py",
+    "api":           "tests/test_api.py",
 }
 
 
@@ -55,8 +54,8 @@ def test_count(filename: str) -> int:
 
 
 def registered_chart_count() -> int:
-    # Registry lives in prism_registry.py; fall back to plotter_barplot_app.py
-    for candidate in ("prism_registry.py", "plotter_barplot_app.py"):
+    # Registry lives in plotter_registry.py; fall back to plotter_barplot_app.py
+    for candidate in ("plotter_registry.py", "plotter_barplot_app.py"):
         path = ROOT / candidate
         if not path.exists():
             continue
@@ -106,18 +105,18 @@ def update_test_counts(
 
         # Per-suite comments: "# 309 tests —" or "#  80 tests —"
         suite_map = {
-            "comprehensive":   suite_counts.get("comprehensive", 0),
-            "canvas_renderer": suite_counts.get("canvas_renderer", 0),
-            "modular":         suite_counts.get("modular", 0),
-            "p1p2p3":          suite_counts.get("p1p2p3", 0),
-            "control":         suite_counts.get("control", 0),
+            "comprehensive": suite_counts.get("comprehensive", 0),
+            "stats":         suite_counts.get("stats", 0),
+            "validators":    suite_counts.get("validators", 0),
+            "specs":         suite_counts.get("specs", 0),
+            "api":           suite_counts.get("api", 0),
         }
         label_map = {
-            "comprehensive":   "comprehensive",
-            "canvas_renderer": "canvas_renderer",
-            "modular":         "modular",
-            "p1p2p3":          "p1p2p3",
-            "control":         "control",
+            "comprehensive": "comprehensive",
+            "stats":         "stats",
+            "validators":    "validators",
+            "specs":         "specs",
+            "api":           "api",
         }
         for key, count in suite_map.items():
             suite_label = label_map[key]
@@ -182,13 +181,12 @@ def update_readme(counts: dict[str, int], n_charts: int) -> bool:
 
     # Update approximate line counts in Architecture section
     readme_bases = {
-        "plotter_barplot_app.py":     200,
-        "prism_registry.py":        50,
-        "plotter_functions.py":       200,
-        "plotter_canvas_renderer.py": 100,
-        "prism_widgets.py":         50,
-        "prism_validators.py":      10,
-        "prism_results.py":         10,
+        "plotter_barplot_app.py": 200,
+        "plotter_registry.py":     50,
+        "plotter_functions.py":   200,
+        "plotter_widgets.py":      50,
+        "plotter_validators.py":   10,
+        "plotter_results.py":      10,
     }
 
     for fname, base in readme_bases.items():
@@ -248,7 +246,7 @@ def main():
     readme_updated = readme_updated or readme_tests_updated
 
     # Output goes into Claude's session context
-    print("=== Claude Plotter — session context ===")
+    print("=== Refraction — session context ===")
     print(f"Charts registered in sidebar: {n_charts}")
     print(f"Test registrations (run() calls): {total_tests}")
     print("  " + "  ".join(f"{k}={v}" for k, v in suite_counts.items()))

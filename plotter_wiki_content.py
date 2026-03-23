@@ -1,7 +1,7 @@
 """
 plotter_wiki_content.py
 =======================
-Statistical reference content for Claude Plotter wiki.
+Statistical reference content for Refraction wiki.
 All formulas use matplotlib mathtext syntax.
 Citations reference section-level locations only.
 """
@@ -27,8 +27,8 @@ WIKI_SECTIONS = [
                 "body": (
                     "The Welch t-test compares the means of two independent groups "
                     "without assuming equal population variances (the Behrens-Fisher "
-                    "problem). It is the default two-sample t-test in GraphPad Prism "
-                    "and in scipy (equal_var=False). Use when you cannot be certain "
+                    "problem). It is the default two-sample t-test in scipy "
+                    "(equal_var=False). Use when you cannot be certain "
                     "that the two groups share the same variance — which is almost "
                     "always the safer assumption."
                 ),
@@ -120,7 +120,7 @@ WIKI_SECTIONS = [
                 "type": "text",
                 "body": (
                     "scipy.stats.ttest_ind(a, b, equal_var=False) implements Welch's t-test. "
-                    "GraphPad Prism calls this 'Unpaired t-test, Welch correction'. "
+                    "Also known as 'Unpaired t-test, Welch correction'. "
                     "Setting equal_var=True gives Student's pooled-variance t-test."
                 ),
             },
@@ -217,7 +217,7 @@ WIKI_SECTIONS = [
                 "body": (
                     "scipy.stats.ttest_rel(a, b) computes the paired t-test. "
                     "It is equivalent to scipy.stats.ttest_1samp(a - b, 0). "
-                    "GraphPad Prism calls this 'Paired t-test'."
+                    "Also known as 'Paired t-test'."
                 ),
             },
             {
@@ -295,7 +295,7 @@ WIKI_SECTIONS = [
                 "type": "text",
                 "body": (
                     "scipy.stats.ttest_1samp(a, popmean) tests H₀: μ = popmean. "
-                    "GraphPad Prism offers this under 'One-sample t test'."
+                    "Also known as 'One-sample t test'."
                 ),
             },
             {
@@ -478,7 +478,7 @@ WIKI_SECTIONS = [
                 "body": (
                     "Python: pingouin.rm_anova() provides repeated measures ANOVA with "
                     "sphericity correction. R: ez::ezANOVA(), afex::aov_ez(). "
-                    "GraphPad Prism: 'Repeated measures one-way ANOVA'."
+                    "Also known as 'Repeated measures one-way ANOVA'."
                 ),
             },
             {
@@ -566,7 +566,7 @@ WIKI_SECTIONS = [
                 "body": (
                     "Python: statsmodels.formula.api.ols() with anova_lm(type=3). "
                     "pingouin.anova() for balanced designs. "
-                    "GraphPad Prism: 'Two-way ANOVA'."
+                    "Also known as 'Two-way ANOVA'."
                 ),
             },
             {
@@ -638,7 +638,7 @@ WIKI_SECTIONS = [
                     "scipy.stats.mannwhitneyu(x, y, alternative='two-sided') returns "
                     "the U statistic and p-value. For large samples, uses a normal "
                     "approximation with continuity correction. "
-                    "GraphPad Prism calls this 'Mann-Whitney test'."
+                    "Also known as the 'Mann-Whitney test'."
                 ),
             },
             {
@@ -706,7 +706,7 @@ WIKI_SECTIONS = [
                     "scipy.stats.wilcoxon(x, y) computes the signed-rank test on "
                     "the paired differences x−y. Use alternative='two-sided', "
                     "'greater', or 'less'. "
-                    "GraphPad Prism: 'Wilcoxon matched-pairs signed-rank test'."
+                    "Also known as the 'Wilcoxon matched-pairs signed-rank test'."
                 ),
             },
             {
@@ -784,7 +784,7 @@ WIKI_SECTIONS = [
                     "scipy.stats.kruskal(*groups) returns (H, p). "
                     "Follow significant results with Dunn's post-hoc test "
                     "or pairwise Mann-Whitney U tests with multiple comparison correction. "
-                    "GraphPad Prism: 'Kruskal-Wallis test'."
+                    "Also known as the 'Kruskal-Wallis test'."
                 ),
             },
             {
@@ -986,7 +986,7 @@ WIKI_SECTIONS = [
                 "body": (
                     "scipy.stats.fisher_exact([[a,b],[c,d]], alternative='two-sided') "
                     "returns (odds_ratio, p_value). "
-                    "GraphPad Prism: 'Fisher's exact test' in the Contingency section."
+                    "Also known as 'Fisher's exact test' in contingency analysis."
                 ),
             },
             {
@@ -1056,7 +1056,7 @@ WIKI_SECTIONS = [
                 "body": (
                     "scipy.stats.chi2_contingency(table) returns (χ², p, df, expected). "
                     "With correction=True (default for 2×2), Yates' continuity correction is applied. "
-                    "GraphPad Prism: 'Chi-square test' in the Contingency section."
+                    "Also known as the 'Chi-square test' in contingency analysis."
                 ),
             },
             {
@@ -1265,7 +1265,7 @@ WIKI_SECTIONS = [
                 "body": (
                     "scipy.stats.spearmanr(x, y) returns (ρ, p). "
                     "Handles ties via the rank formulation. "
-                    "GraphPad Prism: 'Spearman correlation'."
+                    "Also known as 'Spearman correlation'."
                 ),
             },
             {
@@ -1325,7 +1325,7 @@ WIKI_SECTIONS = [
                     "• The data distribution is clearly non-normal and non-parametric "
                     "rank tests are not appropriate (e.g., complex multivariate statistics).\n"
                     "• You want an exact test without distributional assumptions.\n\n"
-                    "Claude Plotter uses permutation tests as an alternative to "
+                    "Refraction uses permutation tests as an alternative to "
                     "parametric tests in the statistics panel."
                 ),
             },
@@ -1666,7 +1666,7 @@ WIKI_SECTIONS = [
                     "• One group is designated as control and all others are treatments.\n"
                     "• You are not interested in treatment-vs-treatment comparisons.\n"
                     "• You want maximum power for control comparisons.\n\n"
-                    "GraphPad Prism: 'Dunnett's multiple comparisons test' after one-way ANOVA."
+                    "Also known as 'Dunnett's multiple comparisons test' after one-way ANOVA."
                 ),
             },
             {
@@ -1722,7 +1722,7 @@ WIKI_SECTIONS = [
                 "body": (
                     "Python: scikit_posthocs.posthoc_dunn(data, p_adjust='holm') "
                     "or pingouin.pairwise_tests(parametric=False). "
-                    "GraphPad Prism: 'Dunn's multiple comparisons test' after Kruskal-Wallis."
+                    "Also known as 'Dunn's multiple comparisons test' after Kruskal-Wallis."
                 ),
             },
         ],
@@ -2073,7 +2073,7 @@ WIKI_SECTIONS = [
                 ],
             },
             {
-                "heading": "Recommendation hierarchy for Claude Plotter users",
+                "heading": "Recommendation hierarchy for Refraction users",
                 "type": "numbered_list",
                 "items": [
                     (

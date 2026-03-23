@@ -1,7 +1,7 @@
 """
-prism_tabs.py
-=============
-Tab system for Claude Plotter.
+plotter_tabs.py
+===============
+Tab system for Refraction.
 
 Three classes:
   TabState    — dataclass holding per-tab identity and form state

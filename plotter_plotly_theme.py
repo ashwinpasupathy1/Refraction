@@ -1,4 +1,4 @@
-"""Prism-style Plotly theme matching Claude Plotter's matplotlib style."""
+"""Plotly theme matching Refraction's matplotlib style."""
 
 PRISM_PALETTE = [
     "#E8453C", "#2274A5", "#32936F", "#F18F01", "#A846A0",

@@ -1,4 +1,4 @@
-"""plotter_presets.py — Style preset system for Claude Plotter."""
+"""plotter_presets.py — Style preset system for Refraction."""
 
 import json
 import logging
@@ -8,7 +8,7 @@ import time
 _log = logging.getLogger(__name__)
 
 PRESETS_DIR = os.path.expanduser(
-    "~/Library/Application Support/Claude Plotter/presets/"
+    "~/Library/Application Support/Refraction/presets/"
 )
 
 PRESET_KEYS = [

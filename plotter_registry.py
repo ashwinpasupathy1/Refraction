@@ -1,7 +1,7 @@
 """
 prism_registry.py
 =================
-Chart-type registry for Claude Plotter.
+Chart-type registry for Refraction.
 
 Contains:
 - PlotTypeConfig  — dataclass describing one chart type's UI contract
@@ -14,7 +14,7 @@ focused on UI logic rather than data definitions.
 
 To add a new chart type, append a PlotTypeConfig entry to _REGISTRY_SPECS.
 No other file needs to change (except plotter_functions.py for the function,
-prism_validators.py for the validator, and test_comprehensive.py for tests).
+plotter_validators.py for the validator, and test_comprehensive.py for tests).
 """
 
 from __future__ import annotations

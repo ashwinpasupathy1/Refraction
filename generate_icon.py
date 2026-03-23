@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-generate_icon.py — Claude Plotter macOS app icon generator
+generate_icon.py — Refraction macOS app icon generator
 
 Generates:
   assets/icon.png   — 1024x1024 PNG (primary blue bg + white bar chart)
@@ -181,7 +181,7 @@ def generate_icns(png_path: Path, icns_path: Path) -> bool:
 def main() -> None:
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Claude Plotter — icon generator")
+    print("Refraction — icon generator")
     print(f"  Output dir: {ASSETS_DIR}")
 
     # 1. Generate 1024x1024 PNG
