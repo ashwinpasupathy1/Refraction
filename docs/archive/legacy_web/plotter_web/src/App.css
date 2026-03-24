@@ -1,0 +1,463 @@
+/* ── Layout ─────────────────────────────────────────────────────── */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 44px;
+  background: #2274A5;
+  color: white;
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.app-header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.app-header-sub {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-left: auto;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────── */
+
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: #FAFAFA;
+  border-right: 1px solid #E0E0E0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-section {
+  padding-bottom: 4px;
+}
+
+.sidebar-category {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #888;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sidebar-category:hover {
+  color: #555;
+}
+
+.sidebar-category-toggle {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.sidebar-items {
+  list-style: none;
+}
+
+.sidebar-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 6px 14px 6px 18px;
+  font-size: 13px;
+  font-family: Arial, sans-serif;
+  color: #444;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 0.12s, color 0.12s, border-left-color 0.12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-item:hover {
+  background: #EEF4FA;
+  color: #2274A5;
+}
+
+.sidebar-item.active {
+  background: #EEF4FA;
+  color: #2274A5;
+  border-left-color: #2274A5;
+  font-weight: 600;
+}
+
+/* ── Center ─────────────────────────────────────────────────────── */
+
+.chart-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #F5F5F5;
+  position: relative;
+}
+
+.chart-area-inner {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chart-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  gap: 10px;
+}
+
+.chart-placeholder-icon {
+  font-size: 48px;
+  opacity: 0.3;
+}
+
+.chart-placeholder p {
+  font-size: 14px;
+}
+
+/* ── Config Panel ───────────────────────────────────────────────── */
+
+.config-panel {
+  width: 280px;
+  flex-shrink: 0;
+  background: #FAFAFA;
+  border-left: 1px solid #E0E0E0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+
+.config-panel.collapsed {
+  width: 0;
+  overflow: hidden;
+}
+
+.config-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #E0E0E0;
+  flex-shrink: 0;
+}
+
+.config-panel-header h2 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #222;
+}
+
+.config-panel-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #888;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.config-panel-toggle:hover {
+  color: #2274A5;
+}
+
+.config-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 0 80px;
+}
+
+.config-section {
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid #E0E0E0;
+}
+
+.config-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.form-group {
+  margin-bottom: 10px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"] {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: Arial, sans-serif;
+  border: 1px solid #D0D0D0;
+  border-radius: 4px;
+  background: white;
+  color: #222;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus {
+  border-color: #2274A5;
+}
+
+.form-group input[type="color"] {
+  width: 100%;
+  height: 30px;
+  padding: 1px 2px;
+  border: 1px solid #D0D0D0;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+}
+
+.config-panel-footer {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 280px;
+  padding: 12px 14px;
+  background: #FAFAFA;
+  border-top: 1px solid #E0E0E0;
+}
+
+.config-panel.collapsed .config-panel-footer {
+  display: none;
+}
+
+.btn-generate {
+  width: 100%;
+  padding: 9px 0;
+  background: #2274A5;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: Arial, sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-generate:hover {
+  background: #1a5f87;
+}
+
+.btn-generate:active {
+  background: #164f71;
+}
+
+.btn-generate:disabled {
+  background: #aac4d9;
+  cursor: not-allowed;
+}
+
+/* ── Collapse toggle button (on chart area edge) ─────────────────── */
+
+.panel-collapse-btn {
+  position: absolute;
+  right: 280px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 48px;
+  background: #FAFAFA;
+  border: 1px solid #E0E0E0;
+  border-right: none;
+  border-radius: 4px 0 0 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #888;
+  z-index: 10;
+  transition: right 0.2s ease;
+}
+
+.panel-collapse-btn:hover {
+  color: #2274A5;
+  background: #EEF4FA;
+}
+
+.panel-collapse-btn.panel-hidden {
+  right: 0;
+}
+
+/* ── File Upload ─────────────────────────────────────────────────── */
+
+.drop-zone {
+  border: 2px dashed #C0C0C0;
+  border-radius: 6px;
+  padding: 14px 10px;
+  text-align: center;
+  cursor: pointer;
+  background: white;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone.dragging {
+  border-color: #2274A5;
+  background: #EEF4FA;
+}
+
+.drop-zone-text {
+  font-size: 12px;
+  color: #888;
+  pointer-events: none;
+}
+
+.drop-zone-text strong {
+  color: #2274A5;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.drop-zone input[type="file"] {
+  display: none;
+}
+
+.upload-status {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.upload-status.success {
+  color: #32936F;
+}
+
+.upload-status.error {
+  color: #E8453C;
+}
+
+.uploaded-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #32936F;
+  background: #f0faf5;
+  border: 1px solid #b2ddc6;
+  border-radius: 4px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.uploaded-file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uploaded-file-clear {
+  color: #888;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ── Loading / error states ──────────────────────────────────────── */
+
+.chart-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #888;
+}
+
+.chart-error {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #E8453C;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 180px;
+  }
+  .config-panel {
+    width: 220px;
+  }
+  .config-panel-footer {
+    width: 220px;
+  }
+  .panel-collapse-btn {
+    right: 220px;
+  }
+  .panel-collapse-btn.panel-hidden {
+    right: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar {
+    width: 140px;
+  }
+  .sidebar-item {
+    font-size: 12px;
+    padding: 5px 8px 5px 12px;
+  }
+  .config-panel,
+  .config-panel-footer {
+    width: 200px;
+  }
+  .panel-collapse-btn {
+    right: 200px;
+  }
+}

@@ -1,5 +1,5 @@
 """
-test_api.py — pytest tests for FastAPI endpoints.
+test_api.py -- pytest tests for FastAPI endpoints.
 
 Covers: /health, /chart-types, /analyze, /upload.
 """
@@ -53,11 +53,11 @@ class TestChartTypes:
         assert "all" in data
         assert "priority" in data
 
-    def test_has_analyzer_types(self, client):
+    def test_has_29_chart_types(self, client):
         resp = client.get("/chart-types")
         data = resp.json()
-        assert len(data["all"]) >= 8, (
-            f"Expected >= 8 chart types, got {len(data['all'])}: {data['all']}"
+        assert len(data["all"]) == 29, (
+            f"Expected 29 chart types, got {len(data['all'])}: {data['all']}"
         )
 
     def test_priority_subset(self, client):
@@ -68,7 +68,7 @@ class TestChartTypes:
 
 
 # =========================================================================
-# /analyze — bar chart
+# /analyze -- bar chart
 # =========================================================================
 
 class TestAnalyzeBar:
@@ -77,28 +77,25 @@ class TestAnalyzeBar:
                 {"Control": np.array([1, 2, 3]), "Drug": np.array([4, 5, 6])}, path=p)) as xl:
             resp = client.post("/analyze", json={
                 "chart_type": "bar",
-                "data_path": xl,
+                "excel_path": xl,
             })
             assert resp.status_code == 200
             data = resp.json()
             assert data["ok"] is True
-            assert "spec" in data
-            assert data["spec"]["chart_type"] == "bar"
-            assert "data" in data["spec"]
-            assert "axes" in data["spec"]
-            assert "style" in data["spec"]
+            assert "groups" in data
+            assert len(data["groups"]) == 2
 
     def test_with_title(self, client):
         with _with_excel(lambda p: _bar_excel(
                 {"A": np.array([10, 20, 30])}, path=p)) as xl:
             resp = client.post("/analyze", json={
                 "chart_type": "bar",
-                "data_path": xl,
+                "excel_path": xl,
                 "config": {"title": "Test Title"},
             })
             data = resp.json()
             assert data["ok"] is True
-            assert data["spec"]["title"] == "Test Title"
+            assert data["title"] == "Test Title"
 
     def test_group_count(self, client):
         with _with_excel(lambda p: _bar_excel(
@@ -106,15 +103,45 @@ class TestAnalyzeBar:
                 path=p)) as xl:
             resp = client.post("/analyze", json={
                 "chart_type": "bar",
-                "data_path": xl,
+                "excel_path": xl,
             })
             data = resp.json()
-            groups = data["spec"]["data"]["groups"]
-            assert len(groups) == 3, f"Expected 3 groups, got {len(groups)}"
+            assert len(data["groups"]) == 3, f"Expected 3 groups, got {len(data['groups'])}"
+
+    def test_mean_correct(self, client):
+        with _with_excel(lambda p: _bar_excel(
+                {"A": np.array([10, 20, 30])}, path=p)) as xl:
+            resp = client.post("/analyze", json={
+                "chart_type": "bar",
+                "excel_path": xl,
+            })
+            data = resp.json()
+            assert abs(data["groups"][0]["mean"] - 20.0) < 0.01
 
 
 # =========================================================================
-# /analyze — other chart types
+# /analyze -- with statistics
+# =========================================================================
+
+class TestAnalyzeWithStats:
+    def test_bar_with_stats(self, client):
+        with _with_excel(lambda p: _bar_excel(
+                {"Control": np.array([1, 2, 3, 4, 5]),
+                 "Drug": np.array([6, 7, 8, 9, 10])}, path=p)) as xl:
+            resp = client.post("/analyze", json={
+                "chart_type": "bar",
+                "excel_path": xl,
+                "config": {"stats_test": "parametric"},
+            })
+            data = resp.json()
+            assert data["ok"] is True
+            assert len(data["comparisons"]) >= 1
+            assert "p_value" in data["comparisons"][0]
+            assert "stars" in data["comparisons"][0]
+
+
+# =========================================================================
+# /analyze -- other chart types
 # =========================================================================
 
 class TestAnalyzeOther:
@@ -124,28 +151,7 @@ class TestAnalyzeOther:
                  "G2": np.array([6, 7, 8, 9, 10])}, path=p)) as xl:
             resp = client.post("/analyze", json={
                 "chart_type": "box",
-                "data_path": xl,
-            })
-            data = resp.json()
-            assert data["ok"] is True
-
-    def test_scatter(self, client):
-        with _with_excel(lambda p: _simple_xy_excel(
-                np.array([1, 2, 3, 4]), np.array([2, 4, 6, 8]), path=p)) as xl:
-            resp = client.post("/analyze", json={
-                "chart_type": "scatter",
-                "data_path": xl,
-            })
-            data = resp.json()
-            assert data["ok"] is True
-
-    def test_line(self, client):
-        with _with_excel(lambda p: _simple_xy_excel(
-                np.array([1, 2, 3, 4, 5]),
-                np.array([10, 20, 30, 40, 50]), path=p)) as xl:
-            resp = client.post("/analyze", json={
-                "chart_type": "line",
-                "data_path": xl,
+                "excel_path": xl,
             })
             data = resp.json()
             assert data["ok"] is True
@@ -156,7 +162,7 @@ class TestAnalyzeOther:
                  "G2": np.random.default_rng(0).normal(8, 1, 20)}, path=p)) as xl:
             resp = client.post("/analyze", json={
                 "chart_type": "violin",
-                "data_path": xl,
+                "excel_path": xl,
             })
             data = resp.json()
             assert data["ok"] is True
@@ -166,25 +172,52 @@ class TestAnalyzeOther:
                 {"Data": np.random.default_rng(1).normal(0, 1, 50)}, path=p)) as xl:
             resp = client.post("/analyze", json={
                 "chart_type": "histogram",
-                "data_path": xl,
+                "excel_path": xl,
             })
             data = resp.json()
             assert data["ok"] is True
 
 
 # =========================================================================
-# /analyze — error handling
+# /analyze -- error handling
 # =========================================================================
 
 class TestAnalyzeErrors:
-    def test_unknown_chart_type(self, client):
+    def test_missing_file(self, client):
         resp = client.post("/analyze", json={
-            "chart_type": "nonexistent_chart",
-            "config": {},
+            "chart_type": "bar",
+            "excel_path": "/nonexistent/file.xlsx",
         })
         data = resp.json()
         assert data["ok"] is False
         assert "error" in data
+
+
+# =========================================================================
+# /analyze -- SEM accuracy
+# =========================================================================
+
+class TestAnalyzeSEM:
+    def test_sem_matches_scipy(self, client):
+        from scipy import stats as scipy_stats
+        vals_a = np.array([2.0, 4.0, 6.0, 8.0, 10.0])
+        vals_b = np.array([1.0, 3.0, 5.0, 7.0, 9.0])
+        expected_sem_a = scipy_stats.sem(vals_a)
+        expected_sem_b = scipy_stats.sem(vals_b)
+
+        with _with_excel(lambda p: _bar_excel({"A": vals_a, "B": vals_b}, path=p)) as xl:
+            resp = client.post("/analyze", json={
+                "chart_type": "bar",
+                "excel_path": xl,
+                "config": {"error_type": "sem"},
+            })
+            data = resp.json()
+            actual_sem_a = data["groups"][0]["sem"]
+            actual_sem_b = data["groups"][1]["sem"]
+            assert abs(actual_sem_a - expected_sem_a) < 1e-10, \
+                f"SEM mismatch: got {actual_sem_a}, expected {expected_sem_a}"
+            assert abs(actual_sem_b - expected_sem_b) < 1e-10, \
+                f"SEM mismatch: got {actual_sem_b}, expected {expected_sem_b}"
 
 
 # =========================================================================

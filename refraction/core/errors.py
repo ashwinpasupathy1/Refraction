@@ -1,9 +1,11 @@
-"""plotter_errors.py — Centralized error handling and logging for Refraction."""
+"""Structured error reporting and logging for Refraction.
+
+No GUI dependencies -- the SwiftUI frontend handles display.
+"""
 
 import logging
 import logging.handlers
 import os
-import threading
 import traceback
 
 LOG_PATH = os.path.expanduser("~/Library/Logs/refraction.log")
@@ -44,55 +46,41 @@ def log_error(msg: str, exc: Exception = None) -> None:
 
 
 class ErrorReporter:
-    """Show error dialogs from any thread and log everything."""
+    """Collect and log errors.  No GUI -- call summary() for text output."""
 
-    def __init__(self, root_tk=None):
-        self._root = root_tk
-
-    def set_root(self, root_tk) -> None:
-        self._root = root_tk
+    def __init__(self):
+        self._errors: list[dict] = []
+        self._warnings: list[str] = []
 
     def report(self, title: str, message: str, exc: Exception = None,
                level: str = "error") -> None:
-        """Show messagebox (thread-safe) and log the error."""
+        """Log and store an error."""
         log_error(f"{title}: {message}", exc=exc)
-        self._show_dialog(title, message, level)
+        self._errors.append({"title": title, "message": message, "level": level})
 
-    def _show_dialog(self, title: str, message: str, level: str) -> None:
-        if self._root is None:
-            return
-        try:
-            from tkinter import messagebox
-        except ImportError:
-            return
+    def warning(self, message: str) -> None:
+        log_warning(message)
+        self._warnings.append(message)
 
-        def show():
-            try:
-                if level == "warning":
-                    messagebox.showwarning(title, message)
-                elif level == "info":
-                    messagebox.showinfo(title, message)
-                else:
-                    messagebox.showerror(title, message)
-            except Exception:
-                pass
+    @property
+    def has_errors(self) -> bool:
+        return len(self._errors) > 0
 
-        if threading.current_thread() is threading.main_thread():
-            show()
-        else:
-            try:
-                self._root.after(0, show)
-            except Exception:
-                pass
+    @property
+    def errors(self) -> list[dict]:
+        return list(self._errors)
 
-    def wrap_thread(self, fn, error_title: str = "Background Error"):
-        """Return a wrapper that catches exceptions and calls report()."""
-        def wrapper(*args, **kwargs):
-            try:
-                return fn(*args, **kwargs)
-            except Exception as e:
-                self.report(error_title, str(e), exc=e)
-        return wrapper
+    @property
+    def warnings(self) -> list[str]:
+        return list(self._warnings)
+
+    def summary(self) -> str:
+        lines = []
+        for e in self._errors:
+            lines.append(f"[{e['level'].upper()}] {e['title']}: {e['message']}")
+        for w in self._warnings:
+            lines.append(f"[WARNING] {w}")
+        return "\n".join(lines)
 
 
 # Module-level singleton

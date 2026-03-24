@@ -1,19 +1,7 @@
-# Refraction — Python backend requirements
-# Install with: pip install -r requirements.txt
-
-# API server
+# Refraction -- Python dependencies
 fastapi>=0.109.0
 uvicorn>=0.27.0
-
-# Data handling
 pandas>=2.0.0
 openpyxl>=3.1.0
-xlrd>=2.0.1
-numpy>=1.26.0
-
-# Statistics
 scipy>=1.11.0
-
-# Optional: journal export (only needed for export_plotly)
-# plotly>=5.18.0
-# kaleido>=0.2.1
+numpy>=1.26.0

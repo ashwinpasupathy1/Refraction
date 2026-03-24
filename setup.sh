@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Refraction — One-command setup
+# Refraction -- One-command setup
 # Usage: ./setup.sh
 
 set -euo pipefail
@@ -51,4 +51,5 @@ ok "Setup complete!"
 echo ""
 echo "  The Python analysis server powers the SwiftUI desktop app."
 echo "  To run tests:  python3 -m pytest tests/ -v"
+echo "  Open RefractionApp/ in Xcode for the native app."
 echo ""

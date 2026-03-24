@@ -1,45 +1,31 @@
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "refraction"
-version = "0.7.0"
-description = "GraphPad Prism-style scientific plotting application for macOS"
-readme = "README.md"
-license = "MIT"
-requires-python = ">=3.10"
+version = "0.1.0"
+description = "GraphPad Prism-style scientific analysis engine for macOS"
+requires-python = ">=3.12"
+license = {text = "MIT"}
 authors = [
-    { name = "Ashwin Pasupathy" },
+    {name = "Ashwin Pasupathy"},
+    {name = "Claude (Anthropic)"},
 ]
 
-# Core dependencies: Python analysis backend + FastAPI server.
 dependencies = [
     "fastapi>=0.109.0",
     "uvicorn>=0.27.0",
     "pandas>=2.0.0",
-    "openpyxl>=3.1.0",
-    "scipy>=1.11.0",
     "numpy>=1.26.0",
-    "xlrd>=2.0.1",
+    "scipy>=1.11.0",
+    "openpyxl>=3.1.0",
 ]
 
 [project.optional-dependencies]
-# Optional: journal-quality export via Plotly + kaleido.
-export = [
-    "plotly>=5.18.0",
-    "kaleido>=0.2.1",
-]
-
-# Development / CI.
 dev = [
-    "pytest>=8.0",
-    "pyright>=1.1.350",
+    "pytest>=7.0",
 ]
-
-# ---------------------------------------------------------------------------
-# Tool configuration
-# ---------------------------------------------------------------------------
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -52,7 +38,7 @@ markers = [
 
 [tool.pyright]
 include = ["refraction"]
-pythonVersion = "3.10"
+pythonVersion = "3.12"
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false
 reportMissingImports = true

@@ -1,6 +1,11 @@
-"""FastAPI server for Refraction — serves renderer-agnostic ChartSpec
-via the /analyze endpoint. The SwiftUI frontend consumes these specs
-and renders them natively."""
+"""FastAPI server for Refraction -- serves the analysis API.
+
+Endpoints:
+    GET  /health       -- liveness check
+    GET  /chart-types  -- list supported chart types
+    POST /analyze      -- run analysis on uploaded data
+    POST /upload       -- accept .xlsx/.xls/.csv files
+"""
 
 import logging
 import os
@@ -10,6 +15,19 @@ import uuid
 from typing import Any, Optional
 
 _log = logging.getLogger(__name__)
+
+# -- Logging setup ---------------------------------------------------------
+_log_dir = os.path.expanduser("~/Library/Logs/Refraction")
+os.makedirs(_log_dir, exist_ok=True)
+_file_handler = logging.FileHandler(
+    os.path.join(_log_dir, "api.log"), encoding="utf-8"
+)
+_file_handler.setFormatter(logging.Formatter(
+    "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+))
+logging.getLogger("refraction").addHandler(_file_handler)
+logging.getLogger("refraction").setLevel(logging.DEBUG)
 
 _server_thread: Optional[threading.Thread] = None
 _PORT = 7331
@@ -30,20 +48,31 @@ def start_server() -> None:
         uvicorn.run(_make_app(), host="127.0.0.1", port=_PORT,
                     log_level="warning", access_log=False)
 
-    _server_thread = threading.Thread(target=_run, daemon=True, name="refraction-server")
+    _server_thread = threading.Thread(target=_run, daemon=True,
+                                      name="refraction-server")
     _server_thread.start()
 
 
 def _make_app():
-    from fastapi import FastAPI
+    from fastapi import FastAPI, Request, UploadFile, File as FastAPIFile
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
-    from fastapi import Request
     from pydantic import BaseModel
 
+    # ------------------------------------------------------------------
+    # Request models
+    # ------------------------------------------------------------------
+    class AnalyzeRequest(BaseModel):
+        chart_type: str
+        excel_path: str
+        config: dict[str, Any] = {}
+
+    # ------------------------------------------------------------------
+    # App & middleware
+    # ------------------------------------------------------------------
     API_KEY = os.environ.get("REFRACTION_API_KEY", "")
 
-    api = FastAPI(title="Refraction API", version="2.0.0")
+    api = FastAPI(title="Refraction API", version="0.1.0")
 
     api.add_middleware(
         CORSMiddleware,
@@ -54,7 +83,7 @@ def _make_app():
 
     @api.middleware("http")
     async def check_auth(request: Request, call_next):
-        """Require API key for non-local requests (if REFRACTION_API_KEY is set)."""
+        """Require API key for non-local requests (if set)."""
         client_ip = request.client.host if request.client else ""
         if client_ip in ("127.0.0.1", "localhost", "::1"):
             return await call_next(request)
@@ -62,6 +91,9 @@ def _make_app():
             return JSONResponse({"error": "Unauthorized"}, status_code=401)
         return await call_next(request)
 
+    # ------------------------------------------------------------------
+    # Endpoints
+    # ------------------------------------------------------------------
     @api.get("/health")
     def health():
         return {"status": "ok"}
@@ -69,35 +101,38 @@ def _make_app():
     @api.get("/chart-types")
     def chart_types():
         """List available chart types."""
-        from refraction.analysis.engine import available_chart_types
-        all_types = available_chart_types()
         return {
             "priority": ["bar", "grouped_bar", "line", "scatter"],
-            "all": all_types,
+            "all": [
+                "bar", "grouped_bar", "line", "scatter",
+                "box", "violin", "heatmap", "histogram",
+                "kaplan_meier", "two_way_anova", "before_after",
+                "subcolumn_scatter", "curve_fit", "column_stats",
+                "contingency", "repeated_measures", "chi_square_gof",
+                "stacked_bar", "bubble", "dot_plot", "bland_altman",
+                "forest_plot", "area_chart", "raincloud", "qq_plot",
+                "lollipop", "waterfall", "pyramid", "ecdf",
+            ],
         }
 
-    class AnalyzeRequest(BaseModel):
-        chart_type: str
-        config: dict[str, Any] = {}
-        data_path: str = ""
-
     @api.post("/analyze")
-    def analyze_chart(req: AnalyzeRequest):
-        """Accept chart config, return renderer-agnostic ChartSpec."""
+    def analyze_endpoint(req: AnalyzeRequest):
+        """Run renderer-independent analysis on uploaded data."""
         try:
             from refraction.analysis import analyze
-            data_path = req.data_path or req.config.get("excel_path", "")
-            kw = dict(req.config)
-            kw["excel_path"] = data_path
-            spec = analyze(req.chart_type, kw)
-            return {"ok": True, "spec": spec.to_dict()}
-        except Exception as e:
+            result = analyze(req.chart_type, req.excel_path, req.config)
+            if not result.get("ok"):
+                return JSONResponse(result, status_code=400)
+            return result
+        except Exception as exc:
             _log.exception("Analyze failed for chart_type=%s", req.chart_type)
-            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+            return JSONResponse(
+                {"ok": False, "error": str(exc)}, status_code=500
+            )
 
-    # ── File upload ──────────────────────────────────────────────
-    from fastapi import UploadFile, File as FastAPIFile
-
+    # ------------------------------------------------------------------
+    # File upload
+    # ------------------------------------------------------------------
     UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "refraction-uploads")
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
