@@ -1,5 +1,8 @@
 """FastAPI server for Refraction — serves Plotly chart specs
-and receives edit events from the pywebview frontend."""
+and receives edit events from the pywebview frontend.
+
+This server only binds to 127.0.0.1 (localhost) and is accessed
+exclusively by the pywebview desktop window."""
 
 import json
 import logging
@@ -51,29 +54,14 @@ def _make_app():
         value: Any = None
         extra: dict[str, Any] = {}
 
-    from fastapi.responses import JSONResponse
-    from fastapi import Request
-
-    API_KEY = os.environ.get("PLOTTER_API_KEY", "")
-
     api = FastAPI(title="Refraction API", version="1.0.0")
 
     api.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=["http://127.0.0.1:*", "http://localhost:*"],
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    @api.middleware("http")
-    async def check_auth(request: Request, call_next):
-        """Require API key for non-local requests (if PLOTTER_API_KEY is set)."""
-        host = request.headers.get("host", "")
-        if host.startswith("127.0.0.1") or host.startswith("localhost"):
-            return await call_next(request)
-        if API_KEY and request.headers.get("x-api-key") != API_KEY:
-            return JSONResponse({"error": "Unauthorized"}, status_code=401)
-        return await call_next(request)
 
     @api.post("/render")
     def render(req: RenderRequest):
@@ -116,6 +104,22 @@ def _make_app():
                     "forest_plot", "area_chart", "raincloud", "qq_plot",
                     "lollipop", "waterfall", "pyramid", "ecdf"]
         }
+
+    class AnalyzeRequest(BaseModel):
+        chart_type: str
+        config: dict[str, Any] = {}
+        data_path: str = ""
+
+    @api.post("/analyze")
+    def analyze_chart(req: AnalyzeRequest):
+        """Accept chart config, return renderer-agnostic ChartSpec."""
+        try:
+            from refraction.analysis import analyze
+            data_path = req.data_path or req.config.get("excel_path", "")
+            spec = analyze(data_path, req.chart_type, req.config)
+            return {"ok": True, "spec": spec}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
 
     @api.get("/health")
     def health():

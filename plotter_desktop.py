@@ -13,6 +13,9 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
+import shutil
+import subprocess
 import sys
 import time
 import threading
@@ -49,6 +52,42 @@ def _parse_args() -> argparse.Namespace:
         help=f"Port for the FastAPI server (default: {_DEFAULT_PORT})",
     )
     return parser.parse_args()
+
+
+# ── SPA build helper ──────────────────────────────────────────────────────────
+
+def _ensure_spa_built() -> None:
+    """Build the React SPA if plotter_web/dist/ doesn't exist."""
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    web_dir = os.path.join(project_root, "plotter_web")
+    dist_dir = os.path.join(web_dir, "dist")
+
+    if os.path.isdir(dist_dir):
+        return
+
+    if not os.path.isdir(web_dir):
+        print("ERROR: plotter_web/ directory not found.", file=sys.stderr)
+        sys.exit(1)
+
+    npm = shutil.which("npm")
+    if npm is None:
+        print(
+            "ERROR: npm not found. Install Node.js or run the build manually:\n"
+            "       cd plotter_web && npm install && npm run build",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    print("React SPA not built — building now…")
+
+    node_modules = os.path.join(web_dir, "node_modules")
+    if not os.path.isdir(node_modules):
+        print("  npm install …", flush=True)
+        subprocess.run([npm, "install"], cwd=web_dir, check=True)
+
+    print("  npm run build …", flush=True)
+    subprocess.run([npm, "run", "build"], cwd=web_dir, check=True)
+    print("  Build complete.")
 
 
 # ── Server helpers ─────────────────────────────────────────────────────────────
@@ -151,6 +190,9 @@ def _open_window(port: int) -> None:
 def main() -> None:
     args = _parse_args()
     port: int = args.port
+
+    # 0. Build the React SPA if needed.
+    _ensure_spa_built()
 
     # 1. Start the FastAPI server in a daemon thread.
     print(f"Starting Refraction server on port {port}…")

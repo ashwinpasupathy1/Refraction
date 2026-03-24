@@ -30,9 +30,7 @@ python3 run_all.py specs              #  11+ tests — Plotly spec builders + se
 python3 run_all.py api                #  18 tests — FastAPI endpoint tests
 
 # Launch the app
-python3 plotter_barplot_app.py        # Tk desktop app
 python3 plotter_desktop.py            # Desktop entry point (pywebview + FastAPI)
-python3 plotter_web_server.py         # Standalone web server (no Tk)
 
 # One-command setup (installs Python deps + npm build)
 ./setup.sh
@@ -41,7 +39,7 @@ python3 plotter_web_server.py         # Standalone web server (no Tk)
 ./build_app.sh
 
 # Quick syntax check of all modules
-python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plotter_results, plotter_registry, plotter_tabs, plotter_app_icons, plotter_presets, plotter_session, plotter_events, plotter_types, plotter_undo, plotter_errors, plotter_comparisons, plotter_project, plotter_import_pzfx, plotter_wiki_content, plotter_app_wiki, plotter_server, plotter_webview, plotter_plotly_theme, plotter_spec_bar, plotter_spec_grouped_bar, plotter_spec_line, plotter_spec_scatter, plotter_web_server, plotter_export; print('OK')"
+python3 -c "import refraction; print('OK')"
 ```
 
 ---

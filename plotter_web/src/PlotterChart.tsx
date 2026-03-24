@@ -3,6 +3,18 @@ import Plotly from 'plotly.js-dist-min';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:7331';
 
+function isDarkMode(): boolean {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+const DARK_LAYOUT_OVERRIDES: Partial<Plotly.Layout> = {
+  paper_bgcolor: '#1e1e1e',
+  plot_bgcolor: '#1e1e1e',
+  font: { color: '#e0e0e0' },
+  xaxis: { linecolor: '#666', tickcolor: '#666', tickfont: { color: '#ccc' } },
+  yaxis: { linecolor: '#666', tickcolor: '#666', tickfont: { color: '#ccc' } },
+} as Partial<Plotly.Layout>;
+
 interface ChartProps {
   chartType: string;
   kw: Record<string, unknown>;
@@ -32,7 +44,10 @@ export function PlotterChart({ chartType, kw, onEvent }: ChartProps) {
           return;
         }
         const spec = data.spec;
-        Plotly.newPlot(divRef.current!, spec.data, spec.layout, {
+        const layout = isDarkMode()
+          ? { ...spec.layout, ...DARK_LAYOUT_OVERRIDES }
+          : spec.layout;
+        Plotly.newPlot(divRef.current!, spec.data, layout, {
           responsive: true,
           displayModeBar: true,
           editable: true,
