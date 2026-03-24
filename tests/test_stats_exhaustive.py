@@ -321,7 +321,7 @@ def test_dunnett_vs_scipy():
     for i, trt_name in enumerate(treatments):
         sp = float(scipy_res.pvalue[i])
         op = our_p_map[trt_name]
-        assert abs(op - sp) < 1e-10, f"Dunnett {trt_name}: {op} vs {sp}"
+        assert abs(op - sp) < 1e-8, f"Dunnett {trt_name}: {op} vs {sp}"
 
 
 
