@@ -1,8 +1,93 @@
 """plotter_types.py — Typed dataclasses for Refract plot requests."""
 
+from __future__ import annotations
+
 import json
 from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+
+try:
+    from typing import TypedDict
+except ImportError:
+    from typing_extensions import TypedDict
+
+
+# ---------------------------------------------------------------------------
+# PlotKwargs — TypedDict for the flat kwargs dict passed through the system.
+# This is the canonical type for `kw` parameters in chart functions, spec
+# builders, and the FastAPI /render endpoint.
+# ---------------------------------------------------------------------------
+
+class PlotKwargs(TypedDict, total=False):
+    """Common kwargs dict passed to chart functions and spec builders."""
+
+    # ── Data source ────────────────────────────────────────────────────────
+    excel_path: str
+    sheet: int | str
+
+    # ── Labels ─────────────────────────────────────────────────────────────
+    title: str
+    xlabel: str
+    ytitle: str
+    yscale: str
+    ylim: tuple[float, float] | None
+    ref_line: float | None
+    ref_line_label: str
+
+    # ── Layout ─────────────────────────────────────────────────────────────
+    figsize: tuple[float, float]
+    font_size: float
+    bar_width: float
+
+    # ── Style ──────────────────────────────────────────────────────────────
+    color: str | list[str] | None
+    axis_style: str
+    tick_dir: str
+    minor_ticks: bool
+    point_size: float
+    point_alpha: float
+    cap_size: float
+    ytick_interval: float
+    xtick_interval: float
+    fig_bg: str
+    spine_width: float
+    gridlines: bool
+    grid_style: str
+
+    # ── Error bars ─────────────────────────────────────────────────────────
+    error: str  # "sem" | "sd" | "ci95"
+
+    # ── Stats ──────────────────────────────────────────────────────────────
+    stats_test: str
+    posthoc: str
+    mc_correction: str
+    control: str | None
+    n_permutations: int
+    show_ns: bool
+    show_p_values: bool
+    show_effect_size: bool
+    show_test_name: bool
+    show_normality_warning: bool
+    p_sig_threshold: float
+    bracket_style: str
+    custom_pairs: list[tuple[str, str]] | None
+
+    # ── Display ────────────────────────────────────────────────────────────
+    show_points: bool
+    show_n_labels: bool
+    show_value_labels: bool
+    jitter: float
+    alpha: float
+
+    # ── Chart-type specific ────────────────────────────────────────────────
+    chart_type: str
+
+
+# ---------------------------------------------------------------------------
+# ValidationResult — return type for validator functions.
+# ---------------------------------------------------------------------------
+
+ValidationResult = Tuple[List[str], List[str]]  # (errors, warnings)
 
 
 @dataclass

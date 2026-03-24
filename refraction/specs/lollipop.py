@@ -3,6 +3,7 @@
 import pandas as pd
 from refraction.specs.theme import PRISM_TEMPLATE, PRISM_PALETTE
 from refraction.specs.helpers import extract_common_kw, read_excel_or_error
+from refraction.core.stats import calc_mean
 
 
 def build_lollipop_spec(kw: dict) -> str:
@@ -19,8 +20,8 @@ def build_lollipop_spec(kw: dict) -> str:
 
     means = []
     for g in groups:
-        col = pd.to_numeric(df[g], errors="coerce").dropna()
-        means.append(float(col.mean()) if len(col) > 0 else float("nan"))
+        col = pd.to_numeric(df[g], errors="coerce").dropna().tolist()
+        means.append(calc_mean(col))
 
     # Stem traces: one per group (vertical line from 0 to mean)
     for i, (g, mean_val) in enumerate(zip(groups, means)):

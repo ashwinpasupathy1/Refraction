@@ -52,20 +52,38 @@ refraction-web = "refraction.server.web_entry:main"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+python_classes = ["Test*"]
 python_functions = ["test_*"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
-# The legacy test harness (plotter_test_harness.py) runs tests as module-level
-# calls rather than pytest-discovered functions.  The run_all.py script is the
-# primary runner.  pytest can still discover standard test_* functions if added.
 
 [tool.pyright]
 include = ["refraction"]
 pythonVersion = "3.10"
-typeCheckingMode = "basic"
-reportMissingImports = true
+typeCheckingMode = "strict"
 reportMissingTypeStubs = false
+reportMissingImports = true
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+reportUnknownParameterType = false
+reportMissingParameterType = false
+reportUnnecessaryIsInstance = false
+reportPrivateUsage = false
+reportUntypedFunctionDecorator = false
+reportUntypedClassDecorator = false
+reportUntypedBaseClass = false
+reportUnusedImport = false
+reportUnusedVariable = false
+reportConstantRedefinition = false
+reportIncompatibleMethodOverride = false
+reportIncompatibleVariableOverride = false
+reportMissingTypeArgument = false
+reportCallInDefaultInitializer = false
+reportImplicitOverride = false
+reportUnknownLambdaType = false
+reportAttributeAccessIssue = false
 
 [tool.setuptools.packages.find]
 include = ["refraction*"]

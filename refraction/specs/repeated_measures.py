@@ -3,6 +3,7 @@
 import pandas as pd
 from refraction.specs.theme import PRISM_TEMPLATE, PRISM_PALETTE
 from refraction.specs.helpers import extract_common_kw, read_excel_or_error
+from refraction.core.stats import calc_mean, calc_sem
 
 
 def build_repeated_measures_spec(kw: dict) -> str:
@@ -36,9 +37,9 @@ def build_repeated_measures_spec(kw: dict) -> str:
     # Mean line with SEM error bars
     means, sems = [], []
     for t in timepoints:
-        col = pd.to_numeric(df[t], errors="coerce").dropna()
-        means.append(col.mean() if len(col) > 0 else float("nan"))
-        sems.append(col.sem() if len(col) > 1 else 0.0)
+        col = pd.to_numeric(df[t], errors="coerce").dropna().values.tolist()
+        means.append(calc_mean(col))
+        sems.append(calc_sem(col))
 
     traces.append(go.Scatter(
         x=x_positions,

@@ -36,12 +36,17 @@ pyramid                     -> validate_pyramid()
 
 from __future__ import annotations
 
+from typing import Any, List, Tuple
+
+# Type alias for the (errors, warnings) return value.
+ValidationResult = Tuple[List[str], List[str]]
+
 
 # ---------------------------------------------------------------------------
 # Lazy pandas access (mirrors the _pd() pattern in plotter_barplot_app)
 # ---------------------------------------------------------------------------
 
-def _pd():
+def _pd() -> Any:
     """Return pandas, importing it lazily on first call."""
     import pandas as _p
     return _p
@@ -52,25 +57,25 @@ def _pd():
 # and can be unit-tested without importing the full App)
 # ---------------------------------------------------------------------------
 
-def _is_num(v) -> bool:
+def _is_num(v: object) -> bool:
     """Return True if v can be cast to float."""
     try:
-        float(v)
+        float(v)  # type: ignore[arg-type]
         return True
     except (ValueError, TypeError):
         return False
 
 
-def _non_numeric_values(series, max_shown: int = 5) -> list:
+def _non_numeric_values(series: Any, max_shown: int = 5) -> list[str]:
     """Return at most max_shown non-numeric cell string representations from series."""
     return [str(v) for v in series.dropna() if not _is_num(v)][:max_shown]
 
 
 # ---------------------------------------------------------------------------
-def validate_flat_header(df,
+def validate_flat_header(df: Any,
                           min_groups: int = 2,
                           min_rows: int = 3,
-                          chart_name: str = "bar graph") -> tuple:
+                          chart_name: str = "bar graph") -> ValidationResult:
     """Validate a flat-header layout (Row 1 = group names, Rows 2+ = values).
 
     Used by: bar, box, violin, subcolumn_scatter, before_after,
@@ -149,12 +154,12 @@ def validate_flat_header(df,
 
     return errors, warnings
 
-def validate_bar(df):
+def validate_bar(df: Any) -> ValidationResult:
     """Validate a bar-chart sheet (flat header: row 0 = group names, rows 1+ = values)."""
     return validate_flat_header(df, min_groups=2, min_rows=3,
                                   chart_name="bar graph")
 
-def validate_line(df):
+def validate_line(df: Any) -> ValidationResult:
     """Validate a line/scatter-chart sheet (col 0 = X, col 1 = X-axis label, cols 2+ = series)."""
     pd = _pd()
     errors, warnings = [], []
@@ -215,7 +220,7 @@ def validate_line(df):
 
     return errors, warnings
 
-def validate_grouped_bar(df):
+def validate_grouped_bar(df: Any) -> ValidationResult:
     """Validate a grouped-bar sheet (row 0 = categories, row 1 = subgroups, rows 2+ = values)."""
     pd = _pd()
     from collections import Counter
@@ -278,7 +283,7 @@ def validate_grouped_bar(df):
 
     return errors, warnings
 
-def validate_kaplan_meier(df):
+def validate_kaplan_meier(df: Any) -> ValidationResult:
     """Validate a Kaplan-Meier survival sheet (row 0 = groups, row 1 = Time/Event headers)."""
     pd = _pd()
     errors, warnings = [], []
@@ -310,7 +315,7 @@ def validate_kaplan_meier(df):
 
     return errors, warnings
 
-def validate_heatmap(df):
+def validate_heatmap(df: Any) -> ValidationResult:
     """Validate a heatmap sheet (row/col 0 = labels, interior = numeric values)."""
     pd = _pd()
     errors, warnings = [], []
@@ -335,7 +340,7 @@ def validate_heatmap(df):
     return errors, warnings
 
 
-def validate_two_way_anova(df):
+def validate_two_way_anova(df: Any) -> ValidationResult:
     """Validate a two-way ANOVA sheet (long format: Factor_A, Factor_B, Value columns)."""
     pd = _pd()
     errors, warnings = [], []
@@ -381,7 +386,7 @@ def validate_two_way_anova(df):
     return errors, warnings
 
 
-def validate_contingency(df):
+def validate_contingency(df: Any) -> ValidationResult:
     """Validate a contingency table (row 0 = outcome labels, col 0 = group names)."""
     pd = _pd()
     errors, warnings = [], []
@@ -403,7 +408,7 @@ def validate_contingency(df):
     return errors, warnings
 
 
-def validate_chi_square_gof(df):
+def validate_chi_square_gof(df: Any) -> ValidationResult:
     """Validate Chi-Square GoF layout.
 
     Row 1 : category names
@@ -444,7 +449,7 @@ def validate_chi_square_gof(df):
 
 
 
-def validate_bland_altman(df):
+def validate_bland_altman(df: Any) -> ValidationResult:
     """Validate Bland-Altman layout: Row 1 = two method names, Rows 2+ = paired values."""
     pd = _pd()
     errors, warnings = [], []
@@ -469,7 +474,7 @@ def validate_bland_altman(df):
     return errors, warnings
 
 
-def validate_forest_plot(df):
+def validate_forest_plot(df: Any) -> ValidationResult:
     """Validate Forest plot layout: Row 1 = headers, Rows 2+ = studies."""
     pd = _pd()
     errors, warnings = [], []
@@ -492,7 +497,7 @@ def validate_forest_plot(df):
     return errors, warnings
 
 
-def validate_pyramid(df):
+def validate_pyramid(df: Any) -> ValidationResult:
     """Validate Population Pyramid layout: Row 1 = headers, Rows 2+ = values.
 
     Expected 3 columns: Category, Left series, Right series.

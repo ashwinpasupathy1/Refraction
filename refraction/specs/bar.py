@@ -1,7 +1,8 @@
 """Builds a Plotly figure spec for bar charts from plotter kwargs."""
 
-from refraction.specs.theme import PRISM_TEMPLATE
+from refraction.specs.theme import PRISM_TEMPLATE, apply_open_spine
 from refraction.specs.helpers import extract_common_kw, read_excel_or_error, resolve_colors
+from refraction.core.stats import calc_mean, calc_sem
 
 
 def build_bar_spec(kw: dict) -> str:
@@ -22,7 +23,7 @@ def build_bar_spec(kw: dict) -> str:
 
     groups = list(df.columns)
     values = {g: df[g].dropna().tolist() for g in groups}
-    means = [sum(v) / len(v) if v else 0 for v in values.values()]
+    means = [calc_mean(v) if v else 0 for v in values.values()]
 
     colors = resolve_colors(ck["color"], len(groups))
 
@@ -30,9 +31,7 @@ def build_bar_spec(kw: dict) -> str:
     traces = []
     for i, (g, mean) in enumerate(zip(groups, means)):
         vals = values[g]
-        # SEM = SD / sqrt(n), using sample variance (n-1) not population variance (n)
-        n = len(vals)
-        sem = (sum((x - mean) ** 2 for x in vals) / (n - 1)) ** 0.5 / (n ** 0.5) if n > 1 else 0
+        sem = calc_sem(vals)
         traces.append(go.Bar(
             x=[g],
             y=[mean],
@@ -42,10 +41,13 @@ def build_bar_spec(kw: dict) -> str:
             showlegend=False,
         ))
 
-    fig = go.Figure(data=traces, layout=go.Layout(
+    layout = go.Layout(
         template=PRISM_TEMPLATE,
         title=dict(text=ck["title"], font=dict(size=14)),
         xaxis=dict(title=ck["xlabel"]),
         yaxis=dict(title=ck["ytitle"]),
-    ))
+    )
+    apply_open_spine(layout.to_plotly_json())
+
+    fig = go.Figure(data=traces, layout=layout)
     return fig.to_json()
