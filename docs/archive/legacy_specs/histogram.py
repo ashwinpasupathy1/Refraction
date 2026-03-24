@@ -39,4 +39,12 @@ def build_histogram_spec(kw: dict) -> str:
         barmode=hist_mode if hist_mode in ("overlay", "stack") else "overlay",
     )
     fig = go.Figure(data=traces, layout=layout)
-    return fig.to_json()
+
+    # Attach linked results
+    import json as _json
+    from refraction.analysis.results import build_results_section
+    values = {g: df[g].dropna().tolist() for g in groups}
+    results = build_results_section(values)
+    spec = _json.loads(fig.to_json())
+    spec["results"] = results
+    return _json.dumps(spec)

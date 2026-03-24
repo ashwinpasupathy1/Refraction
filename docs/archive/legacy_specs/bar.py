@@ -1,5 +1,6 @@
 """Builds a Plotly figure spec for bar charts from plotter kwargs."""
 
+import json
 from refraction.specs.theme import PRISM_TEMPLATE
 from refraction.specs.helpers import extract_common_kw, read_excel_or_error, resolve_colors
 
@@ -48,4 +49,11 @@ def build_bar_spec(kw: dict) -> str:
         xaxis=dict(title=ck["xlabel"]),
         yaxis=dict(title=ck["ytitle"]),
     ))
-    return fig.to_json()
+
+    # Attach linked results
+    from refraction.analysis.results import build_results_section
+    results = build_results_section(values)
+
+    spec = json.loads(fig.to_json())
+    spec["results"] = results
+    return json.dumps(spec)

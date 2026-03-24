@@ -157,4 +157,157 @@ def _make_app():
             f.write(contents)
         return {"ok": True, "path": dest, "filename": file.filename}
 
+    # ── Phase 10a: Multi-panel layout ──────────────────────────────
+    class LayoutRequest(BaseModel):
+        panels: list[dict[str, Any]]
+        title: str = ""
+        export_width_mm: float = 183.0
+        export_height_mm: float = 247.0
+        gap_px: int = 16
+        panel_labels: bool = True
+
+    @api.post("/analyze-layout")
+    def analyze_layout_endpoint(req: LayoutRequest):
+        """Analyze a multi-panel layout, returning combined specs."""
+        try:
+            from refraction.analysis.layout import analyze_layout
+            result = analyze_layout(
+                req.panels,
+                title=req.title,
+                export_width_mm=req.export_width_mm,
+                export_height_mm=req.export_height_mm,
+                gap_px=req.gap_px,
+                panel_labels=req.panel_labels,
+            )
+            return result
+        except Exception as e:
+            _log.exception("analyze-layout failed")
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+    # ── Phase 10b: Curve models ──────────────────────────────────
+    @api.get("/curve-models")
+    def list_curve_models():
+        """List all available curve fitting models by category."""
+        from refraction.analysis.curve_models import list_models_by_category, model_count
+        return {
+            "ok": True,
+            "models": list_models_by_category(),
+            "total": model_count(),
+        }
+
+    class CurveFitRequest(BaseModel):
+        x: list[float]
+        y: list[float]
+        model_name: str
+        initial_params: list[float] | None = None
+
+    @api.post("/curve-fit")
+    def curve_fit_endpoint(req: CurveFitRequest):
+        """Fit a curve model to X/Y data."""
+        try:
+            import numpy as _np
+            from refraction.analysis.curve_fit import fit_curve
+            result = fit_curve(
+                _np.array(req.x),
+                _np.array(req.y),
+                req.model_name,
+                initial_params=req.initial_params,
+            )
+            return {"ok": True, "fit": result.to_dict()}
+        except ValueError as e:
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+        except Exception as e:
+            _log.exception("curve-fit failed")
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+    # ── Phase 10d: Column transforms ─────────────────────────────
+    @api.get("/transforms")
+    def list_transforms_endpoint():
+        """List all available column transformations."""
+        from refraction.analysis.transforms import list_transforms, transform_count
+        return {
+            "ok": True,
+            "transforms": list_transforms(),
+            "total": transform_count(),
+        }
+
+    class TransformRequest(BaseModel):
+        data_path: str
+        column: str | int
+        operation: str
+        params: dict[str, Any] = {}
+        sheet: int | str = 0
+
+    @api.post("/transform")
+    def transform_endpoint(req: TransformRequest):
+        """Apply a transform to a column; return path to new Excel file."""
+        try:
+            import pandas as _pd
+            from refraction.analysis.transforms import transform_column
+
+            df = _pd.read_excel(req.data_path, sheet_name=req.sheet)
+            result_series = transform_column(df, req.column, req.operation, **req.params)
+
+            # Write to new temp file
+            new_df = df.copy()
+            col_name = req.column if isinstance(req.column, str) else df.columns[req.column]
+            new_df[f"{col_name}_{req.operation}"] = result_series
+
+            dest = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}.xlsx")
+            new_df.to_excel(dest, index=False)
+            return {"ok": True, "path": dest, "column": f"{col_name}_{req.operation}"}
+        except ValueError as e:
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+        except Exception as e:
+            _log.exception("transform failed")
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+    # ── Phase 10e: Project files ─────────────────────────────────
+    class ProjectSaveRequest(BaseModel):
+        panels: list[dict[str, Any]]
+        layout: dict[str, Any] = {}
+        settings: dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
+
+    @api.post("/project/save")
+    def project_save(req: ProjectSaveRequest):
+        """Save a multi-panel project as .refract archive."""
+        try:
+            from refraction.io.project_v2 import save_project
+            dest = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}.refract")
+            path = save_project(
+                dest,
+                req.panels,
+                metadata=req.metadata,
+                layout=req.layout,
+                settings=req.settings,
+            )
+            return {"ok": True, "path": path}
+        except Exception as e:
+            _log.exception("project save failed")
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+    @api.post("/project/load")
+    async def project_load(file: UploadFile = FastAPIFile(...)):
+        """Upload and load a .refract project file."""
+        try:
+            from refraction.io.project_v2 import load_project
+            ext = os.path.splitext(file.filename or "")[1].lower()
+            if ext not in (".refract",):
+                return JSONResponse(
+                    {"ok": False, "error": f"Unsupported file type: {ext}"},
+                    status_code=400,
+                )
+            contents = await file.read()
+            dest = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}.refract")
+            with open(dest, "wb") as f:
+                f.write(contents)
+            result = load_project(dest)
+            # Don't return temp_dir in API response
+            result.pop("temp_dir", None)
+            return {"ok": True, "project": result}
+        except Exception as e:
+            _log.exception("project load failed")
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
     return api

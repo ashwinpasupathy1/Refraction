@@ -5,6 +5,8 @@ an Excel file path, and configuration options.  It reads the data, runs the
 appropriate statistical tests via ``refraction.core.chart_helpers``, and
 returns a plain dict of results (means, errors, p-values, etc.) that any
 renderer (SwiftUI Charts, Plotly, matplotlib) can consume.
+
+Also includes multi-panel layouts, curve models, and column transforms.
 """
 
 from refraction.analysis.engine import analyze

@@ -60,4 +60,12 @@ def build_before_after_spec(kw: dict) -> str:
         ),
         yaxis=dict(title=ck["ytitle"]),
     ))
-    return fig.to_json()
+
+    # Attach linked results
+    import json as _json
+    from refraction.analysis.results import build_results_section
+    group_values = {g: pd.to_numeric(df[g], errors="coerce").dropna().tolist() for g in groups}
+    results = build_results_section(group_values, paired=True)
+    spec = _json.loads(fig.to_json())
+    spec["results"] = results
+    return _json.dumps(spec)
