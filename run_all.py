@@ -34,6 +34,10 @@ SUITES = {
     "specs":         "test_phase3_plotly",
     "api":           "test_api",
     "analysis":      "test_analysis",
+    "spec_correctness": "test_spec_correctness",
+    "edge_cases":    "test_edge_cases",
+    "api_integration": "test_api_integration",
+    "invariants":    "test_invariants",
 }
 
 
