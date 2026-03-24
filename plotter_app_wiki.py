@@ -24,9 +24,10 @@ def _render_latex_image(expression: str, fontsize: int = 13):
     Render a matplotlib mathtext expression to a PIL Image.
     Returns (PIL.Image, PhotoImage-compatible) or None if rendering fails.
     """
-    if not _PIL_AVAILABLE:
-        return None
-    try:
+    # LaTeX rendering removed (matplotlib dependency dropped).
+    # Returns None — wiki displays plain text instead.
+    return None
+    if False:  # dead code preserved for reference
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt

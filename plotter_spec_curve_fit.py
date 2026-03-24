@@ -1,32 +1,27 @@
 """Builds a Plotly figure spec for scatter + polynomial curve fit."""
 
-import json
 import pandas as pd
 from plotter_plotly_theme import PRISM_TEMPLATE, PRISM_PALETTE
+from plotter_spec_helpers import extract_common_kw, read_excel_or_error, spec_error
 
 
 def build_curve_fit_spec(kw: dict) -> str:
     import plotly.graph_objects as go
     import numpy as np
 
-    excel_path = kw.get("excel_path", "")
-    sheet = kw.get("sheet", 0)
-    title = kw.get("title", "")
-    xlabel = kw.get("xlabel", "")
-    ytitle = kw.get("ytitle", "")
+    ck = extract_common_kw(kw)
     poly_degree = int(kw.get("poly_degree", 1))
 
-    try:
-        df = pd.read_excel(excel_path, sheet_name=sheet, header=0)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+    df, err = read_excel_or_error(ck["excel_path"], ck["sheet"])
+    if err:
+        return err
 
     if df.shape[1] < 2:
-        return json.dumps({"error": "Curve fit requires at least 2 columns: X, Y."})
+        return spec_error("Curve fit requires at least 2 columns: X, Y.")
 
     col_names = df.columns.tolist()
-    x_label = xlabel or str(col_names[0])
-    y_label = ytitle or str(col_names[1])
+    x_label = ck["xlabel"] or str(col_names[0])
+    y_label = ck["ytitle"] or str(col_names[1])
 
     x = pd.to_numeric(df.iloc[:, 0], errors="coerce")
     y = pd.to_numeric(df.iloc[:, 1], errors="coerce")
@@ -34,7 +29,7 @@ def build_curve_fit_spec(kw: dict) -> str:
     x, y = x[mask].values, y[mask].values
 
     if len(x) < 2:
-        return json.dumps({"error": "Not enough data points for curve fit."})
+        return spec_error("Not enough data points for curve fit.")
 
     color_scatter = PRISM_PALETTE[0]
     color_fit = PRISM_PALETTE[1]
@@ -51,7 +46,7 @@ def build_curve_fit_spec(kw: dict) -> str:
     x_fit = np.linspace(x.min(), x.max(), 200)
     y_fit = np.polyval(coeffs, x_fit)
 
-    # Compute R²
+    # Compute R-squared
     y_pred = np.polyval(coeffs, x)
     ss_res = float(np.sum((y - y_pred) ** 2))
     ss_tot = float(np.sum((y - np.mean(y)) ** 2))
@@ -68,7 +63,7 @@ def build_curve_fit_spec(kw: dict) -> str:
 
     fig = go.Figure(data=traces, layout=go.Layout(
         template=PRISM_TEMPLATE,
-        title=dict(text=title),
+        title=dict(text=ck["title"]),
         xaxis=dict(title=x_label),
         yaxis=dict(title=y_label),
         annotations=[dict(

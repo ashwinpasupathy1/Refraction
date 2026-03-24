@@ -1,28 +1,22 @@
 """Builds a Plotly figure spec for a Two-Way ANOVA interaction plot."""
 
-import json
 import pandas as pd
 from plotter_plotly_theme import PRISM_TEMPLATE, PRISM_PALETTE
+from plotter_spec_helpers import extract_common_kw, read_excel_or_error, spec_error
 
 
 def build_two_way_anova_spec(kw: dict) -> str:
     import plotly.graph_objects as go
 
-    excel_path = kw.get("excel_path", "")
-    sheet = kw.get("sheet", 0)
-    title = kw.get("title", "Two-Way ANOVA Interaction Plot")
-    xlabel = kw.get("xlabel", "")
-    ytitle = kw.get("ytitle", "Mean")
-
-    try:
-        df = pd.read_excel(excel_path, sheet_name=sheet, header=0)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+    ck = extract_common_kw(kw, title="Two-Way ANOVA Interaction Plot", ytitle="Mean")
+    df, err = read_excel_or_error(ck["excel_path"], ck["sheet"])
+    if err:
+        return err
 
     required = ["Factor_A", "Factor_B", "Value"]
     for col in required:
         if col not in df.columns:
-            return json.dumps({"error": f"Missing column: {col}"})
+            return spec_error(f"Missing column: {col}")
 
     df["Value"] = pd.to_numeric(df["Value"], errors="coerce")
     df = df.dropna(subset=["Value"])
@@ -32,7 +26,7 @@ def build_two_way_anova_spec(kw: dict) -> str:
 
     factor_a_levels = grouped["Factor_A"].unique().tolist()
     factor_b_levels = sorted(grouped["Factor_B"].unique().tolist(), key=str)
-    x_label = xlabel or "Factor B"
+    x_label = ck["xlabel"] or "Factor B"
 
     traces = []
     for i, level_a in enumerate(factor_a_levels):
@@ -50,8 +44,8 @@ def build_two_way_anova_spec(kw: dict) -> str:
 
     fig = go.Figure(data=traces, layout=go.Layout(
         template=PRISM_TEMPLATE,
-        title=dict(text=title),
+        title=dict(text=ck["title"]),
         xaxis=dict(title=x_label),
-        yaxis=dict(title=ytitle),
+        yaxis=dict(title=ck["ytitle"]),
     ))
     return fig.to_json()

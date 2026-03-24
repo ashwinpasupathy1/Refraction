@@ -1,23 +1,17 @@
 """Builds a Plotly figure spec for a contingency table (grouped bar chart)."""
 
-import json
 import pandas as pd
 from plotter_plotly_theme import PRISM_TEMPLATE, PRISM_PALETTE
+from plotter_spec_helpers import extract_common_kw, read_excel_or_error
 
 
 def build_contingency_spec(kw: dict) -> str:
     import plotly.graph_objects as go
 
-    excel_path = kw.get("excel_path", "")
-    sheet = kw.get("sheet", 0)
-    title = kw.get("title", "")
-    xlabel = kw.get("xlabel", "")
-    ytitle = kw.get("ytitle", "Count")
-
-    try:
-        df = pd.read_excel(excel_path, sheet_name=sheet, header=None)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+    ck = extract_common_kw(kw, ytitle="Count")
+    df, err = read_excel_or_error(ck["excel_path"], ck["sheet"], header=None)
+    if err:
+        return err
 
     # Row 0: blank, then outcome labels. Rows 1+: group name, then counts.
     outcome_labels = [str(c) for c in df.iloc[0, 1:].tolist()]
@@ -37,9 +31,9 @@ def build_contingency_spec(kw: dict) -> str:
 
     fig = go.Figure(data=traces, layout=go.Layout(
         template=PRISM_TEMPLATE,
-        title=dict(text=title),
-        xaxis=dict(title=xlabel),
-        yaxis=dict(title=ytitle),
+        title=dict(text=ck["title"]),
+        xaxis=dict(title=ck["xlabel"]),
+        yaxis=dict(title=ck["ytitle"]),
         barmode="group",
     ))
     return fig.to_json()

@@ -1,21 +1,17 @@
 """
-prism_test_harness.py
-=====================
+plotter_test_harness.py
+=======================
 Shared harness, fixtures, and bootstrap for all Refraction test suites.
 
 Importing this module:
-  • Locates and imports plotter_functions (works from both the work dir and the
-    legacy claude_plotter_src sub-directory)
-  • Calls _ensure_imports() once so matplotlib/seaborn are pre-loaded
-  • Sets matplotlib backend to Agg
-  • Exports: pf, plt, np, pd
+  • Locates and imports plotter_functions
+  • Exports: pf, np, pd
   • Exports: ok, fail, run, section, summarise
   • Exports: all Excel fixture writers
   • Exports: @with_excel context manager / decorator
 
 Usage in a test file:
-    from plotter_test_harness import *          # imports everything
-    # or selectively:
+    from plotter_test_harness import *
     from plotter_test_harness import pf, run, section, bar_excel, with_excel
 """
 
@@ -44,14 +40,6 @@ import plotter_functions as pf  # noqa: E402
 
 # Re-export key constants so test files can access them via the harness
 PLOT_PARAM_DEFAULTS = pf.PLOT_PARAM_DEFAULTS
-
-# Agg backend must be set before pyplot is imported
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-
-# Pre-load heavy deps once — shared across all test files in the same process
-pf._ensure_imports()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -114,11 +102,8 @@ def summarise(label: str = "") -> bool:
 
 
 def close_fig(fig) -> None:
-    """Close a matplotlib figure, suppressing any errors."""
-    try:
-        plt.close(fig)
-    except Exception:
-        pass
+    """No-op — kept for backward compatibility with existing test calls."""
+    pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────

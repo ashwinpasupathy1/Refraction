@@ -1,8 +1,8 @@
 """
 plotter_export.py — Journal-quality figure export for Refraction.
 
-Provides dimension presets for Nature, Science, and Cell journals and
-handles both Plotly/kaleido and matplotlib export paths.
+Provides dimension presets for Nature, Science, and Cell journals.
+Uses Plotly + kaleido for all raster/vector export.
 
 Journal dimension sources
 -------------------------
@@ -159,41 +159,6 @@ def export_plotly(
     )
 
     pio.write_image(fig, path, scale=scale)
-
-
-# ── Matplotlib fallback export ────────────────────────────────────────────────
-
-def export_matplotlib(
-    mpl_fig,
-    path: str,
-    journal: Optional[str] = None,
-    col_label: Optional[str] = None,
-    dpi: int = 300,
-) -> None:
-    """Export a matplotlib Figure at journal-preset dimensions.
-
-    This path is used when kaleido is unavailable.  Only the figure
-    dimensions and DPI are adjusted; font size must be set in the app
-    before generating the plot.
-
-    The live figure is not mutated: ``set_size_inches(..., forward=False)``
-    is used to resize for export without propagating the change to the
-    Tk canvas backend, and the original size is restored afterwards.
-    """
-    if journal and journal in JOURNAL_PRESETS and col_label:
-        w_in, h_in, _dpi = _dims_from_preset(journal, col_label)
-    else:
-        w_in, h_in, _dpi = None, None, dpi
-
-    if w_in is not None:
-        orig_w, orig_h = mpl_fig.get_size_inches()
-        mpl_fig.set_size_inches(w_in, h_in, forward=False)
-        try:
-            mpl_fig.savefig(path, dpi=_dpi, bbox_inches="tight")
-        finally:
-            mpl_fig.set_size_inches(orig_w, orig_h, forward=False)
-    else:
-        mpl_fig.savefig(path, dpi=_dpi, bbox_inches="tight")
 
 
 # ── Kaleido availability check ────────────────────────────────────────────────

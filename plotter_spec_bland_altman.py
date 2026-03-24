@@ -1,28 +1,23 @@
 """Builds a Plotly figure spec for a Bland-Altman agreement plot."""
 
-import json
 import pandas as pd
 from plotter_plotly_theme import PRISM_TEMPLATE, PRISM_PALETTE
+from plotter_spec_helpers import extract_common_kw, read_excel_or_error, spec_error
 
 
 def build_bland_altman_spec(kw: dict) -> str:
     import plotly.graph_objects as go
     import numpy as np
 
-    excel_path = kw.get("excel_path", "")
-    sheet = kw.get("sheet", 0)
-    title = kw.get("title", "Bland-Altman Plot")
-    xlabel = kw.get("xlabel", "Mean of Methods")
-    ytitle = kw.get("ytitle", "Difference (A - B)")
-
-    try:
-        df = pd.read_excel(excel_path, sheet_name=sheet, header=0)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+    ck = extract_common_kw(kw, title="Bland-Altman Plot",
+                           xlabel="Mean of Methods", ytitle="Difference (A - B)")
+    df, err = read_excel_or_error(ck["excel_path"], ck["sheet"])
+    if err:
+        return err
 
     cols = df.columns.tolist()
     if len(cols) < 2:
-        return json.dumps({"error": "Bland-Altman requires at least 2 columns."})
+        return spec_error("Bland-Altman requires at least 2 columns.")
 
     a = pd.to_numeric(df.iloc[:, 0], errors="coerce").dropna()
     b = pd.to_numeric(df.iloc[:, 1], errors="coerce").dropna()
@@ -48,9 +43,9 @@ def build_bland_altman_spec(kw: dict) -> str:
 
     fig = go.Figure(data=traces, layout=go.Layout(
         template=PRISM_TEMPLATE,
-        title=dict(text=title),
-        xaxis=dict(title=xlabel),
-        yaxis=dict(title=ytitle),
+        title=dict(text=ck["title"]),
+        xaxis=dict(title=ck["xlabel"]),
+        yaxis=dict(title=ck["ytitle"]),
     ))
 
     line_style = dict(color="#333333", width=1.5, dash="dash")

@@ -1,31 +1,25 @@
 """Builds a Plotly figure spec for a bubble chart (XY + size)."""
 
-import json
 import pandas as pd
 from plotter_plotly_theme import PRISM_TEMPLATE, PRISM_PALETTE
+from plotter_spec_helpers import extract_common_kw, read_excel_or_error, spec_error
 
 
 def build_bubble_spec(kw: dict) -> str:
     import plotly.graph_objects as go
     import numpy as np
 
-    excel_path = kw.get("excel_path", "")
-    sheet = kw.get("sheet", 0)
-    title = kw.get("title", "")
-    xlabel = kw.get("xlabel", "")
-    ytitle = kw.get("ytitle", "")
-
-    try:
-        df = pd.read_excel(excel_path, sheet_name=sheet, header=0)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+    ck = extract_common_kw(kw)
+    df, err = read_excel_or_error(ck["excel_path"], ck["sheet"])
+    if err:
+        return err
 
     if df.shape[1] < 3:
-        return json.dumps({"error": "Bubble chart requires at least 3 columns: X, Y, Size."})
+        return spec_error("Bubble chart requires at least 3 columns: X, Y, Size.")
 
     col_names = df.columns.tolist()
-    x_label = xlabel or str(col_names[0])
-    y_label = ytitle or str(col_names[1])
+    x_label = ck["xlabel"] or str(col_names[0])
+    y_label = ck["ytitle"] or str(col_names[1])
     size_label = str(col_names[2])
 
     x = pd.to_numeric(df.iloc[:, 0], errors="coerce")
@@ -64,7 +58,7 @@ def build_bubble_spec(kw: dict) -> str:
 
     fig = go.Figure(data=traces, layout=go.Layout(
         template=PRISM_TEMPLATE,
-        title=dict(text=title),
+        title=dict(text=ck["title"]),
         xaxis=dict(title=x_label),
         yaxis=dict(title=y_label),
     ))

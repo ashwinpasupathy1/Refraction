@@ -115,12 +115,7 @@ class TabManager:
         tab.plot_frame.place_forget()
         tab.plot_frame.destroy()
 
-        if tab.fig is not None:
-            try:
-                import matplotlib.pyplot as _plt
-                _plt.close(tab.fig)
-            except Exception:
-                pass
+        tab.fig = None
 
         self._tabs.pop(idx)
 

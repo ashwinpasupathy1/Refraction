@@ -1,24 +1,17 @@
 """Builds a Plotly figure spec for Repeated Measures charts."""
 
-import json
-import numpy as np
 import pandas as pd
 from plotter_plotly_theme import PRISM_TEMPLATE, PRISM_PALETTE
+from plotter_spec_helpers import extract_common_kw, read_excel_or_error
 
 
 def build_repeated_measures_spec(kw: dict) -> str:
     import plotly.graph_objects as go
 
-    excel_path = kw.get("excel_path", "")
-    sheet = kw.get("sheet", 0)
-    title = kw.get("title", "")
-    xlabel = kw.get("xlabel", "")
-    ytitle = kw.get("ytitle", "")
-
-    try:
-        df = pd.read_excel(excel_path, sheet_name=sheet, header=0)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+    ck = extract_common_kw(kw)
+    df, err = read_excel_or_error(ck["excel_path"], ck["sheet"])
+    if err:
+        return err
 
     timepoints = list(df.columns)
     x_positions = list(range(len(timepoints)))
@@ -60,18 +53,18 @@ def build_repeated_measures_spec(kw: dict) -> str:
             color=PRISM_PALETTE[0],
             thickness=1.5,
         ),
-        name="Mean ± SEM",
+        name="Mean \u00b1 SEM",
         showlegend=True,
     ))
 
     fig = go.Figure(data=traces, layout=go.Layout(
         template=PRISM_TEMPLATE,
-        title=dict(text=title),
+        title=dict(text=ck["title"]),
         xaxis=dict(
-            title=xlabel,
+            title=ck["xlabel"],
             tickvals=x_positions,
             ticktext=timepoints,
         ),
-        yaxis=dict(title=ytitle),
+        yaxis=dict(title=ck["ytitle"]),
     ))
     return fig.to_json()

@@ -1,8 +1,7 @@
 """Builds a Plotly figure spec for scatter plots."""
 
-import json
-import pandas as pd
 from plotter_plotly_theme import PRISM_TEMPLATE, PRISM_PALETTE
+from plotter_spec_helpers import extract_common_kw, read_excel_or_error, spec_error
 
 
 def build_scatter_spec(kw: dict) -> str:
@@ -16,19 +15,13 @@ def build_scatter_spec(kw: dict) -> str:
     """
     import plotly.graph_objects as go
 
-    excel_path = kw.get("excel_path", "")
-    sheet = kw.get("sheet", 0)
-    title = kw.get("title", "")
-    xlabel = kw.get("xlabel", "")
-    ytitle = kw.get("ytitle", "")
-
-    try:
-        df = pd.read_excel(excel_path, sheet_name=sheet, header=0)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+    ck = extract_common_kw(kw)
+    df, err = read_excel_or_error(ck["excel_path"], ck["sheet"])
+    if err:
+        return err
 
     if df.shape[1] < 2:
-        return json.dumps({"error": "Need at least 2 columns (X, Y)"})
+        return spec_error("Need at least 2 columns (X, Y)")
 
     x_col = df.columns[0]
     y_cols = df.columns[1:]
@@ -51,8 +44,8 @@ def build_scatter_spec(kw: dict) -> str:
 
     fig = go.Figure(data=traces, layout=go.Layout(
         template=PRISM_TEMPLATE,
-        title=dict(text=title),
-        xaxis=dict(title=xlabel),
-        yaxis=dict(title=ytitle),
+        title=dict(text=ck["title"]),
+        xaxis=dict(title=ck["xlabel"]),
+        yaxis=dict(title=ck["ytitle"]),
     ))
     return fig.to_json()

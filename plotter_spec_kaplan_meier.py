@@ -1,23 +1,17 @@
 """Builds a Plotly figure spec for Kaplan-Meier survival curves."""
 
-import json
 import pandas as pd
 from plotter_plotly_theme import PRISM_TEMPLATE, PRISM_PALETTE
+from plotter_spec_helpers import extract_common_kw, read_excel_or_error
 
 
 def build_kaplan_meier_spec(kw: dict) -> str:
     import plotly.graph_objects as go
 
-    excel_path = kw.get("excel_path", "")
-    sheet = kw.get("sheet", 0)
-    title = kw.get("title", "")
-    xlabel = kw.get("xlabel", "Time")
-    ytitle = kw.get("ytitle", "Survival Probability")
-
-    try:
-        df = pd.read_excel(excel_path, sheet_name=sheet, header=None)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+    ck = extract_common_kw(kw, xlabel="Time", ytitle="Survival Probability")
+    df, err = read_excel_or_error(ck["excel_path"], ck["sheet"], header=None)
+    if err:
+        return err
 
     # Each group spans 2 columns: header row has group name repeated.
     # Row 1: "Time", "Event". Rows 2+: time value, 0/1.
@@ -28,7 +22,7 @@ def build_kaplan_meier_spec(kw: dict) -> str:
 
     while col + 1 < n_cols:
         group_name = str(df.iloc[0, col])
-        # Row 1 should be "Time", "Event" headers — skip it
+        # Row 1 should be "Time", "Event" headers -- skip it
         times = pd.to_numeric(df.iloc[2:, col], errors="coerce").dropna()
         events = pd.to_numeric(df.iloc[2:, col + 1], errors="coerce")
         events = events.iloc[: len(times)].fillna(0).astype(int)
@@ -46,7 +40,6 @@ def build_kaplan_meier_spec(kw: dict) -> str:
         event_vals = event_vals[order]
 
         n_at_risk = len(time_vals)
-        surv = 1.0
         km_times = [0.0]
         km_surv = [1.0]
         censor_times = []
@@ -98,8 +91,8 @@ def build_kaplan_meier_spec(kw: dict) -> str:
 
     fig = go.Figure(data=traces, layout=go.Layout(
         template=PRISM_TEMPLATE,
-        title=dict(text=title),
-        xaxis=dict(title=xlabel),
-        yaxis=dict(title=ytitle, range=[0, 1.05]),
+        title=dict(text=ck["title"]),
+        xaxis=dict(title=ck["xlabel"]),
+        yaxis=dict(title=ck["ytitle"], range=[0, 1.05]),
     ))
     return fig.to_json()

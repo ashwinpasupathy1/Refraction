@@ -1,33 +1,20 @@
 """Builds a Plotly figure spec for ECDF plots from plotter kwargs."""
 
-import json
-import pandas as pd
-from plotter_plotly_theme import PRISM_TEMPLATE, PRISM_PALETTE
+from plotter_plotly_theme import PRISM_TEMPLATE
+from plotter_spec_helpers import extract_common_kw, read_excel_or_error, resolve_colors
 
 
 def build_ecdf_spec(kw: dict) -> str:
     import plotly.graph_objects as go
 
-    excel_path = kw.get("excel_path", "")
-    sheet = kw.get("sheet", 0)
-    color = kw.get("color", None)
-    title = kw.get("title", "ECDF")
-    xlabel = kw.get("xlabel", "Value")
-    ytitle = kw.get("ytitle", "Cumulative Proportion")
-
-    try:
-        df = pd.read_excel(excel_path, sheet_name=sheet, header=0)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+    ck = extract_common_kw(kw, title="ECDF", xlabel="Value",
+                           ytitle="Cumulative Proportion")
+    df, err = read_excel_or_error(ck["excel_path"], ck["sheet"])
+    if err:
+        return err
 
     groups = list(df.columns)
-
-    if isinstance(color, list):
-        colors = color
-    elif isinstance(color, str):
-        colors = [color] * len(groups)
-    else:
-        colors = PRISM_PALETTE[:len(groups)]
+    colors = resolve_colors(ck["color"], len(groups))
 
     traces = []
     for i, g in enumerate(groups):
@@ -48,9 +35,9 @@ def build_ecdf_spec(kw: dict) -> str:
 
     layout = go.Layout(
         template=PRISM_TEMPLATE,
-        title=dict(text=title, font=dict(size=14)),
-        xaxis=dict(title=xlabel),
-        yaxis=dict(title=ytitle, range=[0, 1]),
+        title=dict(text=ck["title"], font=dict(size=14)),
+        xaxis=dict(title=ck["xlabel"]),
+        yaxis=dict(title=ck["ytitle"], range=[0, 1]),
     )
     fig = go.Figure(data=traces, layout=layout)
     return fig.to_json()

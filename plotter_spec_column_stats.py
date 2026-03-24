@@ -1,22 +1,18 @@
 """Builds a Plotly figure spec for column descriptive statistics (table)."""
 
-import json
 import pandas as pd
 from plotter_plotly_theme import PRISM_TEMPLATE, PRISM_PALETTE
+from plotter_spec_helpers import extract_common_kw, read_excel_or_error
 
 
 def build_column_stats_spec(kw: dict) -> str:
     import plotly.graph_objects as go
     import numpy as np
 
-    excel_path = kw.get("excel_path", "")
-    sheet = kw.get("sheet", 0)
-    title = kw.get("title", "Column Statistics")
-
-    try:
-        df = pd.read_excel(excel_path, sheet_name=sheet, header=0)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+    ck = extract_common_kw(kw, title="Column Statistics")
+    df, err = read_excel_or_error(ck["excel_path"], ck["sheet"])
+    if err:
+        return err
 
     stat_names = ["n", "Mean", "SD", "SEM", "Min", "Median", "Max"]
     col_headers = ["Statistic"] + df.columns.tolist()
@@ -34,7 +30,7 @@ def build_column_stats_spec(kw: dict) -> str:
         mx = float(np.max(vals)) if n > 0 else float("nan")
 
         def fmt(v):
-            return f"{v:.4g}" if pd.notna(v) else "—"
+            return f"{v:.4g}" if pd.notna(v) else "\u2014"
 
         rows["n"].append(str(n))
         rows["Mean"].append(fmt(mean))
@@ -46,9 +42,6 @@ def build_column_stats_spec(kw: dict) -> str:
 
     cell_values = [rows[s] for s in stat_names]
     # Transpose: go.Table expects column-major data
-    transposed = list(map(list, zip(*cell_values)))
-    # transposed[0] = first column (stat names), etc.
-    # go.Table header = col_headers, cells per column
     col_data = list(map(list, zip(*[row for row in cell_values])))
 
     traces = [go.Table(
@@ -68,6 +61,6 @@ def build_column_stats_spec(kw: dict) -> str:
 
     fig = go.Figure(data=traces, layout=go.Layout(
         template=PRISM_TEMPLATE,
-        title=dict(text=title),
+        title=dict(text=ck["title"]),
     ))
     return fig.to_json()

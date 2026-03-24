@@ -1,23 +1,17 @@
 """Builds a Plotly figure spec for Lollipop charts."""
 
-import json
 import pandas as pd
 from plotter_plotly_theme import PRISM_TEMPLATE, PRISM_PALETTE
+from plotter_spec_helpers import extract_common_kw, read_excel_or_error
 
 
 def build_lollipop_spec(kw: dict) -> str:
     import plotly.graph_objects as go
 
-    excel_path = kw.get("excel_path", "")
-    sheet = kw.get("sheet", 0)
-    title = kw.get("title", "")
-    xlabel = kw.get("xlabel", "")
-    ytitle = kw.get("ytitle", "")
-
-    try:
-        df = pd.read_excel(excel_path, sheet_name=sheet, header=0)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+    ck = extract_common_kw(kw)
+    df, err = read_excel_or_error(ck["excel_path"], ck["sheet"])
+    if err:
+        return err
 
     groups = list(df.columns)
     x_positions = list(range(len(groups)))
@@ -55,12 +49,12 @@ def build_lollipop_spec(kw: dict) -> str:
 
     fig = go.Figure(data=traces, layout=go.Layout(
         template=PRISM_TEMPLATE,
-        title=dict(text=title),
+        title=dict(text=ck["title"]),
         xaxis=dict(
-            title=xlabel,
+            title=ck["xlabel"],
             tickvals=x_positions,
             ticktext=groups,
         ),
-        yaxis=dict(title=ytitle),
+        yaxis=dict(title=ck["ytitle"]),
     ))
     return fig.to_json()

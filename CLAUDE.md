@@ -23,7 +23,7 @@ before doing anything else.
 python3 run_all.py
 
 # Run a single suite
-python3 run_all.py comprehensive      # 309 tests — all chart types + stats engine
+python3 run_all.py comprehensive      # 175 tests — all chart types + stats engine
 python3 run_all.py stats              #  57 tests — statistical verification + control logic
 python3 run_all.py validators         #  35 tests — spreadsheet validators
 python3 run_all.py specs              #  11+ tests — Plotly spec builders + server (needs plotly)

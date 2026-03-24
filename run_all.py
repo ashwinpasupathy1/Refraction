@@ -7,11 +7,10 @@ Runs all five suites in a single Python process sharing the already-loaded
 plotter_functions module (saves ~3–5 s vs running each file separately).
 
 Suites:
-    comprehensive   — 309 tests: all chart types + stats engine
-    stats           — 57 tests: statistical verification + control-group logic
-    validators      — 35 tests: spreadsheet validators
-    specs           — 11+ tests: Plotly spec builders + server
-    api             — 18 tests: FastAPI endpoint tests
+    stats           — statistical verification + control-group logic
+    validators      — spreadsheet validators
+    specs           — Plotly spec builders + server
+    api             — FastAPI endpoint tests
 
 Usage:
     python3 run_all.py                       # run all suites
@@ -25,12 +24,11 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
 sys.path.insert(0, os.path.join(_HERE, "tests"))
 
-import plotter_test_harness as _h   # pre-loads pf + matplotlib once
+import plotter_test_harness as _h   # pre-loads pf
 
 LINE = "━" * 64
 
 SUITES = {
-    "comprehensive": "test_comprehensive",
     "stats":         "test_stats",
     "validators":    "test_validators",
     "specs":         "test_phase3_plotly",
