@@ -74,9 +74,26 @@ else
     echo ""
 fi
 
-# Step 4: Build the Swift app
-echo "Step 4: Building Refraction.app ($CONFIGURATION)..."
+# Step 4: Generate Xcode project via XcodeGen
 XCODE_PROJECT_DIR="$PROJECT_ROOT/RefractionApp"
+if [[ -f "$XCODE_PROJECT_DIR/project.yml" ]]; then
+    echo "Step 4: Generating Xcode project via XcodeGen..."
+    if command -v xcodegen &>/dev/null; then
+        cd "$XCODE_PROJECT_DIR"
+        xcodegen generate
+        cd "$PROJECT_ROOT"
+    else
+        echo "  XcodeGen not found. Install with: brew install xcodegen"
+        echo "  Skipping — will use existing .xcodeproj if present."
+    fi
+    echo ""
+else
+    echo "Step 4: No project.yml found, skipping XcodeGen."
+    echo ""
+fi
+
+# Step 5: Build the Swift app
+echo "Step 5: Building Refraction.app ($CONFIGURATION)..."
 
 if [[ -d "$XCODE_PROJECT_DIR/Refraction.xcodeproj" ]]; then
     # Xcode project exists — use xcodebuild

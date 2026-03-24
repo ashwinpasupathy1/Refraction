@@ -1,0 +1,71 @@
+name: Build & Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-dmg:
+    runs-on: macos-14
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Python tests
+        run: python3 run_all.py
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: cd RefractionApp && xcodegen generate
+
+      - name: Bundle Python into app Resources
+        run: bash scripts/bundle_python.sh
+
+      - name: Build unsigned app
+        run: |
+          cd RefractionApp
+          xcodebuild \
+            -project Refraction.xcodeproj \
+            -scheme Refraction \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package DMG
+        run: |
+          APP_PATH="RefractionApp/build/Build/Products/Release/Refraction.app"
+          DMG_NAME="Refraction-${{ github.event.release.tag_name }}.dmg"
+
+          # Create a temporary directory for DMG contents
+          mkdir -p dmg-stage
+          cp -R "$APP_PATH" dmg-stage/
+          ln -s /Applications dmg-stage/Applications
+
+          # Create DMG
+          hdiutil create \
+            -volname "Refraction" \
+            -srcfolder dmg-stage \
+            -ov \
+            -format UDZO \
+            "$DMG_NAME"
+
+      - name: Upload DMG to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DMG_NAME="Refraction-${{ github.event.release.tag_name }}.dmg"
+          gh release upload "${{ github.event.release.tag_name }}" "$DMG_NAME"
