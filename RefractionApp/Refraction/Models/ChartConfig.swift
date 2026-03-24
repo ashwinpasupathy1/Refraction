@@ -117,7 +117,7 @@ final class ChartConfig {
     enum TickDirection: String, CaseIterable, Identifiable {
         case out = "Outward (default)"
         case `in` = "Inward"
-        case inout = "Both"
+        case `inout` = "Both"
         case none = "None"
 
         var id: String { rawValue }

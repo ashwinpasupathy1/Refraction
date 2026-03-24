@@ -12,6 +12,10 @@ settings:
     CODE_SIGNING_REQUIRED: "NO"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
 
+packages:
+  RefractionRenderer:
+    path: ../RefractionRenderer
+
 targets:
   Refraction:
     type: application
@@ -20,6 +24,8 @@ targets:
       - path: Refraction
         excludes:
           - "Resources/python-env/**"
+    dependencies:
+      - package: RefractionRenderer
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.refraction.app

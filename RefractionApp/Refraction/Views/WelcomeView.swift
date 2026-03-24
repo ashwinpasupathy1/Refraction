@@ -121,7 +121,7 @@ struct WelcomeView: View {
     private func tipRow(icon: String, text: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
-                .foregroundStyle(.accent)
+                .foregroundStyle(.tint)
                 .frame(width: 20)
             Text(text)
                 .font(.callout)
