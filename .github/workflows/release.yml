@@ -59,6 +59,20 @@ jobs:
 
           echo "App bundle size: $(du -sh "$APP_PATH" | cut -f1)"
 
+      - name: Verify app bundle
+        run: |
+          APP_PATH="RefractionApp/build/Build/Products/Release/Refraction.app"
+          PYTHON="$APP_PATH/Contents/Resources/python-env/bin/python3"
+          RESOURCES="$APP_PATH/Contents/Resources"
+
+          echo "Verifying bundled Python can import core modules..."
+          PYTHONPATH="$RESOURCES" "$PYTHON" -c "
+          from refraction.analysis.engine import analyze
+          from refraction.server.api import _make_app
+          import uvicorn, pandas, scipy, numpy
+          print('All imports OK')
+          "
+
       - name: Package DMG
         run: |
           APP_PATH="RefractionApp/build/Build/Products/Release/Refraction.app"
