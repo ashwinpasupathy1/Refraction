@@ -20,7 +20,7 @@ plotter_validators.py for the validator, and test_comprehensive.py for tests).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, Set, Optional
+from typing import Any, Callable, List, Set, Optional
 import inspect
 
 
@@ -89,7 +89,7 @@ class PlotTypeConfig:
     has_stats:     bool = True    # shows significance brackets (stats tab)
     x_continuous:  bool = False   # continuous x-axis (x-limit controls visible)
 
-    def filter_kwargs(self, kw: dict, fn) -> dict:
+    def filter_kwargs(self, kw: dict[str, Any], fn: Any) -> dict[str, Any]:
         """Return only the kwargs that fn actually accepts, using its signature.
         This replaces all manual strip_keys / keep_keys maintenance  -  adding a
         new parameter to a plot function is sufficient; no registry edit needed."""

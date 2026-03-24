@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "refraction"
+version = "0.1.0"
+description = "GraphPad Prism-style scientific analysis engine for macOS"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Ashwin Pasupathy"},
+    {name = "Claude (Anthropic)"},
+]
+
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn>=0.27.0",
+    "pandas>=2.0.0",
+    "numpy>=1.26.0",
+    "scipy>=1.11.0",
+    "openpyxl>=3.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+[tool.pyright]
+include = ["refraction"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+reportMissingImports = true
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+reportUnknownParameterType = false
+reportMissingParameterType = false
+reportUnnecessaryIsInstance = false
+reportPrivateUsage = false
+reportUntypedFunctionDecorator = false
+reportUntypedClassDecorator = false
+reportUntypedBaseClass = false
+reportUnusedImport = false
+reportUnusedVariable = false
+reportConstantRedefinition = false
+reportIncompatibleMethodOverride = false
+reportIncompatibleVariableOverride = false
+reportMissingTypeArgument = false
+reportCallInDefaultInitializer = false
+reportImplicitOverride = false
+reportUnknownLambdaType = false
+reportAttributeAccessIssue = false
+
+[tool.setuptools.packages.find]
+include = ["refraction*"]

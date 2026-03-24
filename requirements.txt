@@ -1,12 +1,7 @@
-# Refraction — Desktop requirements
-# Install with: pip install -r requirements.txt
+# Refraction -- Python dependencies
 fastapi>=0.109.0
 uvicorn>=0.27.0
-plotly>=5.18.0
-kaleido>=0.2.1
-pywebview>=4.4.0
 pandas>=2.0.0
 openpyxl>=3.1.0
 scipy>=1.11.0
 numpy>=1.26.0
-xlrd>=2.0.1

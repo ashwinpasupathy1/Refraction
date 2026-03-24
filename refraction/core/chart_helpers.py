@@ -34,120 +34,55 @@ __all__ = [
     "np", "pd", "stats",
 ]
 
-_DPI = 144
-
 # ---------------------------------------------------------------------------
-# Style constants — change once here to affect the whole codebase
-# ---------------------------------------------------------------------------
-
-_FONT        = "Arial"          # plot axis/tick font
-_LW_AXIS     = 0.8              # spine + tick linewidth
-_LW_ERR      = 1.0              # error bar default linewidth
-_LW_GRID     = 0.6              # gridline linewidth
-_LW_REF      = 1.0              # reference line linewidth
-_CAP_SIZE    = 4                # error bar cap size (pts)
-_LABEL_PAD   = 6                # axis label padding (pts)
-_TITLE_PAD   = 8                # title padding (pts)
-_TIGHT_PAD   = 1.2              # tight_layout pad
-_ALPHA_BAR   = 0.85             # default bar alpha
-_ALPHA_POINT = 0.80             # default scatter point alpha
-_ALPHA_CI    = 0.15             # confidence band alpha
-_ALPHA_LINE  = 0.55             # subject connecting line alpha
-_PT_SIZE     = 18               # default scatter point size (s=)
-_PT_LW       = 1.2              # point edge linewidth
-_DARKEN      = 0.65             # default darken factor for edges
-_COLOR_ANNOT = "dimgray"        # annotation text color
-_COLOR_WARN  = "darkorange"     # normality warning color
-_COLOR_SUBJ  = "#aaaaaa"        # subject line color
-_COLOR_BOX   = "#444444"        # box plot whisker/cap color
-_COLOR_ANNO_SUBTLE = "#888888"  # subtle annotation color
-_COLOR_HDR       = "#2274A5"        # table header color
-_COLOR_WARN_FILL = "#FFA50055"       # normality-fail cell highlight
-_COLOR_BG        = "white"           # plot / figure background
-
-# Marker cycle for multi-series XY charts (line, scatter, curve fit)
-MARKER_CYCLE = ["o", "s", "^", "D", "v", "*", "P", "X", "h"]
-
-# Shared paired / subcolumn drawing constants
-_MEAN_TICK_HALF  = 0.18   # half-width of mean tick line (data units)
-_MEAN_TICK_LW    = 2.5    # linewidth of mean tick
-_PAIR_ERR_LW     = 1.8    # elinewidth for paired error bars
-_PAIR_CAP_SIZE   = 6      # capsize for paired error bars
-_SUBJ_LINE_LW    = 0.8    # subject connecting line linewidth
-_SUBJ_LINE_ALPHA = 0.55   # subject connecting line alpha
-
-
-
-
-# ---------------------------------------------------------------------------
-# Module-level constants
+# Import all constants from the canonical config module.
+# Local aliases preserve backward compatibility for code that references
+# the old module-level names (e.g. _DPI, _FONT, PRISM_PALETTE).
 # ---------------------------------------------------------------------------
 
-PRISM_PALETTE = [
-    "#E8453C", "#2274A5", "#32936F", "#F18F01", "#A846A0",
-    "#6B4226", "#048A81", "#D4AC0D", "#3B1F2B", "#44BBA4",
-]
+from refraction.core.config import (          # noqa: F401 — re-exports
+    DEFAULT_CONFIG,
+    PRISM_PALETTE,
+    AXIS_STYLES,
+    TICK_DIRS,
+    LEGEND_POSITIONS,
+    MARKER_CYCLE,
+    PLOT_PARAM_DEFAULTS,
+)
 
+_cfg = DEFAULT_CONFIG
 
-AXIS_STYLES = {
-    "Open (default)": "open",
-    "Closed box":           "closed",
-    "Floating":             "floating",
-    "None":                 "none",
-}
-
-TICK_DIRS = {
-    "Outward (default)": "out",
-    "Inward":            "in",
-    "Both":              "inout",
-    "None":              "",
-}
-
-LEGEND_POSITIONS = {
-    "Auto (best fit)": "best",
-    "Upper right":     "upper right",
-    "Upper left":      "upper left",
-    "Lower right":     "lower right",
-    "Lower left":      "lower left",
-    "Outside right":   "outside",
-    "None (hidden)":   "none",
-}
-
-PLOT_PARAM_DEFAULTS: dict = {
-    # ── Axis / tick style ──────────────────────────────────────────────────
-    "axis_style":  "open",    # "open" | "closed" | "floating" | "none"
-    "tick_dir":    "out",     # "out" | "in" | "inout" | ""
-    "minor_ticks": False,     # bool
-    # ── Data point style ──────────────────────────────────────────────────
-    "point_size":  6.0,       # marker diameter in pts; area = size²
-    "point_alpha": 0.80,      # transparency 0–1
-    # ── Error bar style ───────────────────────────────────────────────────
-    "cap_size":    4.0,       # error bar cap width in pts
-    # ── Legend ────────────────────────────────────────────────────────────
-    "legend_pos":  "upper right",  # matplotlib loc string or "outside"/"none"
-    # ── Tick intervals (0 = auto) ─────────────────────────────────────────
-    "ytick_interval": 0.0,
-    "xtick_interval": 0.0,
-    # ── Background color ─────────────────────────────────────────────────
-    "fig_bg": "white",
-    # ── Spine / tick width ────────────────────────────────────────────────
-    "spine_width": 0.8,
-    # ── Grid style ────────────────────────────────────────────────────────
-    "grid_style": "none",   # "none" | "horizontal" | "full"
-    # ── Bracket style ─────────────────────────────────────────────────────
-    "bracket_style": "lines",  # "lines" | "bracket" | "asterisks_only"
-    # ── Layout ────────────────────────────────────────────────────────────
-    "figsize":     (5, 5),
-    "font_size":   12.0,
-    # ── Labels ────────────────────────────────────────────────────────────
-    "title":       "",
-    "xlabel":      "",
-    "ytitle":      "",
-    "yscale":      "linear",
-    "ylim":        None,
-    "ref_line":    None,
-    "ref_line_label": "",
-}
+_DPI             = _cfg.dpi
+_FONT            = _cfg.font
+_LW_AXIS         = _cfg.lw_axis
+_LW_ERR          = _cfg.lw_err
+_LW_GRID         = _cfg.lw_grid
+_LW_REF          = _cfg.lw_ref
+_CAP_SIZE        = _cfg.cap_size
+_LABEL_PAD       = _cfg.label_pad
+_TITLE_PAD       = _cfg.title_pad
+_TIGHT_PAD       = _cfg.tight_pad
+_ALPHA_BAR       = _cfg.alpha_bar
+_ALPHA_POINT     = _cfg.alpha_point
+_ALPHA_CI        = _cfg.alpha_ci
+_ALPHA_LINE      = _cfg.alpha_line
+_PT_SIZE         = _cfg.pt_size
+_PT_LW           = _cfg.pt_lw
+_DARKEN          = _cfg.darken
+_COLOR_ANNOT     = _cfg.color_annot
+_COLOR_WARN      = _cfg.color_warn
+_COLOR_SUBJ      = _cfg.color_subj
+_COLOR_BOX       = _cfg.color_box
+_COLOR_ANNO_SUBTLE = _cfg.color_anno_subtle
+_COLOR_HDR       = _cfg.color_hdr
+_COLOR_WARN_FILL = _cfg.color_warn_fill
+_COLOR_BG        = _cfg.color_bg
+_MEAN_TICK_HALF  = _cfg.mean_tick_half
+_MEAN_TICK_LW    = _cfg.mean_tick_lw
+_PAIR_ERR_LW     = _cfg.pair_err_lw
+_PAIR_CAP_SIZE   = _cfg.pair_cap_size
+_SUBJ_LINE_LW   = _cfg.subj_line_lw
+_SUBJ_LINE_ALPHA = _cfg.subj_line_alpha
 
 
 
