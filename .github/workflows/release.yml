@@ -45,6 +45,20 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
+      - name: Copy bundled Python into app bundle
+        run: |
+          APP_PATH="RefractionApp/build/Build/Products/Release/Refraction.app"
+          RESOURCES_DIR="$APP_PATH/Contents/Resources"
+          PYTHON_ENV="RefractionApp/Refraction/Resources/python-env"
+
+          echo "Copying python-env into app bundle..."
+          cp -R "$PYTHON_ENV" "$RESOURCES_DIR/python-env"
+
+          # Also copy the refraction Python package so the server can find it
+          cp -R refraction "$RESOURCES_DIR/refraction"
+
+          echo "App bundle size: $(du -sh "$APP_PATH" | cut -f1)"
+
       - name: Package DMG
         run: |
           APP_PATH="RefractionApp/build/Build/Products/Release/Refraction.app"
