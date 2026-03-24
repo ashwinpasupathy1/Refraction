@@ -33,6 +33,7 @@ SUITES = {
     "validators":    "test_validators",
     "specs":         "test_phase3_plotly",
     "api":           "test_api",
+    "analysis":      "test_analysis",
 }
 
 
