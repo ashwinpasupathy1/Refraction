@@ -12,6 +12,7 @@ import pandas as pd
 
 from refraction.analysis.schema import AxisSpec, ChartSpec, StyleSpec
 from refraction.analysis.helpers import read_data, resolve_colors, extract_config
+from refraction.core.chart_helpers import _logrank_test
 
 
 def _kaplan_meier_curve(times: np.ndarray, events: np.ndarray):
@@ -119,6 +120,26 @@ def analyze_kaplan_meier(kw: dict) -> ChartSpec:
             "color": colors[gi],
         })
 
+    # Log-rank (Mantel-Cox) pairwise tests between groups
+    comparisons = []
+    non_empty = [(c["name"], i) for i, c in enumerate(curves) if c["n"] > 0]
+    if len(non_empty) >= 2:
+        # Build groups_dict for _logrank_test: {name: (times, events)}
+        lr_groups = {}
+        for gi, (name, col_start) in enumerate(zip(group_names, group_cols)):
+            time_col = data_rows.iloc[:, col_start]
+            event_col = data_rows.iloc[:, col_start + 1]
+            t = pd.to_numeric(time_col, errors="coerce").dropna().values
+            e = pd.to_numeric(event_col, errors="coerce").dropna().values
+            n = min(len(t), len(e))
+            if n > 0:
+                lr_groups[name] = (t[:n].astype(float), e[:n].astype(float))
+        if len(lr_groups) >= 2:
+            comparisons = [
+                {"group_a": a, "group_b": b, "p_value": p, "stars": s}
+                for a, b, p, s in _logrank_test(lr_groups)
+            ]
+
     return ChartSpec(
         chart_type="kaplan_meier",
         title=cfg["title"],
@@ -138,5 +159,6 @@ def analyze_kaplan_meier(kw: dict) -> ChartSpec:
         ),
         data={
             "curves": curves,
+            "comparisons": comparisons,
         },
     )
