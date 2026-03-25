@@ -83,6 +83,15 @@ struct ErrorView: View {
     private var parsedError: ParsedError {
         let msg = errorMessage.lowercased()
 
+        if msg.contains("not found in app bundle") || msg.contains("sample data") {
+            return ParsedError(
+                title: "Sample Data Missing",
+                description: "The bundled sample data could not be found. This usually means xcodegen needs to be re-run. Run 'xcodegen generate' in RefractionApp/ and rebuild.",
+                icon: "shippingbox.and.arrow.backward",
+                color: .orange
+            )
+        }
+
         if msg.contains("filenotfounderror") || msg.contains("no such file") {
             return ParsedError(
                 title: "File Not Found",
@@ -179,6 +188,8 @@ struct ErrorView: View {
 
         App Version: \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown")
         macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)
+        Bundle: \(Bundle.main.bundlePath)
+        Date: \(ISO8601DateFormatter().string(from: Date()))
         """
 
         pasteboard.setString(report, forType: .string)

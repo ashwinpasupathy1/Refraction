@@ -171,17 +171,40 @@ struct WelcomeView: View {
     }
 
     private func loadSampleData() {
-        // Look for bundled sample data in the app's resources
-        if let sampleURL = Bundle.main.url(
-            forResource: "drug_treatment",
-            withExtension: "xlsx",
-            subdirectory: "SampleData"
-        ) {
+        // Try multiple lookup strategies for bundled sample data.
+        // Strategy 1: folder reference (subdirectory preserved in bundle)
+        // Strategy 2: flat copy (xcodegen group-based resources)
+        // Strategy 3: direct path search in bundle resources
+        let sampleURL: URL? =
+            Bundle.main.url(forResource: "drug_treatment", withExtension: "xlsx", subdirectory: "SampleData")
+            ?? Bundle.main.url(forResource: "drug_treatment", withExtension: "xlsx")
+            ?? Bundle.main.resourceURL?.appendingPathComponent("SampleData/drug_treatment.xlsx")
+
+        if let url = sampleURL, FileManager.default.fileExists(atPath: url.path) {
             Task {
-                await appState.uploadFile(url: sampleURL)
+                await appState.uploadFile(url: url)
             }
         } else {
-            appState.error = "Sample data file not found in app bundle."
+            // Build diagnostic info so future debugging is easier
+            let bundlePath = Bundle.main.bundlePath
+            let resourcePath = Bundle.main.resourcePath ?? "(nil)"
+            let xlsxFiles = (try? FileManager.default.contentsOfDirectory(
+                at: Bundle.main.resourceURL ?? URL(fileURLWithPath: "/"),
+                includingPropertiesForKeys: nil
+            ).filter { $0.pathExtension == "xlsx" }.map(\.lastPathComponent)) ?? []
+
+            let sampleDirExists = FileManager.default.fileExists(
+                atPath: (Bundle.main.resourceURL?.appendingPathComponent("SampleData").path) ?? ""
+            )
+
+            appState.error = """
+                Sample data file not found in app bundle.
+                Bundle: \(bundlePath)
+                Resources: \(resourcePath)
+                SampleData dir exists: \(sampleDirExists)
+                .xlsx files in resources: \(xlsxFiles.isEmpty ? "none" : xlsxFiles.joined(separator: ", "))
+                Tip: Run 'xcodegen generate' and rebuild.
+                """
         }
     }
 }

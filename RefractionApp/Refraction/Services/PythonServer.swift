@@ -210,7 +210,7 @@ final class PythonServer {
     // MARK: - Python Resolution
 
     /// Resolve the Python binary path.
-    /// Priority: bundled python-env > system python3
+    /// Priority: bundled python-env > REFRACTION_PYTHON env > well-known paths > system python3
     private static func pythonPath() -> String {
         // Check for bundled Python inside the .app bundle
         if let bundled = Bundle.main.resourceURL?
@@ -218,6 +218,30 @@ final class PythonServer {
            FileManager.default.fileExists(atPath: bundled) {
             NSLog("[PythonServer] Found bundled Python at: %@", bundled)
             return bundled
+        }
+
+        // Check REFRACTION_PYTHON env var (set by user or launch script)
+        if let envPython = ProcessInfo.processInfo.environment["REFRACTION_PYTHON"],
+           FileManager.default.fileExists(atPath: envPython) {
+            NSLog("[PythonServer] Using REFRACTION_PYTHON: %@", envPython)
+            return envPython
+        }
+
+        // Check well-known Python locations that typically have packages.
+        // /usr/bin/env inside Xcode subprocesses often resolves to a bare
+        // system Python that lacks uvicorn/fastapi/etc.
+        let candidates = [
+            "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+            "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+            "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+            "/opt/homebrew/bin/python3",
+            "/usr/local/bin/python3",
+        ]
+        for path in candidates {
+            if FileManager.default.fileExists(atPath: path) {
+                NSLog("[PythonServer] Found Python at well-known path: %@", path)
+                return path
+            }
         }
 
         // Fall back to system Python for development
@@ -335,8 +359,9 @@ final class PythonServer {
         }
 
         // Strategy 2: Walk up from the main bundle looking for refraction/
+        // The bundle is usually deep in DerivedData, so walk up generously.
         var candidate = Bundle.main.bundleURL
-        for _ in 0..<5 {
+        for _ in 0..<10 {
             candidate = candidate.deletingLastPathComponent()
             let marker = candidate.appendingPathComponent("refraction").appendingPathComponent("__init__.py")
             if FileManager.default.fileExists(atPath: marker.path) {
@@ -344,7 +369,48 @@ final class PythonServer {
             }
         }
 
-        // Strategy 3: Fall back to current working directory
+        // Strategy 3: Walk up from the Xcode project source root.
+        // The .xcodeproj lives in RefractionApp/ which is one level below the repo root.
+        // Use the SOURCE_ROOT build setting if available, or locate via the
+        // project.yml that xcodegen uses.
+        if let sourceRoot = ProcessInfo.processInfo.environment["SOURCE_ROOT"] {
+            let repoRoot = URL(fileURLWithPath: sourceRoot).deletingLastPathComponent()
+            let marker = repoRoot.appendingPathComponent("refraction").appendingPathComponent("__init__.py")
+            if FileManager.default.fileExists(atPath: marker.path) {
+                NSLog("[PythonServer] Found project root via SOURCE_ROOT: %@", repoRoot.path)
+                return repoRoot
+            }
+        }
+
+        // Strategy 4: Search well-known development paths.
+        // Check any active worktrees first (they have the latest code),
+        // then fall back to the main repo.
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        var knownPaths = [String]()
+
+        // Scan for worktrees under the main repo (they contain the latest dev code)
+        let worktreeDir = "\(home)/Documents/Claude Prism/.claude/worktrees"
+        if let entries = try? FileManager.default.contentsOfDirectory(atPath: worktreeDir) {
+            for entry in entries {
+                knownPaths.append("\(worktreeDir)/\(entry)")
+            }
+        }
+
+        knownPaths += [
+            "\(home)/Documents/Claude Prism",
+            "\(home)/Documents/Refraction",
+        ]
+        for path in knownPaths {
+            let marker = URL(fileURLWithPath: path).appendingPathComponent("refraction").appendingPathComponent("__init__.py")
+            if FileManager.default.fileExists(atPath: marker.path) {
+                NSLog("[PythonServer] Found project root at known path: %@", path)
+                return URL(fileURLWithPath: path)
+            }
+        }
+
+        // Strategy 5: Fall back to current working directory
+        NSLog("[PythonServer] WARNING: Could not find project root, falling back to cwd: %@",
+              FileManager.default.currentDirectoryPath)
         return URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
     }
 }

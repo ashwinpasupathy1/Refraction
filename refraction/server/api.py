@@ -131,6 +131,155 @@ def _make_app():
             )
 
     # ------------------------------------------------------------------
+    # /render — bridge for the SwiftUI app
+    # ------------------------------------------------------------------
+    class RenderRequest(BaseModel):
+        chart_type: str
+        kw: dict[str, Any] = {}
+
+    @api.post("/render")
+    def render_endpoint(req: RenderRequest):
+        """Bridge endpoint for the SwiftUI app.
+
+        Accepts the format the Swift APIClient sends, transforms into
+        an analyze() call, then reshapes the response into the ChartSpec
+        JSON schema the Swift RenderResponse / ChartSpec structs expect.
+        """
+        try:
+            from refraction.analysis import analyze
+
+            kw = dict(req.kw)
+            excel_path = kw.pop("excel_path", "")
+            if not excel_path:
+                return JSONResponse(
+                    {"ok": False, "error": "Missing excel_path"},
+                    status_code=400,
+                )
+
+            # Map Swift config keys to engine config keys
+            config = dict(kw)
+            if "error" in config and "error_type" not in config:
+                config["error_type"] = config.pop("error")
+            if "xlabel" in config and "x_label" not in config:
+                config["x_label"] = config.get("xlabel", "")
+            if "ytitle" in config and "y_label" not in config:
+                config["y_label"] = config.get("ytitle", "")
+
+            result = analyze(req.chart_type, excel_path, config)
+
+            if not result.get("ok"):
+                return JSONResponse(
+                    {"ok": False, "error": result.get("error", "Analysis failed")},
+                    status_code=400,
+                )
+
+            return {"ok": True, "spec": _to_chart_spec(result, config)}
+
+        except Exception as exc:
+            _log.exception("Render failed for chart_type=%s", req.chart_type)
+            return JSONResponse(
+                {"ok": False, "error": str(exc)}, status_code=500,
+            )
+
+    def _to_chart_spec(result: dict, config: dict) -> dict:
+        """Transform analyze() output into the ChartSpec JSON schema."""
+        palette = [
+            "#E8453C", "#2274A5", "#32936F", "#F18F01", "#A846A0",
+            "#6B4226", "#048A81", "#D4AC0D", "#3B1F2B", "#44BBA4",
+        ]
+
+        # -- groups: nest values into {raw, mean, sem, sd, ci95, n} --
+        groups = []
+        for g in result.get("groups", []):
+            raw = g.get("values", [])
+            groups.append({
+                "name": g.get("name", ""),
+                "values": {
+                    "raw": raw if isinstance(raw, list) else [],
+                    "mean": g.get("mean"),
+                    "sem": g.get("sem"),
+                    "sd": g.get("sd"),
+                    "ci95": g.get("ci95"),
+                    "n": g.get("n", 0),
+                },
+                "color": g.get("color", palette[len(groups) % len(palette)]),
+            })
+
+        # -- comparisons → stats + brackets --
+        comparisons_out = []
+        brackets = []
+        group_names = [g["name"] for g in groups]
+        for i, c in enumerate(result.get("comparisons", [])):
+            if "error" in c:
+                continue
+            p = c.get("p_value", 1.0)
+            label = c.get("stars", "ns")
+            comparisons_out.append({
+                "group_1": c.get("group_a", ""),
+                "group_2": c.get("group_b", ""),
+                "p_value": p,
+                "significant": p < config.get("p_sig_threshold", 0.05),
+                "label": label,
+            })
+            # Build bracket indices
+            left = group_names.index(c["group_a"]) if c.get("group_a") in group_names else i
+            right = group_names.index(c["group_b"]) if c.get("group_b") in group_names else i + 1
+            brackets.append({
+                "left_index": left,
+                "right_index": right,
+                "label": label,
+                "stacking_order": i,
+            })
+
+        stats_test = config.get("stats_test", "none")
+        stats = None
+        if stats_test != "none" and comparisons_out:
+            stats = {
+                "test_name": stats_test,
+                "p_value": comparisons_out[0]["p_value"] if len(comparisons_out) == 1 else None,
+                "statistic": None,
+                "comparisons": comparisons_out,
+                "normality": None,
+                "effect_size": None,
+                "warning": None,
+            }
+
+        error_type = config.get("error_type", config.get("error", "sem"))
+
+        return {
+            "chart_type": result.get("chart_type", "bar"),
+            "groups": groups,
+            "style": {
+                "colors": [g["color"] for g in groups] or palette[:1],
+                "show_points": bool(config.get("show_points", False)),
+                "show_brackets": True,
+                "point_size": config.get("point_size", 6.0),
+                "point_alpha": config.get("point_alpha", 0.8),
+                "bar_width": config.get("bar_width", 0.6),
+                "error_type": error_type,
+                "axis_style": config.get("axis_style", "open"),
+            },
+            "axes": {
+                "title": result.get("title", ""),
+                "x_label": result.get("x_label", ""),
+                "y_label": result.get("y_label", ""),
+                "x_scale": "linear",
+                "y_scale": config.get("yscale", "linear"),
+                "x_range": None,
+                "y_range": config.get("ylim"),
+                "tick_direction": config.get("tick_dir", "out"),
+                "spine_width": config.get("spine_width", 1.0),
+                "font_size": config.get("font_size", 12.0),
+            },
+            "stats": stats,
+            "brackets": brackets if stats else [],
+            "reference_line": (
+                {"y": config["ref_line"], "label": config.get("ref_line_label", "")}
+                if "ref_line" in config else None
+            ),
+        }
+
+    # ------------------------------------------------------------------
     # File upload
     # ------------------------------------------------------------------
     UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "refraction-uploads")

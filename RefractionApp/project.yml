@@ -28,6 +28,7 @@ targets:
     resources:
       - path: Refraction/Assets.xcassets
       - path: Refraction/Resources/SampleData
+        type: folder
         buildPhase: resources
     dependencies:
       - package: RefractionRenderer

@@ -46,8 +46,20 @@ final class AppState {
                 config: chartConfig
             )
             currentSpec = spec
+        } catch let apiError as APIError {
+            self.error = """
+                Analysis failed: \(apiError.localizedDescription)
+                Chart type: \(selectedChartType.key)
+                File: \(chartConfig.excelPath)
+                Endpoint: POST /render
+                """
+            currentSpec = nil
         } catch {
-            self.error = error.localizedDescription
+            self.error = """
+                Analysis failed: \(error.localizedDescription)
+                Chart type: \(selectedChartType.key)
+                Tip: Is the Python server running on localhost:7331?
+                """
             currentSpec = nil
         }
 
@@ -61,8 +73,18 @@ final class AppState {
         do {
             let serverPath = try await APIClient.shared.upload(fileURL: url)
             chartConfig.excelPath = serverPath
+        } catch let apiError as APIError {
+            self.error = """
+                File upload failed: \(apiError.localizedDescription)
+                File: \(url.lastPathComponent)
+                Endpoint: POST /upload
+                """
         } catch {
-            self.error = "File upload failed: \(error.localizedDescription)"
+            self.error = """
+                File upload failed: \(error.localizedDescription)
+                File: \(url.lastPathComponent)
+                Tip: Is the Python server running on localhost:7331?
+                """
         }
     }
 

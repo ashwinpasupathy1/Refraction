@@ -18,17 +18,20 @@ Never commit if tests fail.  Never skip it.
 ## Commands
 
 ```bash
-# Run the full test suite (4 suites, ~3 seconds)
+# Run the full test suite (727 tests, ~3 seconds)
 python3 run_all.py
 
 # Run a single suite
 python3 run_all.py stats              # 56 tests -- statistical verification
 python3 run_all.py validators         # 35 tests -- spreadsheet validators
-python3 run_all.py specs              # 13 tests -- analysis engine + server
 python3 run_all.py api                # 16 tests -- FastAPI endpoint tests
 
-# Start the API server
-python3 -m refraction.server.web_entry
+# Run the app locally
+# 1. Start the Python backend (in a terminal):
+python3 -c "from refraction.server.api import start_server; start_server(); import time; time.sleep(999999)"
+# 2. Build and run the SwiftUI app (in another terminal):
+cd RefractionApp && xcodegen generate && open Refraction.xcodeproj
+# Then Cmd+R in Xcode
 
 # Quick import check
 python3 -c "from refraction.analysis import analyze; print('OK')"
@@ -59,8 +62,7 @@ refraction/io/import_pzfx.py          GraphPad .pzfx file importer
 refraction/io/project.py              .cplot project files (ZIP)
 
 # -- Server --------------------------------------------------------
-refraction/server/api.py              FastAPI: /analyze, /upload, /health, /chart-types
-refraction/server/web_entry.py        Standalone server entry point
+refraction/server/api.py              FastAPI: /analyze, /render, /upload, /health, /chart-types
 
 # -- SwiftUI app ---------------------------------------------------
 RefractionApp/                        macOS SwiftUI application (Xcode project)
