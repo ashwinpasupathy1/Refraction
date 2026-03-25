@@ -11,18 +11,18 @@
 
 ## Overview
 
-Refraction brings the familiar workflow of GraphPad Prism to macOS as a native SwiftUI application backed by a Python analysis engine.  Load your data from an Excel spreadsheet, choose a chart type, and get publication-quality figures with full statistical analysis -- all without writing a single line of code.
+Refraction brings the familiar workflow of GraphPad Prism to macOS as a native SwiftUI application backed by a Python analysis engine.  The UI follows Prism conventions: a project navigator with multiple sheet types (Data Tables, Graphs, Results, Info), Format Graph/Axes dialogs, and a statistical test encyclopedia.  Load your data from an Excel spreadsheet, choose a chart type, and get publication-quality figures with full statistical analysis -- all without writing a single line of code.
 
 **Architecture:**
 
 ```
-SwiftUI app (RefractionApp/)  <-->  FastAPI server  <-->  Analysis engine
-      Charts framework                /analyze            refraction.analysis
-      Native macOS UI                 /upload             refraction.core
+SwiftUI app (RefractionApp/)  <-->  FastAPI server  <-->  Dedicated analyzers
+      Prism-style UI                  /analyze            refraction/analysis/*.py
+      Native macOS rendering          /upload             refraction/core/stats.py
                                       /health
 ```
 
-The Python backend is a pure analysis engine with no rendering dependencies.  The SwiftUI frontend handles all chart rendering via Apple's Charts framework.
+The Python backend is a pure analysis engine with no rendering dependencies.  15+ chart types have dedicated analyzers; statistical computation lives in `refraction/core/stats.py`.  The SwiftUI frontend handles all chart rendering via Apple's Charts framework.
 
 ---
 
@@ -47,7 +47,7 @@ open RefractionApp/ in Xcode
 ## Features
 
 - **29 chart types** -- from bar charts to Kaplan-Meier survival curves and forest plots
-- **Native macOS app** -- SwiftUI with Apple Charts framework
+- **Native macOS app** -- SwiftUI with Prism-style UI (navigator, sheets, Format dialogs)
 - **Statistical engine** -- parametric, nonparametric, paired, and permutation tests
 - **Publication-ready** -- journal export presets for Nature, Science, and Cell
 - **Excel-native data model** -- validates your spreadsheet layout before analysis
@@ -103,6 +103,10 @@ The FastAPI server exposes these endpoints:
 | `/chart-types` | GET | List all 29 supported chart types |
 | `/analyze` | POST | Run analysis on uploaded data |
 | `/upload` | POST | Accept .xlsx/.xls/.csv file |
+| `/data-preview` | POST | Preview spreadsheet contents |
+| `/recommend-test` | POST | Suggest appropriate statistical test |
+| `/analyze-stats` | POST | Run stats-only analysis |
+| `/project/save-refract` | POST | Save .refract project archive |
 
 ### POST /analyze
 
@@ -133,7 +137,7 @@ refraction/
   server/           FastAPI server with /analyze endpoint
 
 RefractionApp/      SwiftUI macOS application
-tests/              Python test suites (118 tests)
+tests/              Python test suites (767 tests)
 run_all.py          Unified test runner
 ```
 
@@ -146,10 +150,16 @@ run_all.py          Unified test runner
 python3 run_all.py
 
 # Run a single suite
-python3 run_all.py stats        # statistical verification
-python3 run_all.py validators   # spreadsheet validators
-python3 run_all.py specs        # analysis engine tests
-python3 run_all.py api          # FastAPI endpoint tests
+python3 run_all.py stats              # statistical verification
+python3 run_all.py validators         # spreadsheet validators
+python3 run_all.py api                # FastAPI endpoint tests
+python3 run_all.py engine             # pure computation tests
+python3 run_all.py integration        # API + pipeline tests
+python3 run_all.py analysis           # dedicated analyzer tests
+python3 run_all.py stats_exhaustive   # exhaustive stats coverage
+python3 run_all.py deficiency         # deficiency fix verification
+python3 run_all.py render             # render contract tests
+python3 run_all.py qa                 # QA regression tests
 
 # Quick import check
 python3 -c "from refraction.analysis import analyze; print('OK')"

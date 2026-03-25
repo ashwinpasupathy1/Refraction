@@ -44,13 +44,20 @@ See `HUMAN_REVIEW_TODO.md` for manual verification tasks.
 ## Commands
 
 ```bash
-# Run the full test suite (727 tests, ~3 seconds)
+# Run the full test suite (767 tests, ~3 seconds)
 python3 run_all.py
 
 # Run a single suite
-python3 run_all.py stats              # 56 tests -- statistical verification
-python3 run_all.py validators         # 35 tests -- spreadsheet validators
-python3 run_all.py api                # 16 tests -- FastAPI endpoint tests
+python3 run_all.py stats              # statistical verification
+python3 run_all.py validators         # spreadsheet validators
+python3 run_all.py api                # FastAPI endpoint tests
+python3 run_all.py engine             # tests/engine/ -- pure computation tests
+python3 run_all.py integration        # tests/integration/ -- API + pipeline tests
+python3 run_all.py analysis           # dedicated analyzer tests
+python3 run_all.py qa                 # QA regression tests
+python3 run_all.py stats_exhaustive   # exhaustive statistical coverage
+python3 run_all.py deficiency         # deficiency fix verification
+python3 run_all.py render             # render contract tests
 
 # Run the app locally
 # 1. Start the Python backend (in a terminal):
@@ -70,13 +77,41 @@ python3 -c "from refraction.analysis import analyze; print('OK')"
 ```
 # -- Analysis engine -----------------------------------------------
 refraction/analysis/__init__.py       Exports analyze()
-refraction/analysis/engine.py         Core analyze() function
+refraction/analysis/engine.py         Core analyze() + _DEDICATED_ANALYZERS dispatch
+refraction/analysis/xy.py             Dedicated XY analyzer (scatter, line, area, curve_fit, bubble)
+refraction/analysis/grouped_bar.py    Dedicated grouped bar / stacked bar analyzer
+refraction/analysis/two_way_anova.py  Dedicated two-way ANOVA analyzer
+refraction/analysis/kaplan_meier.py   Survival curve analyzer
+refraction/analysis/contingency.py    Contingency table analyzer
+refraction/analysis/chi_square_gof.py Chi-square goodness-of-fit analyzer
+refraction/analysis/forest_plot.py    Forest plot analyzer
+refraction/analysis/bland_altman.py   Bland-Altman paired comparison analyzer
+refraction/analysis/dot_plot.py       Dot plot analyzer
+refraction/analysis/raincloud.py      Raincloud plot analyzer
+refraction/analysis/bar.py            Bar chart analyzer
+refraction/analysis/box.py            Box plot analyzer
+refraction/analysis/violin.py         Violin plot analyzer
+refraction/analysis/histogram.py      Histogram analyzer
+refraction/analysis/before_after.py   Before/after analyzer
+refraction/analysis/scatter.py        Scatter plot analyzer
+refraction/analysis/line.py           Line graph analyzer
+refraction/analysis/curve_fit.py      Curve fitting analyzer
+refraction/analysis/curve_models.py   Curve model definitions
+refraction/analysis/helpers.py        Shared analyzer helper functions
+refraction/analysis/layout.py         Data layout detection
+refraction/analysis/results.py        Result object builders
+refraction/analysis/schema.py         Analysis result schema definitions
+refraction/analysis/stats_annotator.py  Statistical annotation helpers
+refraction/analysis/transforms.py     Column transforms
 
 # -- Core library --------------------------------------------------
-refraction/core/chart_helpers.py      Stats, palettes, helper functions
+refraction/core/stats.py              Pure statistical computation (all math lives here)
+refraction/core/chart_helpers.py      Presentation helpers + re-exports from stats.py for compat
 refraction/core/validators.py         Spreadsheet validators
 refraction/core/registry.py           PlotTypeConfig chart registry
-refraction/core/tabs.py               TabState dataclass
+refraction/core/config.py             Configuration utilities
+refraction/core/types.py              Shared type definitions
+refraction/core/outliers.py           Outlier detection
 refraction/core/errors.py             ErrorReporter + logging
 refraction/core/presets.py            Style preset load/save
 refraction/core/session.py            Session persistence
@@ -88,10 +123,55 @@ refraction/io/import_pzfx.py          GraphPad .pzfx file importer
 refraction/io/project.py              .cplot project files (ZIP)
 
 # -- Server --------------------------------------------------------
-refraction/server/api.py              FastAPI: /analyze, /render, /upload, /health, /chart-types
+refraction/server/api.py              FastAPI: /analyze, /render, /upload, /health, /chart-types,
+                                        /data-preview, /recommend-test, /analyze-stats,
+                                        /analyze-layout, /curve-models, /curve-fit,
+                                        /transforms, /transform, /project/save-refract,
+                                        /project/save, /project/load
 
 # -- SwiftUI app ---------------------------------------------------
-RefractionApp/                        macOS SwiftUI application (Xcode project)
+RefractionApp/Refraction/App/
+  RefractionApp.swift                 @main entry point, server lifecycle
+  AppState.swift                      Central @Observable state
+
+RefractionApp/Refraction/Models/
+  DataTable.swift                     Prism-style data table model
+  Sheet.swift                         Sheet (graph + data + results) model
+  TableType.swift                     Data table type enum (XY, Column, Grouped, etc.)
+  FormatGraphSettings.swift           Graph formatting settings
+  FormatAxesSettings.swift            Axes formatting settings
+  ProjectState.swift                  Multi-sheet project state
+  StatsTestCatalog.swift              Statistical test catalog/wiki
+  ChartType.swift                     Chart type enum + capabilities
+  ChartConfig.swift                   ~40 config properties + toDict()
+
+RefractionApp/Refraction/Views/
+  ContentView.swift                   Root layout
+  WelcomeView.swift                   First-run experience
+  ErrorView.swift                     Error display + parsing
+  ToolbarBanner.swift                 Toolbar status banner
+  Sidebar/NavigatorView.swift         Prism-style project navigator
+  Sidebar/ChartSidebarView.swift      Chart type list
+  Sheets/GraphSheetView.swift         Graph sheet container
+  Sheets/DataTableView.swift          Data table editor
+  Sheets/ResultsSheetView.swift       Statistical results sheet
+  Sheets/InfoSheetView.swift          Info/metadata sheet
+  Sheets/AnalyzeDataDialog.swift      Analyze data dialog
+  Sheets/StatsWikiDialog.swift        Stats test encyclopedia dialog
+  Sheets/StatsTestDetailDialog.swift  Individual test detail dialog
+  Chart/ChartCanvasView.swift         Canvas rendering
+  Chart/FormatGraphDialog.swift       Format Graph dialog (Prism-style)
+  Chart/FormatAxesDialog.swift        Format Axes dialog (Prism-style)
+  Config/ConfigTabView.swift          Tab container
+  Config/DataTabView.swift            File + labels
+  Config/AxesTabView.swift            Axis config
+  Config/StyleTabView.swift           Visual style
+  Config/StatsTabView.swift           Statistical tests
+  Results/ResultsView.swift           Stats results table
+
+RefractionApp/Refraction/Services/
+  APIClient.swift                     HTTP client (actor, singleton)
+  PythonServer.swift                  Python subprocess manager
 
 # -- Sample data ---------------------------------------------------
 RefractionApp/Refraction/Resources/SampleData/
@@ -100,12 +180,31 @@ RefractionApp/Refraction/Resources/SampleData/
   survival_data.xlsx                  2 groups, time/event
 
 # -- Tests ---------------------------------------------------------
-tests/plotter_test_harness.py         Shared test bootstrap + fixtures
-run_all.py                            4-suite unified test runner
-tests/test_stats.py                   Statistical verification (56 tests)
-tests/test_validators.py              Spreadsheet validator tests (35 tests)
-tests/test_phase3_plotly.py           Analysis engine tests (13 tests)
-tests/test_api.py                     FastAPI endpoint tests (16 tests)
+run_all.py                            10-suite unified test runner
+tests/conftest.py                     Shared pytest fixtures
+
+tests/test_stats.py                   Statistical verification
+tests/test_validators.py              Spreadsheet validator tests
+tests/test_api.py                     FastAPI endpoint tests
+tests/test_analysis.py                Dedicated analyzer tests
+tests/test_stats_exhaustive.py        Exhaustive statistical coverage
+tests/test_deficiency_fixes.py        Deficiency fix verification
+tests/test_render_contract.py         Render contract tests
+tests/test_phase6_qa.py              QA regression tests
+
+tests/engine/                         Pure computational tests
+  test_stats_core.py                  Core stats function tests
+  test_helpers.py                     Helper function tests
+  test_validators.py                  Validator unit tests
+  test_layout.py                      Layout detection tests
+  test_transforms.py                  Transform tests
+  test_curve_models.py                Curve model tests
+  test_results.py                     Result builder tests
+  test_project_v2.py                  Project file v2 tests
+
+tests/integration/                    API + pipeline integration tests
+  test_api.py                         API integration tests
+  test_pipeline.py                    End-to-end pipeline tests
 ```
 
 ---
@@ -120,13 +219,14 @@ SwiftUI app (RefractionApp/)
 FastAPI server (refraction/server/api.py)
     |
     v
-Analysis engine (refraction/analysis/engine.py)
+Dedicated analyzers (refraction/analysis/*.py)
     |
     v
-Core library (refraction/core/chart_helpers.py)
+Pure stats (refraction/core/stats.py)
     |-- _run_stats()    statistical tests
     |-- _calc_error()   descriptive statistics
-    |-- PRISM_PALETTE   color constants
+    |-- _km_curve()     survival analysis
+    |-- _twoway_anova() two-way ANOVA
 ```
 
 The Python backend is a pure analysis engine.  It reads Excel data,
@@ -262,7 +362,7 @@ summarise()
 
 ## Core helper functions
 
-### In `refraction/core/chart_helpers.py`
+### In `refraction/core/stats.py` (re-exported by `chart_helpers.py` for compat)
 
 | Function | Purpose |
 |---|---|

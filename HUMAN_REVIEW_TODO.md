@@ -8,7 +8,7 @@ with domain knowledge to verify correctness or decide on fixes.
 ## CRITICAL — May produce wrong results for users
 
 ### 1. Double multiple-comparisons correction on Tukey HSD
-- **File:** `refraction/core/chart_helpers.py` ~line 288
+- **File:** `refraction/core/stats.py`, `_run_stats()` Tukey HSD branch
 - **Issue:** Tukey HSD already controls family-wise error rate via the
   studentized range distribution. The code then applies an *additional*
   Bonferroni or FDR correction on top when `mc_correction` is set.
@@ -18,14 +18,14 @@ with domain knowledge to verify correctness or decide on fixes.
   If not, Tukey results should bypass `_apply_correction()` entirely.
 
 ### 2. Chi-square warning checks observed counts, labels it "expected"
-- **File:** `refraction/core/validators.py` ~line 438
+- **File:** `refraction/core/validators.py`, contingency validator
 - **Issue:** Code checks `obs_row < 5` but the warning message says
   "Some expected counts < 5". The chi-square validity rule is about
   *expected* counts, not observed.
 - **Human call:** Change the check to expected counts, or fix the message.
 
 ### 3. Prism .pzfx OneWay import scrambles group data
-- **File:** `refraction/io/import_pzfx.py` ~line 165
+- **File:** `refraction/io/import_pzfx.py`, OneWay import section
 - **Issue:** Uses the value-within-subcolumn index `i` to look up the
   group name in `headers[]`. If groups have different lengths, data
   gets transposed across groups silently.
@@ -33,7 +33,7 @@ with domain knowledge to verify correctness or decide on fixes.
   verify the imported DataFrame matches Prism's display.
 
 ### 4. Prism .pzfx survival import — group index never incremented
-- **File:** `refraction/io/import_pzfx.py` ~line 217
+- **File:** `refraction/io/import_pzfx.py`, survival import section
 - **Issue:** `gi` starts at 0 but is never incremented in the loop, so
   all survival groups get the first group's name.
 - **Human call:** Import a multi-group Kaplan-Meier .pzfx and check
@@ -44,14 +44,14 @@ with domain knowledge to verify correctness or decide on fixes.
 ## HIGH — Subtle bugs, incorrect logging, lost state
 
 ### 5. `log_error()` captures wrong traceback
-- **File:** `refraction/core/errors.py` ~line 42
+- **File:** `refraction/core/errors.py`, `log_error()` function
 - **Issue:** `traceback.format_exc()` returns the *current* exception
   context, not the `exc` argument. In nested exception handlers, the
   logged traceback may belong to a different exception.
 - **Fix:** `traceback.format_exception(type(exc), exc, exc.__traceback__)`
 
 ### 6. Redo stack cleared on empty compound command
-- **File:** `refraction/core/undo.py` ~line 76
+- **File:** `refraction/core/undo.py`, `end_compound()` method
 - **Issue:** `end_compound()` clears `_redo` even when no commands were
   recorded during the compound block. User loses redo history for no reason.
 - **Fix:** Only clear `_redo` inside the `if self._compound_acc:` branch.
@@ -105,19 +105,18 @@ would pass most statistical tests.
 ## MEDIUM — Error handling gaps
 
 ### 12. Uncaught `os.remove()` in presets and session
-- **Files:** `refraction/core/presets.py` ~line 164,
-  `refraction/core/session.py` ~line 82
+- **Files:** `refraction/core/presets.py` and `refraction/core/session.py`, `os.remove()` calls
 - **Issue:** `os.remove()` without try-except. Permission errors raise
   `OSError` instead of returning False / handling gracefully.
 
 ### 13. Orphaned default sheet in .cplot extraction
-- **File:** `refraction/io/project.py` ~line 167
+- **File:** `refraction/io/project.py`, sheet extraction logic
 - **Issue:** If all sheet CSVs are missing from a .cplot file, the
   workbook ends up with an empty unnamed "Sheet" instead of a
   meaningful error.
 
 ### 14. Module-level logging init can crash on import
-- **File:** `refraction/core/errors.py` ~line 18
+- **File:** `refraction/core/errors.py`, module-level handler setup
 - **Issue:** If both `RotatingFileHandler` and fallback `FileHandler`
   fail, import of `errors.py` crashes. Low probability but no fallback.
 
@@ -126,7 +125,7 @@ would pass most statistical tests.
 ## CRITICAL — SwiftUI / UI-side issues
 
 ### 15. Race condition in PythonServer.stop()
-- **File:** `RefractionApp/Refraction/Services/PythonServer.swift` ~line 167
+- **File:** `RefractionApp/Refraction/Services/PythonServer.swift`, `stop()` method
 - **Issue:** `stop()` sets `state = .idle` and `process = nil` on the main
   thread before the async dispatch queue actually kills the process. If
   `stop()` is called twice rapidly, the guard on `process` can pass in
@@ -135,7 +134,7 @@ would pass most statistical tests.
   crashes or zombie Python processes.
 
 ### 16. .pzfx missing from DataTabView file picker
-- **File:** `RefractionApp/Refraction/Views/Config/DataTabView.swift` ~line 148
+- **File:** `RefractionApp/Refraction/Views/Config/DataTabView.swift`, `allowedContentTypes`
 - **Issue:** `allowedContentTypes` includes xlsx/xls/csv but NOT pzfx.
   WelcomeView advertises pzfx support. Users can load pzfx from welcome
   but not from the main config panel.
@@ -143,7 +142,7 @@ would pass most statistical tests.
   allowed types, or remove pzfx from welcome screen advertising.
 
 ### 17. hasAutoRestarted flag never resets
-- **File:** `RefractionApp/Refraction/Services/PythonServer.swift` ~line 35
+- **File:** `RefractionApp/Refraction/Services/PythonServer.swift`, `hasAutoRestarted` property
 - **Issue:** Once set to `true` after first crash recovery, auto-restart
   is permanently disabled for the session. Manual restart via alert
   doesn't reset the flag.
@@ -154,28 +153,28 @@ would pass most statistical tests.
 ## HIGH — SwiftUI functional bugs
 
 ### 18. Y-range invalid when all values identical
-- **File:** `RefractionApp/Refraction/Views/Chart/ChartCanvasView.swift` ~line 126
+- **File:** `RefractionApp/Refraction/Views/Chart/ChartCanvasView.swift`, `computeYRange()`
 - **Issue:** `computeYRange()` returns `(min(lo, 0), hi + padding)`. When
   all values are the same, padding=0. If all values are negative and
   identical (e.g., all -5), range becomes `(-5, -5)` — zero-height chart.
 - **Human call:** Test with uniform-value datasets and negative data.
 
 ### 19. Reference lines silently hidden outside data range
-- **File:** `RefractionApp/Refraction/Views/Chart/ChartCanvasView.swift` ~line 92
+- **File:** `RefractionApp/Refraction/Views/Chart/ChartCanvasView.swift`, reference line drawing
 - **Issue:** If a reference line's Y value is outside `computeYRange()`,
   the guard returns without drawing. The user's configuration is silently
   ignored with no feedback.
 - **Human call:** Should the Y range expand to include reference lines?
 
 ### 20. hasFileLoaded true even after upload failure
-- **File:** `RefractionApp/Refraction/App/AppState.swift` ~line 26
+- **File:** `RefractionApp/Refraction/App/AppState.swift`, `hasFileLoaded` property
 - **Issue:** `hasFileLoaded` checks `!excelPath.isEmpty`. If upload fails
   midway, excelPath may point to an invalid/partial path. Subsequent
   analyze calls fail with confusing errors.
 - **Human call:** Track upload success separately from path existence.
 
 ### 21. Inverted Y-limits sent to backend without validation
-- **File:** `RefractionApp/Refraction/Models/ChartConfig.swift` ~line 208
+- **File:** `RefractionApp/Refraction/Models/ChartConfig.swift`, `toDict()` ylim handling
 - **Issue:** User can enter yMin=10, yMax=5. The inverted range is sent
   to Python as `"ylim": [10, 5]` without validation. No UI feedback.
 - **Human call:** Add `min < max` validation or swap automatically.
@@ -185,32 +184,32 @@ would pass most statistical tests.
 ## MEDIUM — SwiftUI layout and UX issues
 
 ### 22. Fixed NavigationSplitView widths — minimum total 840px
-- **File:** `RefractionApp/Refraction/Views/ContentView.swift` ~line 15
+- **File:** `RefractionApp/Refraction/Views/ContentView.swift`, hardcoded min widths
 - **Issue:** Hardcoded min widths (180+400+260=840). May break on
   smaller external monitors or split-screen usage.
 
 ### 23. Hardcoded chart canvas insets
-- **File:** `RefractionApp/Refraction/Views/Chart/ChartCanvasView.swift` ~line 12
+- **File:** `RefractionApp/Refraction/Views/Chart/ChartCanvasView.swift`, `plotInsets`
 - **Issue:** `plotInsets = EdgeInsets(top: 40, leading: 60, bottom: 50, trailing: 20)`
   assumes specific axis label widths. Long titles/labels get clipped.
 
 ### 24. Bracket stacking can overflow canvas top
-- **File:** `RefractionApp/Refraction/Renderers/BracketRenderer.swift` ~line 45
+- **File:** `RefractionApp/Refraction/Views/Chart/ChartCanvasView.swift`, bracket rendering
 - **Issue:** Many significance brackets (stacking_order > 3) move above
   the plot area with no clipping or overflow handling.
 
 ### 25. Hex color parsing silently returns black on invalid input
-- **File:** `RefractionApp/Refraction/Renderers/AxisRenderer.swift` ~line 182
+- **File:** `RefractionApp/Refraction/Views/Chart/ChartCanvasView.swift`, `Color(hex:)` extension
 - **Issue:** `Color(hex:)` uses `Scanner.scanHexInt64` which returns 0
   on invalid strings like "#GGGGGG". Color silently becomes black.
 
 ### 26. stderr handler not cleared on process launch failure
-- **File:** `RefractionApp/Refraction/Services/PythonServer.swift` ~line 113
+- **File:** `RefractionApp/Refraction/Services/PythonServer.swift`, stderr pipe handler
 - **Issue:** If `proc.run()` throws, the readability handler on the
   stderr pipe is never cleaned up.
 
 ### 27. Plotly JSON fallback uses first Y value as mean
-- **File:** `RefractionApp/Refraction/Models/ChartSpec.swift` ~line 63
+- **File:** `RefractionApp/Refraction/Models/ChartConfig.swift`, Plotly JSON fallback decoder
 - **Issue:** Fallback path sets `mean = trace.y?.first` instead of
   computing the actual mean. If this path is ever hit, results are wrong.
 - **Human call:** Is this fallback path reachable? If so, compute mean
@@ -278,37 +277,38 @@ run in both Refraction and the reference tool, compare output. Differences
 
 ## Statistical Engine Deep Dive
 
-Line-by-line audit of every statistical computation in
-`refraction/core/chart_helpers.py`. Functions are listed with their
-correctness status and specific items needing human verification.
+Audit of every statistical computation in
+`refraction/core/stats.py` (previously in `chart_helpers.py`). Functions
+are listed with their correctness status and specific items needing human
+verification.
 
 ### Verified correct (no action needed)
 
 These implementations match standard formulas and scipy references:
 
-| Function | Lines | Notes |
+| Function | Location | Notes |
 |---|---|---|
-| `_cohens_d()` | 527-539 | Pooled SD formula, Bessel correction, edge cases all correct |
-| `_hedges_g()` | 544-561 | J correction factor formula correct |
-| `_rank_biserial_r()` | 566-585 | U1/U2 vectorized comparison correct |
-| `_apply_correction()` Bonferroni | 161-162 | p × m capped at 1.0 |
-| `_apply_correction()` Holm-Bonferroni | 164-172 | Step-down with running max, correct |
-| `_apply_correction()` BH FDR | 174-183 | Step-up with running min, correct |
-| `_km_curve()` Kaplan-Meier | 604-653 | Product-limit, Greenwood variance, log-log CI all correct |
-| `_logrank_test()` | 657-688 | Mantel-Cox chi-square, hypergeometric E and Var correct |
-| `_twoway_anova()` Type III SS | 696-794 | OLS residual approach, correct df and F-tests |
-| `_run_stats()` Welch t-test | 247-253 | `ttest_ind(equal_var=False)` correct |
-| `_run_stats()` Mann-Whitney | 318-322 | `mannwhitneyu(alternative="two-sided")` correct |
-| `_run_stats()` Paired t-test | 226-244 | `ttest_rel()` with length truncation correct |
-| `_run_stats()` Dunnett | 255-268 | `scipy.stats.dunnett()` correct, no extra correction |
-| `_run_stats()` Permutation | 351-366 | `permutation_test()` correct |
-| `_run_stats()` Kruskal-Wallis posthoc | 323-348 | Tie correction, pairwise z-test correct |
-| `_twoway_posthoc()` | 798-838 | Stratified pairwise Welch t-tests correct |
+| `_cohens_d()` | `stats.py` | Pooled SD formula, Bessel correction, edge cases all correct |
+| `_hedges_g()` | `stats.py` | J correction factor formula correct |
+| `_rank_biserial_r()` | `stats.py` | U1/U2 vectorized comparison correct |
+| `_apply_correction()` Bonferroni | `stats.py` | p x m capped at 1.0 |
+| `_apply_correction()` Holm-Bonferroni | `stats.py` | Step-down with running max, correct |
+| `_apply_correction()` BH FDR | `stats.py` | Step-up with running min, correct |
+| `_km_curve()` Kaplan-Meier | `stats.py` | Product-limit, Greenwood variance, log-log CI all correct |
+| `_logrank_test()` | `stats.py` | Mantel-Cox chi-square, hypergeometric E and Var correct |
+| `_twoway_anova()` Type III SS | `stats.py` | OLS residual approach, correct df and F-tests |
+| `_run_stats()` Welch t-test | `stats.py` | `ttest_ind(equal_var=False)` correct |
+| `_run_stats()` Mann-Whitney | `stats.py` | `mannwhitneyu(alternative="two-sided")` correct |
+| `_run_stats()` Paired t-test | `stats.py` | `ttest_rel()` with length truncation correct |
+| `_run_stats()` Dunnett | `stats.py` | `scipy.stats.dunnett()` correct, no extra correction |
+| `_run_stats()` Permutation | `stats.py` | `permutation_test()` correct |
+| `_run_stats()` Kruskal-Wallis posthoc | `stats.py` | Tie correction, pairwise z-test correct |
+| `_twoway_posthoc()` | `stats.py` | Stratified pairwise Welch t-tests correct |
 
 ### Needs human verification
 
 #### 28. `_calc_error()` CI95 with n=1 resolves to 0 but by accident
-- **File:** `chart_helpers.py` ~line 95-101
+- **File:** `refraction/core/stats.py`, `_calc_error()` function
 - **Issue:** When n=1, `s = 0.0` (ddof=1 makes std undefined, code
   returns 0). Then CI95 = `t.ppf(0.975, df=1) * 0.0 / 1.0 = 0.0`.
   The answer is accidentally correct (CI is meaningless for n=1) but
@@ -318,20 +318,20 @@ These implementations match standard formulas and scipy references:
   instead of `(mean, 0.0)` which looks like "zero uncertainty"?
 
 #### 29. `_p_to_stars()` returns "*" for NaN p-values
-- **File:** `chart_helpers.py` ~line 144
+- **File:** `refraction/core/stats.py`, `_p_to_stars()` function
 - **Issue:** `np.nan > 0.05` is `False`, so NaN falls through all
   thresholds and returns `"*"`. Should return `"NA"` or `"ns"`.
 - **Human call:** Decide desired behavior. Add `if np.isnan(p): return "ns"`.
 
 #### 30. `_run_stats()` one-sample t-test crashes on n<2
-- **File:** `chart_helpers.py` ~line 214
+- **File:** `refraction/core/stats.py`, `_run_stats()` one_sample branch
 - **Issue:** `stats.ttest_1samp()` requires n≥2. If a group has 1 value,
   scipy raises `ValueError`. Not caught by any try-except.
 - **Human call:** Add `if len(groups[g]) < 2: continue` guard,
   or catch ValueError and append (group, "μ₀", 1.0, "ns").
 
 #### 31. "Bonferroni" posthoc + mc_correction creates double-correction ambiguity
-- **File:** `chart_helpers.py` ~line 312
+- **File:** `refraction/core/stats.py`, `_run_stats()` Bonferroni posthoc branch
 - **Issue:** When `posthoc="Bonferroni"` and `mc_correction="Bonferroni"`,
   the code applies Bonferroni once (correct). But if
   `mc_correction="Holm-Bonferroni"`, it applies Holm-Bonferroni instead
@@ -339,8 +339,8 @@ These implementations match standard formulas and scipy references:
 - **Human call:** Should posthoc="Bonferroni" always use Bonferroni
   regardless of mc_correction? Or should the UI prevent this combination?
 
-#### 32. ANOVA gate (p≥0.05 → empty results) is a design choice, not a bug
-- **File:** `chart_helpers.py` ~lines 272, 325
+#### 32. ANOVA gate (p>=0.05 -> empty results) is a design choice, not a bug
+- **File:** `refraction/core/stats.py`, `_run_stats()` ANOVA and Kruskal-Wallis branches
 - **Issue:** Both Tukey HSD and Kruskal-Wallis posthoc return `[]` if the
   omnibus test is not significant at α=0.05. This matches GraphPad Prism
   behavior but is not universally standard — some statisticians argue
@@ -349,7 +349,7 @@ These implementations match standard formulas and scipy references:
   The hardcoded 0.05 threshold is not exposed to users.
 
 #### 33. NaN propagation in `_calc_error()` — no filtering
-- **File:** `chart_helpers.py` ~line 91
+- **File:** `refraction/core/stats.py`, `_calc_error()` function
 - **Issue:** If `vals` contains NaN, `np.mean()` and `np.std()` propagate
   NaN silently. The function returns `(NaN, NaN)` without warning.
 - **Human call:** Should NaN values be filtered with `vals = vals[~np.isnan(vals)]`
@@ -357,7 +357,7 @@ These implementations match standard formulas and scipy references:
   be responsible?
 
 #### 34. `_calc_error_asymmetric()` silent exception fallback
-- **File:** `chart_helpers.py` ~line 128
+- **File:** `refraction/core/stats.py`, `_calc_error_asymmetric()` function
 - **Issue:** Any math error in the log-transform path (e.g., log10 of
   negative after floating-point drift) silently falls back to symmetric
   error bars. No logging or warning.

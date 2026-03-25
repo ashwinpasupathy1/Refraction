@@ -52,12 +52,17 @@ They communicate over HTTP on `localhost:7331`.
 │              │  /analyze       │ ← raw analysis      │
 │              │  /upload        │ ← file upload       │
 │              │  /health        │ ← liveness check    │
+│              │  /data-preview  │ ← spreadsheet peek  │
+│              │  /recommend-test│ ← test suggestion   │
+│              │  /analyze-stats │ ← stats-only run    │
+│              │  /project/save- │                      │
+│              │    refract      │ ← .refract save     │
 │              └────────┬────────┘                     │
 │                       │                              │
-│              analyze(chart_type, excel_path, config)  │
+│          Dedicated analyzers (analysis/*.py)          │
 │                       │                              │
 │              ┌────────▼────────┐                     │
-│              │  chart_helpers  │                      │
+│              │  core/stats.py  │ ← pure math layer   │
 │              │  _calc_error()  │                      │
 │              │  _run_stats()   │                      │
 │              └─────────────────┘                     │
@@ -113,11 +118,16 @@ or as a subprocess managed by the Swift app's `PythonServer` class.
 | `/analyze` | POST | Raw analysis — takes `{chart_type, excel_path, config}`, returns flat results |
 | `/render` | POST | **Bridge for SwiftUI** — takes `{chart_type, kw}`, calls analyze, transforms into `ChartSpec` format |
 | `/upload` | POST | Accepts `.xlsx/.xls/.csv` via multipart upload, saves to temp dir, returns path |
+| `/data-preview` | POST | Returns a preview of spreadsheet contents for the data table view |
+| `/recommend-test` | POST | Suggests an appropriate statistical test based on data characteristics |
+| `/analyze-stats` | POST | Runs statistical analysis only (no chart spec generation) |
+| `/analyze-layout` | POST | Detects data layout and recommends chart types |
 | `/curve-models` | GET | Lists all curve fitting models by category |
 | `/curve-fit` | POST | Fits a model to X/Y data |
 | `/transforms` | GET | Lists available column transformations |
 | `/transform` | POST | Applies a transform to a column |
-| `/project/save` | POST | Saves a `.refract` project archive |
+| `/project/save-refract` | POST | Saves a `.refract` project archive (new format) |
+| `/project/save` | POST | Saves a `.refract` project archive (legacy) |
 | `/project/load` | POST | Loads a `.refract` project archive |
 
 **Why `/render` and `/analyze` are separate:**
@@ -162,25 +172,36 @@ if stats_test != "none":
 return {"ok": True, "chart_type": ..., "groups": ..., "comparisons": ...}
 ```
 
-**Seven chart types have dedicated analyzers** that handle special data
-layouts (Kaplan-Meier survival, contingency tables, forest plots, etc.):
+**15+ chart types have dedicated analyzers** registered in the
+`_DEDICATED_ANALYZERS` dispatch table (lazily loaded):
 
 | Chart Type | Analyzer Module | What's Different |
 |-----------|----------------|-----------------|
-| `kaplan_meier` | `analyzers.kaplan_meier` | Paired time/event columns |
-| `contingency` | `analyzers.contingency` | Chi-square on count tables |
-| `chi_square_gof` | `analyzers.chi_square_gof` | Goodness-of-fit test |
-| `forest_plot` | `analyzers.forest_plot` | Study/Effect/CI columns |
-| `bland_altman` | `analyzers.bland_altman` | Paired method comparison |
-| `dot_plot` | `analyzers.dot_plot` | Column statistics |
-| `raincloud` | `analyzers.raincloud` | Density + box + jitter |
+| `dot_plot` | `dot_plot` | Column statistics |
+| `kaplan_meier` | `kaplan_meier` | Paired time/event columns |
+| `forest_plot` | `forest_plot` | Study/Effect/CI columns |
+| `raincloud` | `raincloud` | Density + box + jitter |
+| `contingency` | `contingency` | Chi-square on count tables |
+| `bland_altman` | `bland_altman` | Paired method comparison |
+| `chi_square_gof` | `chi_square_gof` | Goodness-of-fit test |
+| `grouped_bar` | `grouped_bar` | Category x subgroup layout |
+| `stacked_bar` | `grouped_bar` | Shares grouped bar analyzer |
+| `two_way_anova` | `two_way_anova` | Factor_A, Factor_B, Value layout |
+| `scatter` | `xy` | XY data with series |
+| `line` | `xy` | XY data with series |
+| `area_chart` | `xy` | XY data with series |
+| `curve_fit` | `xy` | XY data with model fitting |
+| `bubble` | `xy` | XY data with size channel |
 
-These are lazily loaded via `_DEDICATED_ANALYZERS` dispatch table.
+Additional analyzer modules exist for `bar`, `box`, `violin`, `histogram`,
+`before_after`, `scatter`, and `line` though not all are wired into the
+dispatch table yet.
 
-### 2.3 Statistics (`refraction/core/chart_helpers.py`)
+### 2.3 Statistics (`refraction/core/stats.py`)
 
 This is where the actual math lives. No plotting dependencies — pure
-numpy/scipy.
+numpy/scipy. The `chart_helpers.py` module re-exports all functions from
+`stats.py` for backward compatibility.
 
 **Key functions:**
 
@@ -287,18 +308,30 @@ the views that depend on that property.
 
 ### 3.3 View Hierarchy
 
+The UI follows a Prism-style architecture with a project navigator,
+multiple sheet types per graph, and Format dialogs:
+
 ```
 RefractionApp
-└── ContentView (NavigationSplitView — 3 columns)
-    ├── Sidebar: ChartSidebarView
-    │   └── List of ChartTypes grouped by category
+└── ContentView
+    ├── Sidebar: NavigatorView (Prism-style project navigator)
+    │   └── Tree of Sheets (Data Tables, Graphs, Results, Info)
     │
-    ├── Content: Chart Area
-    │   ├── if isLoading → ProgressView (spinner)
-    │   ├── if error → ErrorView (friendly error + technical details)
-    │   ├── if currentSpec → ChartCanvasView (renders the chart)
-    │   ├── if !hasFileLoaded → WelcomeView (first-run)
-    │   └── else → placeholder text
+    ├── Content: Sheet Area (depends on selected sheet type)
+    │   ├── GraphSheetView     → ChartCanvasView (renders the chart)
+    │   ├── DataTableView      → Spreadsheet-style data editor
+    │   ├── ResultsSheetView   → Statistical results display
+    │   ├── InfoSheetView      → Metadata / notes
+    │   └── WelcomeView        → First-run experience
+    │
+    ├── Dialogs (modal):
+    │   ├── FormatGraphDialog   — Prism-style graph formatting
+    │   ├── FormatAxesDialog    — Prism-style axes formatting
+    │   ├── AnalyzeDataDialog   — Run analysis on data
+    │   ├── StatsWikiDialog     — Statistical test encyclopedia
+    │   └── StatsTestDetailDialog — Individual test details
+    │
+    ├── ToolbarBanner — Status messages and actions
     │
     └── Detail: ConfigTabView (tab bar)
         ├── DataTabView    — file picker, sheet selector, labels
@@ -346,10 +379,9 @@ so they can be built and tested independently.
 
 ### 3.6 Models
 
-**`ChartType`** — enum with 8 values: bar, box, scatter, line, grouped_bar,
-violin, histogram, before_after. Each has a `key` (API string), `label`
-(display name), `category` (sidebar group), and capability flags
-(`hasPoints`, `hasErrorBars`, `hasStats`).
+**`ChartType`** — enum with all 29 chart type values. Each has a `key`
+(API string), `label` (display name), `category` (sidebar group), and
+capability flags (`hasPoints`, `hasErrorBars`, `hasStats`).
 
 **`ChartConfig`** — `@Observable` class with ~40 properties covering every
 configurable parameter. Has `toDict()` that serializes to the flat dict
@@ -359,6 +391,22 @@ the API expects.
 `groups` (data + stats), `style`, `axes`, `stats`, `brackets`.
 Has a custom `Decodable` init that can parse both our native format and
 legacy Plotly JSON.
+
+**`DataTable`** — Prism-style data table model for the spreadsheet view.
+
+**`Sheet`** — Represents a single sheet within a project (graph, data,
+results, or info).
+
+**`TableType`** — Enum matching Prism's eight data table types (XY, Column,
+Grouped, Contingency, Survival, Parts of whole, Multiple variables, Nested).
+
+**`FormatGraphSettings`** / **`FormatAxesSettings`** — Settings models for
+the Prism-style Format Graph and Format Axes dialogs.
+
+**`ProjectState`** — Multi-sheet project state with navigator tree.
+
+**`StatsTestCatalog`** — Encyclopedia of statistical tests with descriptions,
+assumptions, and usage guidance.
 
 ---
 
@@ -810,24 +858,44 @@ refraction/
 ├── __init__.py
 ├── analysis/
 │   ├── __init__.py              # Exports analyze()
-│   ├── engine.py                # Core analyze() function + dedicated dispatcher
-│   └── analyzers/               # Dedicated analyzers for special chart types
-│       ├── kaplan_meier.py
-│       ├── contingency.py
-│       ├── chi_square_gof.py
-│       ├── forest_plot.py
-│       ├── bland_altman.py
-│       ├── dot_plot.py
-│       └── raincloud.py
+│   ├── engine.py                # Core analyze() + _DEDICATED_ANALYZERS dispatch
+│   ├── xy.py                    # XY analyzer (scatter, line, area, curve_fit, bubble)
+│   ├── grouped_bar.py           # Grouped bar / stacked bar analyzer
+│   ├── two_way_anova.py         # Two-way ANOVA analyzer
+│   ├── kaplan_meier.py          # Survival curve analyzer
+│   ├── contingency.py           # Contingency table analyzer
+│   ├── chi_square_gof.py        # Chi-square GoF analyzer
+│   ├── forest_plot.py           # Forest plot analyzer
+│   ├── bland_altman.py          # Bland-Altman analyzer
+│   ├── dot_plot.py              # Dot plot analyzer
+│   ├── raincloud.py             # Raincloud analyzer
+│   ├── bar.py                   # Bar chart analyzer
+│   ├── box.py                   # Box plot analyzer
+│   ├── violin.py                # Violin plot analyzer
+│   ├── histogram.py             # Histogram analyzer
+│   ├── before_after.py          # Before/after analyzer
+│   ├── scatter.py               # Scatter plot analyzer
+│   ├── line.py                  # Line graph analyzer
+│   ├── curve_fit.py             # Curve fitting analyzer
+│   ├── curve_models.py          # Curve model definitions
+│   ├── helpers.py               # Shared analyzer helpers
+│   ├── layout.py                # Data layout detection
+│   ├── results.py               # Result object builders
+│   ├── schema.py                # Analysis result schema
+│   ├── stats_annotator.py       # Statistical annotation helpers
+│   └── transforms.py            # Column transforms
 ├── core/
-│   ├── chart_helpers.py         # _run_stats, _calc_error, _p_to_stars, PRISM_PALETTE
+│   ├── stats.py                 # Pure statistical computation (all math lives here)
+│   ├── chart_helpers.py         # Presentation helpers + re-exports from stats.py
 │   ├── validators.py            # Spreadsheet format validators
 │   ├── registry.py              # PlotTypeConfig chart type registry
+│   ├── config.py                # Configuration utilities
+│   ├── types.py                 # Shared type definitions
+│   ├── outliers.py              # Outlier detection
 │   ├── errors.py                # ErrorReporter + file logging
 │   ├── presets.py               # Named style presets (load/save)
 │   ├── session.py               # Session persistence across launches
-│   ├── undo.py                  # Command-pattern undo/redo
-│   └── tabs.py                  # TabState dataclass
+│   └── undo.py                  # Command-pattern undo/redo
 ├── io/
 │   ├── export.py                # Journal export specs (Nature/Science/Cell)
 │   ├── import_pzfx.py           # GraphPad .pzfx XML importer
@@ -846,20 +914,38 @@ RefractionApp/
     │   ├── RefractionApp.swift  # @main entry point, server lifecycle
     │   └── AppState.swift       # Central @Observable state
     ├── Models/
-    │   ├── ChartType.swift      # Chart type enum (8 types)
+    │   ├── ChartType.swift      # Chart type enum (29 types)
     │   ├── ChartConfig.swift    # ~40 config properties + toDict()
-    │   └── ChartSpec.swift      # Response schema (Decodable)
+    │   ├── DataTable.swift      # Prism-style data table model
+    │   ├── Sheet.swift          # Sheet model (graph/data/results/info)
+    │   ├── TableType.swift      # Data table type enum (XY, Column, etc.)
+    │   ├── FormatGraphSettings.swift   # Graph formatting settings
+    │   ├── FormatAxesSettings.swift    # Axes formatting settings
+    │   ├── ProjectState.swift   # Multi-sheet project state
+    │   └── StatsTestCatalog.swift      # Stats test encyclopedia
     ├── Services/
     │   ├── APIClient.swift      # HTTP client (actor, singleton)
     │   └── PythonServer.swift   # Python subprocess manager
     ├── Views/
-    │   ├── ContentView.swift    # Root 3-column layout
+    │   ├── ContentView.swift    # Root layout
     │   ├── WelcomeView.swift    # First-run experience
     │   ├── ErrorView.swift      # Error display + parsing
+    │   ├── ToolbarBanner.swift  # Toolbar status banner
     │   ├── Chart/
-    │   │   └── ChartCanvasView.swift  # Canvas rendering
+    │   │   ├── ChartCanvasView.swift   # Canvas rendering
+    │   │   ├── FormatGraphDialog.swift # Prism-style Format Graph dialog
+    │   │   └── FormatAxesDialog.swift  # Prism-style Format Axes dialog
     │   ├── Sidebar/
-    │   │   └── ChartSidebarView.swift # Chart type list
+    │   │   ├── NavigatorView.swift     # Prism-style project navigator
+    │   │   └── ChartSidebarView.swift  # Chart type list
+    │   ├── Sheets/
+    │   │   ├── GraphSheetView.swift    # Graph sheet container
+    │   │   ├── DataTableView.swift     # Spreadsheet-style data editor
+    │   │   ├── ResultsSheetView.swift  # Statistical results sheet
+    │   │   ├── InfoSheetView.swift     # Info/metadata sheet
+    │   │   ├── AnalyzeDataDialog.swift # Analyze data dialog
+    │   │   ├── StatsWikiDialog.swift   # Stats test encyclopedia
+    │   │   └── StatsTestDetailDialog.swift  # Test detail dialog
     │   ├── Results/
     │   │   └── ResultsView.swift      # Stats results table
     │   └── Config/
@@ -873,27 +959,33 @@ RefractionApp/
             ├── drug_treatment.xlsx
             ├── time_series.xlsx
             └── survival_data.xlsx
-
-RefractionRenderer/              # Separate Swift Package
-├── Package.swift
-└── Sources/RefractionRenderer/
-    ├── ChartSpec.swift          # Public types (duplicated for independence)
-    ├── BarRenderer.swift        # Bar chart rendering
-    ├── AxisRenderer.swift       # Axes, ticks, labels
-    ├── BracketRenderer.swift    # Significance brackets
-    ├── RenderHelpers.swift      # Color parsing, coordinate mapping
-    └── RenderTheme.swift        # Built-in themes (Prism, ggplot2, etc.)
 ```
 
 ### Tests
 
 ```
 tests/
-├── test_stats.py                # Statistical test verification
+├── conftest.py                  # Shared pytest fixtures
+├── test_stats.py                # Statistical verification
 ├── test_validators.py           # Spreadsheet validator tests
-├── test_phase3_plotly.py        # Analysis engine tests
 ├── test_api.py                  # FastAPI endpoint tests
-└── plotter_test_harness.py      # Shared fixtures: bar_excel, km_excel, etc.
+├── test_analysis.py             # Dedicated analyzer tests
+├── test_stats_exhaustive.py     # Exhaustive statistical coverage
+├── test_deficiency_fixes.py     # Deficiency fix verification
+├── test_render_contract.py      # Render contract tests
+├── test_phase6_qa.py            # QA regression tests
+├── engine/                      # Pure computational tests
+│   ├── test_stats_core.py       # Core stats function tests
+│   ├── test_helpers.py          # Helper function tests
+│   ├── test_validators.py       # Validator unit tests
+│   ├── test_layout.py           # Layout detection tests
+│   ├── test_transforms.py       # Transform tests
+│   ├── test_curve_models.py     # Curve model tests
+│   ├── test_results.py          # Result builder tests
+│   └── test_project_v2.py       # Project file v2 tests
+└── integration/                 # API + pipeline integration tests
+    ├── test_api.py              # API integration tests
+    └── test_pipeline.py         # End-to-end pipeline tests
 
-run_all.py                       # Unified test runner (must pass before commit)
+run_all.py                       # 10-suite unified test runner (must pass before commit)
 ```
