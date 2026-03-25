@@ -98,7 +98,9 @@ def _calc_error(vals, error_type):
     elif error_type == "sd":
         return m, s
     else:  # ci95
-        ci = stats.t.ppf(0.975, df=max(n - 1, 1)) * s / np.sqrt(max(n, 1))
+        if n <= 1:
+            return m, float("nan")
+        ci = stats.t.ppf(0.975, df=n - 1) * s / np.sqrt(n)
         return m, float(ci)
 
 
@@ -228,15 +230,64 @@ def _run_stats(
         if k == 2:
             a, b = labels
             n = min(len(groups[a]), len(groups[b]))
+            if len(groups[a]) != len(groups[b]):
+                warnings.warn(
+                    f"Paired test: '{a}' (n={len(groups[a])}) and '{b}' "
+                    f"(n={len(groups[b])}) have unequal lengths; "
+                    f"truncating to {n} pairs.",
+                    stacklevel=2,
+                )
             _, p = stats.ttest_rel(groups[a][:n], groups[b][:n])
             corrected = _apply_correction([p], mc_correction)[0]
             results.append((a, b, corrected, _p_to_stars(corrected)))
         else:
+            # Mauchly sphericity check for repeated measures (k >= 3)
+            # Build difference-score matrix and test sphericity
+            try:
+                min_n = min(len(groups[g]) for g in labels)
+                if min_n >= k:
+                    data_matrix = np.column_stack([groups[g][:min_n] for g in labels])
+                    # Compute k-1 orthogonal difference contrasts
+                    C = np.zeros((k, k - 1))
+                    for j in range(k - 1):
+                        C[j, j] = 1.0
+                        C[j + 1, j] = -1.0
+                    D = data_matrix @ C  # n × (k-1)
+                    S = np.cov(D, rowvar=False)
+                    p_dim = S.shape[0]
+                    if p_dim >= 2:
+                        det_S = np.linalg.det(S)
+                        trace_S = np.trace(S)
+                        # Mauchly's W = det(S) / (trace(S)/p)^p
+                        W = det_S / ((trace_S / p_dim) ** p_dim) if trace_S > 0 else 0
+                        # Approximate chi-square test
+                        df_w = p_dim * (p_dim + 1) // 2 - 1
+                        n_subj = min_n
+                        chi2_w = -(n_subj - 1 - (2 * p_dim + 1 + 2.0 / p_dim) / 6.0) * np.log(max(W, 1e-300))
+                        p_mauchly = float(stats.chi2.sf(chi2_w, df_w))
+                        if p_mauchly < 0.05:
+                            warnings.warn(
+                                f"Mauchly's sphericity test significant "
+                                f"(W={W:.4f}, p={p_mauchly:.4f}): "
+                                "sphericity assumption may be violated. "
+                                "Consider Greenhouse-Geisser corrected p-values.",
+                                stacklevel=2,
+                            )
+            except Exception:
+                pass  # Sphericity check is advisory; don't block analysis
+
             # Repeated-measures style: pairwise paired t-tests
             pairs = list(itertools.combinations(labels, 2))
             raw_p = []
             for a, b in pairs:
                 n = min(len(groups[a]), len(groups[b]))
+                if len(groups[a]) != len(groups[b]):
+                    warnings.warn(
+                        f"Paired test: '{a}' (n={len(groups[a])}) and '{b}' "
+                        f"(n={len(groups[b])}) have unequal lengths; "
+                        f"truncating to {n} pairs.",
+                        stacklevel=2,
+                    )
                 _, p = stats.ttest_rel(groups[a][:n], groups[b][:n])
                 raw_p.append(p)
             corrected = _apply_correction(raw_p, mc_correction)
@@ -244,6 +295,17 @@ def _run_stats(
                 results.append((a, b, corrected[i], _p_to_stars(corrected[i])))
 
     elif test_type == "parametric":
+        # Levene test for homogeneity of variances (k >= 3, like Prism)
+        if k >= 3:
+            _, p_levene = stats.levene(*[groups[g] for g in labels])
+            if p_levene < 0.05:
+                warnings.warn(
+                    f"Levene's test significant (p={p_levene:.4f}): "
+                    "group variances may be unequal. Consider Welch ANOVA "
+                    "or a nonparametric test.",
+                    stacklevel=2,
+                )
+
         if k == 2:
             a, b = labels
             # Welch's t-test (equal_var=False) — Prism default since v8.
@@ -268,9 +330,6 @@ def _run_stats(
                 results.append((ctrl, trt, p, _p_to_stars(p)))
 
         elif posthoc == "Tukey HSD":
-            _, p_anova = stats.f_oneway(*[groups[g] for g in labels])
-            if p_anova >= 0.05:
-                return []
             all_vals  = np.concatenate(list(groups.values()))
             ss_within = sum(np.sum((v - v.mean()) ** 2) for v in groups.values())
             df_within = len(all_vals) - k
@@ -283,8 +342,12 @@ def _run_stats(
             for a, b in pairs:
                 mean_diff = abs(groups[a].mean() - groups[b].mean())
                 se        = np.sqrt((ms_within / 2) * (1/len(groups[a]) + 1/len(groups[b])))
-                q         = mean_diff / se
-                raw_p.append(1 - stats.studentized_range.cdf(q, k, df_within))
+                if se == 0 or np.isnan(se):
+                    # Zero-variance groups: can't compute q — report p=1.0 (ns)
+                    raw_p.append(1.0)
+                else:
+                    q         = mean_diff / se
+                    raw_p.append(1 - stats.studentized_range.cdf(q, k, df_within))
             corrected = (_apply_correction(raw_p, mc_correction)
                          if mc_correction not in ("Holm-Bonferroni", "None (uncorrected)")
                          else raw_p)
@@ -292,9 +355,6 @@ def _run_stats(
                 results.append((a, b, corrected[i], _p_to_stars(corrected[i])))
 
         elif posthoc in ("Bonferroni", "Sidak", "Fisher LSD"):
-            _, p_anova = stats.f_oneway(*[groups[g] for g in labels])
-            if p_anova >= 0.05:
-                return []
             all_pairs = list(itertools.combinations(labels, 2))
             pairs = [p for p in all_pairs
                      if control is None or p[0] == control or p[1] == control]
@@ -322,8 +382,6 @@ def _run_stats(
             results.append((a, b, corrected, _p_to_stars(corrected)))
         else:
             _, p_kw = stats.kruskal(*[groups[g] for g in labels])
-            if p_kw >= 0.05:
-                return []
             all_vals    = np.concatenate(list(groups.values()))
             ranks       = stats.rankdata(all_vals)
             group_ranks = {}

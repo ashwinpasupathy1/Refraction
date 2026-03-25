@@ -129,7 +129,7 @@ def analyze(
         sd = float(np.std(vals, ddof=1)) if len(vals) > 1 else 0.0
         sem = sd / np.sqrt(len(vals)) if len(vals) > 0 else 0.0
         from scipy import stats as sp_stats
-        ci95 = sp_stats.t.ppf(0.975, df=max(len(vals) - 1, 1)) * sem
+        ci95 = sp_stats.t.ppf(0.975, df=len(vals) - 1) * sem if len(vals) > 1 else float("nan")
 
         group_results.append({
             "name": name,
@@ -196,6 +196,9 @@ _DEDICATED_ANALYZERS = {
     "kaplan_meier": _lazy_load_analyzer("kaplan_meier", "analyze_kaplan_meier"),
     "forest_plot": _lazy_load_analyzer("forest_plot", "analyze_forest_plot"),
     "raincloud": _lazy_load_analyzer("raincloud", "analyze_raincloud"),
+    "contingency": _lazy_load_analyzer("contingency", "analyze_contingency"),
+    "bland_altman": _lazy_load_analyzer("bland_altman", "analyze_bland_altman"),
+    "chi_square_gof": _lazy_load_analyzer("chi_square_gof", "analyze_chi_square_gof"),
 }
 
 

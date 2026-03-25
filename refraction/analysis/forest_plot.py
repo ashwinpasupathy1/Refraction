@@ -63,6 +63,7 @@ def analyze_forest_plot(kw: dict) -> ChartSpec:
     # Compute pooled summary (inverse-variance weighted mean)
     summary_effect = None
     summary_ci = None
+    heterogeneity = None
     if len(studies) >= 2:
         effs = np.array([s["effect"] for s in studies])
         ci_widths = np.array([s["ci_hi"] - s["ci_lo"] for s in studies])
@@ -77,6 +78,19 @@ def analyze_forest_plot(kw: dict) -> ChartSpec:
             round(summary_effect + 1.96 * summary_se, 6),
         ]
         summary_effect = round(summary_effect, 6)
+
+        # Cochran's Q and I² heterogeneity statistics
+        k = len(effs)
+        Q = float(np.sum(weights * (effs - summary_effect) ** 2))
+        from scipy import stats as sp_stats
+        Q_p = float(sp_stats.chi2.sf(Q, df=max(k - 1, 1)))
+        I2 = max(0.0, (Q - (k - 1)) / Q) * 100.0 if Q > 0 else 0.0
+        heterogeneity = {
+            "Q": round(Q, 4),
+            "Q_p": round(Q_p, 6),
+            "I2": round(I2, 2),
+            "df": k - 1,
+        }
 
     # Determine null reference value (0 for mean differences, 1 for ratios)
     null_value = kw.get("null_value", 0.0)
@@ -100,5 +114,6 @@ def analyze_forest_plot(kw: dict) -> ChartSpec:
             "null_value": null_value,
             "summary_effect": summary_effect,
             "summary_ci": summary_ci,
+            "heterogeneity": heterogeneity,
         },
     )

@@ -169,10 +169,8 @@ def test_anova_tukey_triggers():
 
 
 
-# ── ANOVA non-significant → empty results ────────────────────────────────
-def test_anova_ns_returns_empty():
-    # Use groups with slight variance but very similar means (not zero-variance,
-    # which produces NaN from f_oneway and bypasses the p >= 0.05 gate)
+# ── ANOVA non-significant → posthoc still runs (matches Prism/R) ─────────
+def test_anova_ns_still_runs_posthoc():
     a = np.array([5.0, 5.1, 4.9, 5.0, 5.1])
     b = np.array([5.0, 5.0, 5.1, 4.9, 5.0])
     c = np.array([5.1, 5.0, 4.9, 5.0, 5.1])
@@ -180,13 +178,15 @@ def test_anova_ns_returns_empty():
     assert p_anova >= 0.05, f"Need non-sig ANOVA, got p={p_anova}"
     groups = {"A": a, "B": b, "C": c}
     res = _run_stats(groups, test_type="parametric", posthoc="Tukey HSD")
-    assert res == [], f"Non-significant ANOVA should return empty, got {res}"
+    assert len(res) > 0, "Posthoc should run even when ANOVA is ns"
+    # All individual comparisons should also be ns
+    for _, _, p, stars in res:
+        assert stars == "ns"
 
 
 
-# ── KW non-significant → empty results ───────────────────────────────────
-def test_kw_ns_returns_empty():
-    # Similar means with some variance (zero-variance causes NaN in kruskal)
+# ── KW non-significant → posthoc still runs (matches Prism/R) ────────────
+def test_kw_ns_still_runs_posthoc():
     a = np.array([5.0, 5.1, 4.9, 5.0, 5.2])
     b = np.array([5.0, 4.9, 5.1, 5.0, 5.0])
     c = np.array([5.1, 5.0, 5.0, 4.9, 5.0])
@@ -194,7 +194,7 @@ def test_kw_ns_returns_empty():
     assert p_kw >= 0.05, f"Need non-sig KW, got p={p_kw}"
     groups = {"A": a, "B": b, "C": c}
     res = _run_stats(groups, test_type="nonparametric")
-    assert res == [], f"Non-significant KW should return empty, got {res}"
+    assert len(res) > 0, "Posthoc should run even when KW is ns"
 
 
 
@@ -1289,9 +1289,8 @@ def test_twoway_insufficient_replicates():
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-def test_tukey_anova_gate_p05():
-    """Tukey HSD returns empty when ANOVA p >= 0.05."""
-    # Use groups with very similar means
+def test_tukey_runs_without_anova_gate():
+    """Tukey HSD runs posthoc even when ANOVA p >= 0.05 (Prism behavior)."""
     a = np.array([5.0, 5.1, 4.9, 5.0, 5.1])
     b = np.array([5.0, 5.0, 5.1, 4.9, 5.0])
     c = np.array([5.1, 5.0, 4.9, 5.0, 5.1])
@@ -1299,18 +1298,18 @@ def test_tukey_anova_gate_p05():
     assert p_anova >= 0.05, f"Need non-significant ANOVA, got p={p_anova}"
     groups = {"A": a, "B": b, "C": c}
     res = _run_stats(groups, test_type="parametric", posthoc="Tukey HSD")
-    assert res == []
+    assert len(res) > 0, "Posthoc should run even when ANOVA is ns"
 
 
 
-def test_bonferroni_posthoc_anova_gate():
-    """Bonferroni posthoc also has ANOVA gate."""
+def test_bonferroni_posthoc_runs_without_gate():
+    """Bonferroni posthoc runs even when ANOVA is ns (Prism behavior)."""
     a = np.array([5.0, 5.1, 4.9])
     b = np.array([5.0, 5.0, 5.1])
     c = np.array([5.1, 5.0, 4.9])
     groups = {"A": a, "B": b, "C": c}
     res = _run_stats(groups, test_type="parametric", posthoc="Bonferroni")
-    assert res == []
+    assert len(res) > 0, "Posthoc should run even when ANOVA is ns"
 
 
 

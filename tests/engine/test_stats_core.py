@@ -451,19 +451,17 @@ class TestRunStats:
 
     # --- Parametric (k=3): ANOVA gate + Tukey ---
 
-    def test_tukey_anova_gate_nonsig_returns_empty(self):
-        """When one-way ANOVA is non-significant (p >= 0.05), Tukey returns []."""
-        # Groups with overlapping distributions
+    def test_tukey_runs_even_when_anova_nonsig(self):
+        """Posthoc always runs regardless of omnibus p (matches Prism/R)."""
         rng = np.random.default_rng(0)
         groups = {"A": rng.normal(5, 1, 10),
                   "B": rng.normal(5.1, 1, 10),
                   "C": rng.normal(5.2, 1, 10)}
-        # Verify ANOVA is indeed non-significant
         _, p_anova = sp_stats.f_oneway(*groups.values())
         if p_anova >= 0.05:
             results = _run_stats(groups, test_type="parametric", posthoc="Tukey HSD",
                                  mc_correction="None (uncorrected)")
-            assert results == [], f"Expected empty results when ANOVA ns, got {results}"
+            assert len(results) > 0, "Posthoc should run even when ANOVA is ns"
 
     def test_tukey_significant_pair(self):
         """Tukey identifies the most separated pair as significant.
@@ -519,8 +517,8 @@ class TestRunStats:
 
     # --- Nonparametric (k=3): Kruskal-Wallis gate + Dunn's ---
 
-    def test_kruskal_gate_nonsig_returns_empty(self):
-        """When Kruskal-Wallis is ns, Dunn's returns []."""
+    def test_kruskal_runs_even_when_nonsig(self):
+        """Dunn's posthoc always runs regardless of KW p (matches Prism/R)."""
         rng = np.random.default_rng(0)
         groups = {"A": rng.normal(5, 1, 10),
                   "B": rng.normal(5.05, 1, 10),
@@ -529,7 +527,7 @@ class TestRunStats:
         if p_kw >= 0.05:
             results = _run_stats(groups, test_type="nonparametric",
                                  mc_correction="None (uncorrected)")
-            assert results == []
+            assert len(results) > 0, "Posthoc should run even when KW is ns"
 
     def test_dunns_finds_significant_pair(self):
         """Dunn's identifies widely separated groups."""
