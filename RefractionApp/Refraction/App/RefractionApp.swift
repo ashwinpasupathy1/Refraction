@@ -17,7 +17,6 @@ struct RefractionApp: App {
                 .environment(pythonServer)
                 .onAppear {
                     pythonServer.start()
-                    appState.loadProjectIfExists()
                     // Maximize the window on launch
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                         if let window = NSApplication.shared.mainWindow {

@@ -76,17 +76,40 @@ enum RenderStyle: String, CaseIterable, Identifiable, Codable {
     // MARK: - Default
 
     private func applyDefault(graph: FormatGraphSettings, axes: FormatAxesSettings) {
-        // Graph settings
-        graph.barBorderThickness = 0.8
-        graph.barBorderColor = "#000000"
+        // Symbols
+        graph.showSymbols = true
+        graph.symbolColor = "#000000"
+        graph.symbolShape = .circle
+        graph.symbolSize = 6.0
+        graph.symbolBorderColor = "#000000"
+        graph.symbolBorderThickness = 0.8
+
+        // Bars
+        graph.showBars = true
         graph.barWidth = 0.6
+        graph.barBorderColor = "#000000"
+        graph.barBorderThickness = 0.8
+        graph.barPattern = .solid
+
+        // Error bars
+        graph.showErrorBars = true
         graph.errorBarColor = "#222222"
         graph.errorBarThickness = 1.0
         graph.errorBarStyle = .tCap
-        graph.lineThickness = 1.5
-        graph.symbolSize = 6.0
+        graph.errorBarDirection = .both
 
-        // Axes settings
+        // Lines
+        graph.showConnectingLine = false
+        graph.lineThickness = 1.5
+        graph.lineStyle = .solid
+
+        // Area
+        graph.showAreaFill = false
+
+        // Legend
+        graph.showLegend = true
+
+        // Axes — clean L-shape with light grid
         axes.axisThickness = 1.0
         axes.axisColor = "#000000"
         axes.plotAreaColor = "clear"
@@ -101,6 +124,7 @@ enum RenderStyle: String, CaseIterable, Identifiable, Codable {
         axes.yAxisTickDirection = .out
         axes.xAxisTickLength = 5
         axes.yAxisTickLength = 5
+        axes.xAxisLabelRotation = 0
         axes.globalFontName = "Helvetica"
         axes.chartTitleFontSize = 14
         axes.xAxisTitleFontSize = 12
@@ -110,67 +134,118 @@ enum RenderStyle: String, CaseIterable, Identifiable, Codable {
     }
 
     // MARK: - Prism
+    // Matches GraphPad Prism 10 default appearance.
 
     private func applyPrism(graph: FormatGraphSettings, axes: FormatAxesSettings) {
-        // Graph settings — clean, bold
-        graph.barBorderThickness = 0.0
+        // Symbols — filled, no border (Prism scatter/XY default)
+        graph.showSymbols = true
+        graph.symbolColor = "#000000"
+        graph.symbolShape = .circle
+        graph.symbolSize = 7.0
+        graph.symbolBorderColor = "#000000"
+        graph.symbolBorderThickness = 0.0
+
+        // Bars — solid fill, NO border (Prism default bar appearance)
+        graph.showBars = true
         graph.barWidth = 0.65
+        graph.barBorderColor = "#000000"
+        graph.barBorderThickness = 0.0
+        graph.barPattern = .solid
+
+        // Error bars — black T-caps, medium weight
+        graph.showErrorBars = true
         graph.errorBarColor = "#000000"
         graph.errorBarThickness = 1.2
         graph.errorBarStyle = .tCap
-        graph.lineThickness = 2.0
-        graph.symbolSize = 7.0
-        graph.symbolBorderThickness = 0.0
+        graph.errorBarDirection = .both
 
-        // Axes settings — L-shaped (left + bottom only), no grid
+        // Lines — solid, medium-bold
+        graph.showConnectingLine = false
+        graph.lineColor = "#000000"
+        graph.lineThickness = 2.0
+        graph.lineStyle = .solid
+
+        // Area
+        graph.showAreaFill = false
+
+        // Legend
+        graph.showLegend = true
+
+        // Axes — L-shaped (left + bottom only), NO grid, bold spines
         axes.axisThickness = 1.5
         axes.axisColor = "#000000"
         axes.plotAreaColor = "clear"
         axes.pageBackground = "clear"
-        axes.frameStyle = .noFrame
+        axes.frameStyle = .noFrame       // L-shape: left + bottom spines only
         axes.hideAxes = .showBoth
-        axes.majorGrid = .none
+        axes.majorGrid = .none           // Prism: no gridlines by default
         axes.minorGrid = .none
-        axes.xAxisTickDirection = .out
+        axes.xAxisTickDirection = .out    // Outward-facing ticks
         axes.yAxisTickDirection = .out
         axes.xAxisTickLength = 6
         axes.yAxisTickLength = 6
-        axes.globalFontName = "Arial"
+        axes.xAxisLabelRotation = 0
+        axes.globalFontName = "Helvetica"
         axes.chartTitleFontSize = 16
-        axes.xAxisTitleFontSize = 13
-        axes.yAxisTitleFontSize = 13
-        axes.xAxisLabelFontSize = 11
-        axes.yAxisLabelFontSize = 11
+        axes.xAxisTitleFontSize = 14
+        axes.yAxisTitleFontSize = 14
+        axes.xAxisLabelFontSize = 12
+        axes.yAxisLabelFontSize = 12
     }
 
     // MARK: - ggplot2
+    // Matches R ggplot2 default theme (theme_gray).
 
     private func applyGgplot2(graph: FormatGraphSettings, axes: FormatAxesSettings) {
-        // Graph settings — softer, wider bars
-        graph.barBorderThickness = 0.0
-        graph.barWidth = 0.7
-        graph.errorBarColor = "#333333"
-        graph.errorBarThickness = 0.8
-        graph.errorBarStyle = .tCap
-        graph.lineThickness = 1.0
-        graph.symbolSize = 5.0
+        // Symbols — small filled circles, no border
+        graph.showSymbols = true
+        graph.symbolColor = "#000000"
+        graph.symbolShape = .circle
+        graph.symbolSize = 4.0
+        graph.symbolBorderColor = "#000000"
         graph.symbolBorderThickness = 0.0
 
-        // Axes settings — gray background, white grid, no axis lines
-        axes.axisThickness = 0.0
+        // Bars — wide, no border
+        graph.showBars = true
+        graph.barWidth = 0.7
+        graph.barBorderColor = "#000000"
+        graph.barBorderThickness = 0.0
+        graph.barPattern = .solid
+
+        // Error bars — thin
+        graph.showErrorBars = true
+        graph.errorBarColor = "#333333"
+        graph.errorBarThickness = 0.6
+        graph.errorBarStyle = .tCap
+        graph.errorBarDirection = .both
+
+        // Lines — thin
+        graph.showConnectingLine = false
+        graph.lineThickness = 0.8
+        graph.lineStyle = .solid
+
+        // Area
+        graph.showAreaFill = false
+
+        // Legend
+        graph.showLegend = true
+
+        // Axes — NO visible spines, gray plot area, white grid lines
+        axes.axisThickness = 0.0         // No visible axis lines
         axes.axisColor = "#636363"
-        axes.plotAreaColor = "#EBEBEB"
+        axes.plotAreaColor = "#EBEBEB"   // Signature gray background
         axes.pageBackground = "clear"
         axes.frameStyle = .noFrame
         axes.hideAxes = .showBoth
         axes.majorGrid = .solid
-        axes.majorGridColor = "#FFFFFF"
+        axes.majorGridColor = "#FFFFFF"  // White gridlines on gray bg
         axes.majorGridThickness = 0.8
         axes.minorGrid = .none
-        axes.xAxisTickDirection = .none
+        axes.xAxisTickDirection = .none  // No ticks in ggplot2
         axes.yAxisTickDirection = .none
         axes.xAxisTickLength = 0
         axes.yAxisTickLength = 0
+        axes.xAxisLabelRotation = 0
         axes.globalFontName = "Helvetica"
         axes.chartTitleFontSize = 13
         axes.xAxisTitleFontSize = 11
@@ -180,35 +255,59 @@ enum RenderStyle: String, CaseIterable, Identifiable, Codable {
     }
 
     // MARK: - Matplotlib
+    // Matches Python matplotlib default (rcParams).
 
     private func applyMatplotlib(graph: FormatGraphSettings, axes: FormatAxesSettings) {
-        // Graph settings
-        graph.barBorderThickness = 0.5
-        graph.barBorderColor = "#000000"
-        graph.barWidth = 0.6
-        graph.errorBarColor = "#000000"
-        graph.errorBarThickness = 1.0
-        graph.errorBarStyle = .line
-        graph.lineThickness = 1.5
+        // Symbols — medium with thin border
+        graph.showSymbols = true
+        graph.symbolColor = "#000000"
+        graph.symbolShape = .circle
         graph.symbolSize = 6.0
+        graph.symbolBorderColor = "#000000"
         graph.symbolBorderThickness = 0.5
 
-        // Axes settings — full frame, dashed grid
+        // Bars — thin black border (matplotlib default)
+        graph.showBars = true
+        graph.barWidth = 0.6
+        graph.barBorderColor = "#000000"
+        graph.barBorderThickness = 0.5
+        graph.barPattern = .solid
+
+        // Error bars — black lines, no caps (matplotlib default)
+        graph.showErrorBars = true
+        graph.errorBarColor = "#000000"
+        graph.errorBarThickness = 1.0
+        graph.errorBarStyle = .line      // matplotlib: no T-caps by default
+        graph.errorBarDirection = .both
+
+        // Lines — medium
+        graph.showConnectingLine = false
+        graph.lineThickness = 1.5
+        graph.lineStyle = .solid
+
+        // Area
+        graph.showAreaFill = false
+
+        // Legend
+        graph.showLegend = true
+
+        // Axes — full box frame, dashed grid
         axes.axisThickness = 1.0
         axes.axisColor = "#000000"
         axes.plotAreaColor = "clear"
         axes.pageBackground = "clear"
-        axes.frameStyle = .plain
+        axes.frameStyle = .plain         // Full box (all 4 spines)
         axes.hideAxes = .showBoth
         axes.majorGrid = .dashed
         axes.majorGridColor = "#CCCCCC"
         axes.majorGridThickness = 0.5
         axes.minorGrid = .none
-        axes.xAxisTickDirection = .out
-        axes.yAxisTickDirection = .out
+        axes.xAxisTickDirection = .in     // matplotlib: inward ticks
+        axes.yAxisTickDirection = .in
         axes.xAxisTickLength = 4
         axes.yAxisTickLength = 4
-        axes.globalFontName = "Helvetica"  // DejaVu Sans not available, Helvetica close
+        axes.xAxisLabelRotation = 0
+        axes.globalFontName = "Helvetica" // DejaVu Sans not on macOS, Helvetica is close
         axes.chartTitleFontSize = 14
         axes.xAxisTitleFontSize = 12
         axes.yAxisTitleFontSize = 12

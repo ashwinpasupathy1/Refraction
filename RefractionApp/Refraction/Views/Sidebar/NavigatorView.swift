@@ -18,6 +18,12 @@ struct NavigatorView: View {
     @State private var expandedExperiments: Set<UUID> = []
     @State private var dropTargetID: UUID?
     @State private var dropEdge: DropEdge = .bottom
+    /// True while a drag session is active. Set false in performDrop so
+    /// spurious post-drop callbacks from macOS don't re-show the indicator.
+    @State private var isDragging: Bool = false
+    /// Cached UUID of the item currently being dragged, set on dropEntered
+    /// so performDrop can resolve it synchronously (no async loadItem delay).
+    @State private var draggedItemID: UUID?
 
     enum DropEdge { case top, bottom }
 
@@ -121,6 +127,9 @@ struct NavigatorView: View {
             }
         }
         .listStyle(.sidebar)
+        .onChange(of: dropTargetID) { oldVal, newVal in
+            DebugLog.shared.logVerbose("dropTargetID: \(oldVal?.uuidString.prefix(8) ?? "nil") → \(newVal?.uuidString.prefix(8) ?? "nil")")
+        }
         .onAppear {
             // Only expand the first experiment on launch
             if let first = appState.experiments.first {
@@ -274,7 +283,7 @@ struct NavigatorView: View {
         .buttonStyle(.plain)
         .draggable(experiment.id.uuidString)
         .overlay(alignment: dropEdge == .top ? .top : .bottom) {
-            if dropTargetID == experiment.id {
+            if isDragging && dropTargetID == experiment.id {
                 Rectangle()
                     .fill(Color.accentColor)
                     .frame(height: 2)
@@ -284,6 +293,7 @@ struct NavigatorView: View {
             targetID: experiment.id,
             dropTargetID: $dropTargetID,
             dropEdge: $dropEdge,
+            isDragging: $isDragging, draggedItemID: $draggedItemID,
             onDrop: { droppedID, edge in
                 guard droppedID != experiment.id,
                       let fromIndex = appState.experiments.firstIndex(where: { $0.id == droppedID }),
@@ -311,12 +321,12 @@ struct NavigatorView: View {
                     }
                     .draggable(table.id.uuidString)
                     .overlay(alignment: dropEdge == .top ? .top : .bottom) {
-                        if dropTargetID == table.id {
+                        if isDragging && dropTargetID == table.id {
                             Rectangle().fill(Color.accentColor).frame(height: 2)
                         }
                     }
                     .onDrop(of: [.text], delegate: ReorderDropDelegate(
-                        targetID: table.id, dropTargetID: $dropTargetID, dropEdge: $dropEdge,
+                        targetID: table.id, dropTargetID: $dropTargetID, dropEdge: $dropEdge, isDragging: $isDragging, draggedItemID: $draggedItemID,
                         onDrop: { droppedID, edge in
                             guard droppedID != table.id,
                                   let fromIndex = experiment.dataTables.firstIndex(where: { $0.id == droppedID }),
@@ -355,12 +365,12 @@ struct NavigatorView: View {
                     }
                     .draggable(graph.id.uuidString)
                     .overlay(alignment: dropEdge == .top ? .top : .bottom) {
-                        if dropTargetID == graph.id {
+                        if isDragging && dropTargetID == graph.id {
                             Rectangle().fill(Color.accentColor).frame(height: 2)
                         }
                     }
                     .onDrop(of: [.text], delegate: ReorderDropDelegate(
-                        targetID: graph.id, dropTargetID: $dropTargetID, dropEdge: $dropEdge,
+                        targetID: graph.id, dropTargetID: $dropTargetID, dropEdge: $dropEdge, isDragging: $isDragging, draggedItemID: $draggedItemID,
                         onDrop: { droppedID, edge in
                             guard droppedID != graph.id,
                                   let fromIndex = experiment.graphs.firstIndex(where: { $0.id == droppedID }),
@@ -400,12 +410,12 @@ struct NavigatorView: View {
                     }
                     .draggable(analysis.id.uuidString)
                     .overlay(alignment: dropEdge == .top ? .top : .bottom) {
-                        if dropTargetID == analysis.id {
+                        if isDragging && dropTargetID == analysis.id {
                             Rectangle().fill(Color.accentColor).frame(height: 2)
                         }
                     }
                     .onDrop(of: [.text], delegate: ReorderDropDelegate(
-                        targetID: analysis.id, dropTargetID: $dropTargetID, dropEdge: $dropEdge,
+                        targetID: analysis.id, dropTargetID: $dropTargetID, dropEdge: $dropEdge, isDragging: $isDragging, draggedItemID: $draggedItemID,
                         onDrop: { droppedID, edge in
                             guard droppedID != analysis.id,
                                   let fromIndex = experiment.analyses.firstIndex(where: { $0.id == droppedID }),
@@ -636,10 +646,24 @@ struct ReorderDropDelegate: DropDelegate {
     let targetID: UUID
     @Binding var dropTargetID: UUID?
     @Binding var dropEdge: NavigatorView.DropEdge
+    @Binding var isDragging: Bool
+    @Binding var draggedItemID: UUID?
     let onDrop: (UUID, NavigatorView.DropEdge) -> Void
 
     func dropEntered(info: DropInfo) {
+        isDragging = true
         dropTargetID = targetID
+        // Cache the dragged item ID on first enter so performDrop can use it synchronously
+        if draggedItemID == nil {
+            if let item = info.itemProviders(for: [.text]).first {
+                item.loadItem(forTypeIdentifier: "public.text", options: nil) { data, _ in
+                    guard let data = data as? Data,
+                          let str = String(data: data, encoding: .utf8),
+                          let uuid = UUID(uuidString: str) else { return }
+                    DispatchQueue.main.async { self.draggedItemID = uuid }
+                }
+            }
+        }
     }
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
@@ -656,23 +680,23 @@ struct ReorderDropDelegate: DropDelegate {
 
     func performDrop(info: DropInfo) -> Bool {
         let savedEdge = dropEdge
-        // Clear indicator immediately
-        withAnimation(.none) {
-            dropTargetID = nil
+        isDragging = false
+        dropTargetID = nil
+        // Use the cached ID for instant reorder — no async delay
+        if let droppedID = draggedItemID {
+            draggedItemID = nil
+            onDrop(droppedID, savedEdge)
+            return true
         }
+        // Fallback: async load (shouldn't normally hit this path)
+        draggedItemID = nil
         guard let item = info.itemProviders(for: [.text]).first else { return false }
         item.loadItem(forTypeIdentifier: "public.text", options: nil) { data, _ in
             guard let data = data as? Data,
                   let str = String(data: data, encoding: .utf8),
-                  let droppedID = UUID(uuidString: str) else {
-                // Failed to decode — ensure indicator is cleared
-                DispatchQueue.main.async { self.dropTargetID = nil }
-                return
-            }
+                  let droppedID = UUID(uuidString: str) else { return }
             DispatchQueue.main.async {
                 self.onDrop(droppedID, savedEdge)
-                // Belt-and-suspenders: clear again after reorder completes
-                self.dropTargetID = nil
             }
         }
         return true

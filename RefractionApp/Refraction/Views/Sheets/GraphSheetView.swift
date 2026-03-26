@@ -1,6 +1,6 @@
-// GraphSheetView.swift — Graph view with chart canvas + config panel sidebar.
+// GraphSheetView.swift — Graph view with chart canvas + zoom strip.
 // Auto-generates the chart when the graph appears or data changes.
-// Double-click the chart to open the Format Graph dialog.
+// Format dialogs are opened from the main toolbar ribbon, not from here.
 
 import SwiftUI
 import RefractionRenderer
@@ -10,12 +10,9 @@ struct GraphSheetView: View {
     @Environment(AppState.self) private var appState
     let graph: Graph
 
-    @State private var showFormatDialog = false
-    @State private var showFormatAxesDialog = false
-
     var body: some View {
         VStack(spacing: 0) {
-            // Minimal toolbar (chart type label + format button)
+            // Minimal toolbar (chart type label)
             graphToolbar
             Divider()
 
@@ -33,12 +30,6 @@ struct GraphSheetView: View {
                   appState.activeGraphDataTable?.hasData == true else { return }
             DebugLog.shared.logVerbose("auto-generate chart: \(graph.chartType.rawValue)")
             await appState.generatePlot()
-        }
-        .sheet(isPresented: $showFormatDialog) {
-            FormatGraphDialog(settings: graph.formatSettings)
-        }
-        .sheet(isPresented: $showFormatAxesDialog) {
-            FormatAxesDialog(settings: graph.formatAxesSettings)
         }
     }
 
@@ -86,14 +77,6 @@ struct GraphSheetView: View {
     @ViewBuilder
     private func chartCanvas(spec: ChartSpec) -> some View {
         ChartCanvasView(spec: spec)
-            .contextMenu {
-                Button("Format Graph...") {
-                    showFormatDialog = true
-                }
-                Button("Format Axes...") {
-                    showFormatAxesDialog = true
-                }
-            }
     }
 
     // MARK: - Zoom Control Strip
@@ -157,22 +140,6 @@ struct GraphSheetView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-
-            Button {
-                showFormatDialog = true
-            } label: {
-                Label("Format", systemImage: "paintbrush")
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-
-            Button {
-                showFormatAxesDialog = true
-            } label: {
-                Label("Axes", systemImage: "axis.horizontal.and.vertical")
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
