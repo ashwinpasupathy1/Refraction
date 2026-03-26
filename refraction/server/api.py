@@ -21,16 +21,6 @@ from typing import Any, Optional
 _log = logging.getLogger(__name__)
 
 
-def _error_response(exc: Exception, status_code: int = 500) -> "JSONResponse":
-    """Build a JSON error response with full traceback for debugging."""
-    from starlette.responses import JSONResponse as _JR
-    tb_lines = traceback.format_exception(type(exc), exc, exc.__traceback__)
-    tb_str = "".join(tb_lines)
-    return _JR(
-        {"ok": False, "error": str(exc), "traceback": tb_str},
-        status_code=status_code,
-    )
-
 # -- Logging setup ---------------------------------------------------------
 _log_dir = os.path.expanduser("~/Library/Logs/Refraction")
 os.makedirs(_log_dir, exist_ok=True)
@@ -309,7 +299,7 @@ def _make_app():
     class RenderRequest(BaseModel):
         chart_type: str
         kw: dict[str, Any] = {}
-        _debug: bool = False
+        debug: bool = False
 
     @api.post("/render")
     def render_endpoint(req: RenderRequest):
@@ -323,7 +313,7 @@ def _make_app():
             from refraction.analysis import analyze
 
             kw = dict(req.kw)
-            debug_mode = kw.pop("_debug", False) or req._debug
+            debug_mode = kw.pop("_debug", False) or req.debug
             excel_path = kw.pop("excel_path", "")
             path_err = _validate_data_path(excel_path)
             if path_err:

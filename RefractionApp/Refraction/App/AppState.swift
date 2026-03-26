@@ -473,7 +473,7 @@ final class AppState {
             analysis.rawJSON = response.rawJSON
 
             // Build summary notes
-            var notes = "# \(label)\n\n"
+            var notes = "# \(effectiveLabel)\n\n"
             if let summary = response.summary {
                 notes += "## Summary\n\(summary)\n\n"
             }
@@ -951,7 +951,7 @@ final class AppState {
         panel.allowedContentTypes = [
             .init(filenameExtension: "refract") ?? .data
         ]
-        panel.nameFieldStringValue = projectFilePath?.lastPathComponent ?? "\(untitledName).refract"
+        panel.nameFieldStringValue = projectFilePath?.lastPathComponent ?? untitledName
         panel.title = "Save Project"
         panel.prompt = "Save"
 
