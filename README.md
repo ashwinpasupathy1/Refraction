@@ -24,7 +24,7 @@ FastAPI server  →  Dedicated analyzers  →  Pure stats
   /render, /analyze      analysis/*.py        core/stats.py
 ```
 
-The Python backend is a pure analysis engine with no rendering dependencies.  15+ chart types have dedicated analyzers; statistical computation lives in `refraction/core/stats.py`.  The SwiftUI frontend renders charts natively via Core Graphics.
+The Python backend is a pure analysis engine with no rendering dependencies.  15+ chart types have dedicated analyzers; statistical computation lives in `refraction/core/stats.py`.  The SwiftUI frontend renders charts natively via Core Graphics.  See **SWIFT_UI.md** for the full client architecture and **CLAUDE.md** for project context.
 
 ---
 

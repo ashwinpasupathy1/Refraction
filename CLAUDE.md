@@ -3,6 +3,8 @@
 GraphPad Prism-style scientific plotting and analysis for macOS.
 Built entirely by Claude (Anthropic) with Ashwin Pasupathy.
 
+**For the full SwiftUI client architecture, see `SWIFT_UI.md`.**
+
 ---
 
 ## The one rule before every commit
@@ -59,19 +61,14 @@ See `HUMAN_REVIEW_TODO.md` for manual verification tasks.
 ## Commands
 
 ```bash
-# Run the full test suite (767 tests, ~3 seconds)
+# Run the full test suite (~613 tests, ~3 seconds)
 python3 run_all.py
 
 # Run a single suite
-python3 run_all.py stats              # statistical verification
-python3 run_all.py validators         # spreadsheet validators
-python3 run_all.py api                # FastAPI endpoint tests
 python3 run_all.py engine             # tests/engine/ -- pure computation tests
 python3 run_all.py integration        # tests/integration/ -- API + pipeline tests
 python3 run_all.py analysis           # dedicated analyzer tests
-python3 run_all.py qa                 # QA regression tests
 python3 run_all.py stats_exhaustive   # exhaustive statistical coverage
-python3 run_all.py deficiency         # deficiency fix verification
 python3 run_all.py render             # render contract tests
 
 # Run the app locally
@@ -145,14 +142,14 @@ refraction/server/api.py              FastAPI: /health, /chart-types, /analyze, 
                                         /transforms, /transform, /project/save-refract,
                                         /project/save, /project/load
 
-# -- SwiftUI app ---------------------------------------------------
+# -- SwiftUI app (see SWIFT_UI.md for full client architecture) ----
 RefractionApp/Refraction/App/
   RefractionApp.swift                 @main entry point, server lifecycle
   AppState.swift                      Central @Observable state (experiments, selection, file ops)
 
 RefractionApp/Refraction/Models/
   Experiment.swift                    Top-level container: owns DataTables + Graphs + Analyses
-  DataTable.swift                     Data table within an experiment (type + file path)
+  DataTable.swift                     Data table within an experiment (in-memory CellValue grid)
   Graph.swift                         Graph within an experiment (chart type, config, spec, format)
   Analysis.swift                      Statistical analysis within an experiment (results, notes)
   RenderStyle.swift                   Render style presets (Default, Prism, ggplot2, Matplotlib)
@@ -184,6 +181,9 @@ RefractionApp/Refraction/Views/
   Sheets/AnalyzeDataDialog.swift      Analyze data dialog
   Sheets/StatsWikiDialog.swift        Stats test encyclopedia dialog
   Sheets/StatsTestDetailDialog.swift  Individual test detail dialog
+  Sheets/DataSettingsDialog.swift     Data settings for active graph
+  Sheets/StatsSettingsDialog.swift    Stats test settings for active graph
+  Sheets/StyleSettingsDialog.swift    Render style preset picker
   Sheets/ArchitectureGuideDialog.swift Architecture reference dialog
   Chart/ChartCanvasView.swift         Canvas rendering (Core Graphics)
   Chart/ChartOverlayView.swift        Interactive overlay (hit regions, zoom)
@@ -229,17 +229,12 @@ RefractionApp/Refraction/Resources/SampleData/
   survival_data.xlsx                  2 groups, time/event
 
 # -- Tests ---------------------------------------------------------
-run_all.py                            10-suite unified test runner
+run_all.py                            5-suite unified test runner
 tests/conftest.py                     Shared pytest fixtures
 
-tests/test_stats.py                   Statistical verification
-tests/test_validators.py              Spreadsheet validator tests
-tests/test_api.py                     FastAPI endpoint tests
 tests/test_analysis.py                Dedicated analyzer tests
 tests/test_stats_exhaustive.py        Exhaustive statistical coverage
-tests/test_deficiency_fixes.py        Deficiency fix verification
 tests/test_render_contract.py         Render contract tests
-tests/test_phase6_qa.py              QA regression tests
 
 tests/engine/                         Pure computational tests
   test_stats_core.py                  Core stats function tests
