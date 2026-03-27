@@ -1,0 +1,57 @@
+# ASHWIN.todo — Manual tasks for Ashwin
+
+## Prism Style Previews
+- [ ] Export TIFF screenshots from GraphPad Prism for each chart type using the same sample data
+  - Bar chart
+  - Box plot
+  - Violin plot
+  - Histogram
+  - Scatter plot
+  - Line graph
+  - Grouped bar
+  - Stacked bar
+  - Kaplan-Meier survival curve
+  - Before/After
+  - Dot plot
+  - Raincloud
+  - Lollipop
+  - Forest plot
+  - Bland-Altman
+  - Contingency
+- [ ] Upload TIFFs to Claude so the renderer can be tuned to match pixel-for-pixel
+
+## Manual Testing / Verification
+- [ ] Test debug.refract loads correctly — open it and check all 16 chart types render
+- [ ] Test drag-reorder in sidebar — verify blue line clears after drop
+- [ ] Test undo/redo — add experiment, undo, redo, verify state
+- [ ] Test Style dialog — verify preview images show, switching presets updates chart
+- [ ] Test Format Graph dialog — verify sliders/toggles update the chart live
+- [ ] Test New Project (Cmd+N) — verify it resets cleanly with save prompt if dirty
+- [ ] Verify .refract file icon appears in Finder (may need to restart Finder or rebuild Launch Services)
+- [ ] Provide Y-axis trace for the scatter point clipping bug (10.1 point not visible)
+
+## App Signing & Distribution
+- [ ] Set up code signing identity in Xcode for .dmg distribution
+- [ ] Test .dmg build — verify debug console is hidden in release mode
+- [ ] Register .refract UTType with macOS (double-click .refract opens Refraction)
+
+## Test Suite Verification
+- [ ] Review consolidated test structure after Claude's cleanup (~635 → ~400 tests)
+- [ ] Verify no important test logic was lost in the merge
+- [ ] Check tests/engine/test_stats_core.py — merged tests from test_stats.py
+- [ ] Check tests/test_stats_exhaustive.py — kept as-is (scipy cross-validation)
+- [ ] Check tests/test_analysis.py — cleaned up overlaps with test_phase6_qa.py
+- [ ] Check tests/test_render_contract.py — kept as-is
+- [ ] Confirm deleted files had no unique coverage:
+  - tests/test_validators.py (replaced by engine/test_validators.py)
+  - tests/test_api.py (replaced by integration/test_api.py)
+  - tests/test_phase6_qa.py (smoke tests, logic covered elsewhere)
+  - tests/test_deficiency_fixes.py (one-time fixes now in core tests)
+- [ ] Run python3 run_all.py and verify 0 failures after cleanup
+- [ ] Spot-check: are there tests for edge cases? (empty groups, single values, NaN, all-identical)
+- [ ] Spot-check: are there tests for the inline-data path (bundle refactor)?
+
+## Prism Default Values (if available)
+- [ ] Pull up Prism's default bar width, spacing, axis line thickness, error bar cap width
+- [ ] Note Prism's Y-axis auto-range algorithm (nearest round number above max?)
+- [ ] Note Prism's default font sizes and whether labels are always 45° rotated

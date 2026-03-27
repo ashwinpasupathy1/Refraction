@@ -389,11 +389,36 @@ struct NewDataTableDialog: View {
     private func create() {
         guard let experiment = appState.activeExperiment else { return }
         let table = experiment.addDataTable(type: selectedType, label: effectiveName)
-        // Set the uploaded file path and original filename on the new table
-        if let path = uploadedFilePath {
-            table.dataFilePath = path
-            table.originalFileName = uploadedFileName
+        table.originalFileName = uploadedFileName
+
+        // Populate in-memory data from uploaded file
+        if let serverPath = uploadedFilePath {
+            Task {
+                do {
+                    let preview = try await APIClient.shared.dataPreview(excelPath: serverPath)
+                    if let cols = preview.columns, let rawRows = preview.rows {
+                        await MainActor.run {
+                            table.columns = cols
+                            table.rows = rawRows.map { row in
+                                row.map { cell -> CellValue in
+                                    switch cell {
+                                    case .number(let d): return .number(d)
+                                    case .string(let s):
+                                        if let d = Double(s) { return .number(d) }
+                                        return s.isEmpty ? .empty : .text(s)
+                                    case .null: return .empty
+                                    }
+                                }
+                            }
+                            appState.markDirty()
+                        }
+                    }
+                } catch {
+                    DebugLog.shared.logAppEvent("Failed to load data into table: \(error.localizedDescription)")
+                }
+            }
         }
+
         appState.selectItem(table.id, kind: .dataTable)
         appState.markDirty()
         dismiss()
@@ -404,25 +429,25 @@ struct NewDataTableDialog: View {
     private func typeDescription(_ type: TableType) -> String {
         switch type {
         case .xy:
-            return "Each point is defined by an X and Y coordinate. Use for scatter plots, line graphs, dose-response curves, and time series."
+            return "Each point is defined by an X and Y coordinate. Use for scatter plots, line graphs, dose-response curves, and time series. Repeat a series name across multiple columns for replicates — means and error bars (SEM/SD/CI95) are computed automatically."
         case .column:
-            return "Each column is a group with numeric values in rows. Use for bar charts, box plots, violin plots, and comparing group means."
+            return "Each column is a group with numeric values in rows. Use for bar charts, box plots, violin plots, and comparing group means. Each row is one replicate — add more rows for more replicates per group. Means and error bars are computed automatically."
         case .grouped:
-            return "Data organized by two factors: rows are categories, columns are subgroups. Use for grouped bar charts and stacked bars."
+            return "Data organized by two factors: rows are categories, columns are subgroups. Use for grouped bar charts and stacked bars. Repeat the same category name across multiple rows for replicates. Means and error bars are computed automatically."
         case .contingency:
             return "A matrix of counts for categorical data. Rows are groups, columns are outcomes. Use for chi-square tests and contingency analysis."
         case .survival:
-            return "Time-to-event data with censoring. Each group has paired Time and Event (0/1) columns. Use for Kaplan-Meier survival curves."
+            return "Time-to-event data with censoring. Each group has paired Time and Event (0/1) columns. Use for Kaplan-Meier survival curves. Each row is one subject — add more rows for more subjects per group."
         case .parts:
             return "Categories with values representing parts of a whole. Use for waterfall charts and pyramid plots."
         case .multipleVariables:
-            return "Multiple measured variables per subject. Rows are observations, columns are variables. Use for heatmaps and multivariate scatter."
+            return "Multiple measured variables per subject. Rows are observations, columns are variables. Use for heatmaps and multivariate scatter. Each row is one replicate — add more rows for more observations."
         case .nested:
-            return "Hierarchical data with subgroups nested within groups. Use for subcolumn scatter and nested comparisons."
+            return "Hierarchical data with subgroups nested within groups. Use for subcolumn scatter and nested comparisons. Repeat the same group/subgroup across rows for replicates."
         case .twoWay:
-            return "Each observation has two factors and a response value. Columns are Factor A, Factor B, and Value. Use for two-way ANOVA."
+            return "Each observation has two factors and a response value. Columns are Factor A, Factor B, and Value. Use for two-way ANOVA. Repeat factor combinations across rows for replicates — means are computed automatically."
         case .comparison:
-            return "Paired measurements for comparing two methods or time points. Use for before-after plots and Bland-Altman analysis."
+            return "Paired measurements for comparing two methods or time points. Use for before-after plots and Bland-Altman analysis. Each row is one paired replicate — add more rows for more pairs."
         case .meta:
             return "Summary statistics from multiple studies. Columns are Study, Effect Size, Lower CI, Upper CI. Use for forest plots."
         }
@@ -438,19 +463,34 @@ struct NewDataTableDialog: View {
     private func layoutInfo(_ type: TableType) -> LayoutInfo {
         switch type {
         case .xy:
+            // 3 replicates of Series Y — repeated column name signals replicates
             return LayoutInfo(
-                headers: ["X", "Y\u{2081}", "Y\u{2082}", "Y\u{2083}"],
-                rows: [["0", "2.1", "3.4", "1.8"], ["1", "4.5", "5.2", "3.9"], ["2", "7.8", "8.1", "6.5"]]
+                headers: ["X", "Y", "Y", "Y"],
+                rows: [
+                    ["0", "2.1", "3.4", "1.8"],
+                    ["1", "4.5", "5.2", "3.9"],
+                    ["2", "7.8", "8.1", "6.5"],
+                ]
             )
         case .column:
+            // Each row is one replicate per group (3 replicates shown)
             return LayoutInfo(
                 headers: ["Control", "Drug A", "Drug B"],
-                rows: [["5.2", "8.1", "12.3"], ["4.8", "7.9", "11.8"], ["5.5", "8.5", "13.1"]]
+                rows: [
+                    ["5.2", "8.1", "12.3"],
+                    ["4.8", "7.9", "11.8"],
+                    ["5.5", "8.5", "13.1"],
+                ]
             )
         case .grouped:
+            // 3 replicate rows per category (same category name repeated)
             return LayoutInfo(
                 headers: ["Category", "Male", "Female"],
-                rows: [["Young", "45", "52"], ["Middle", "38", "41"], ["Old", "22", "28"]]
+                rows: [
+                    ["Young", "45", "52"],
+                    ["Young", "47", "49"],
+                    ["Young", "43", "55"],
+                ]
             )
         case .contingency:
             return LayoutInfo(
@@ -458,9 +498,14 @@ struct NewDataTableDialog: View {
                 rows: [["Treatment", "45", "15"], ["Placebo", "20", "40"]]
             )
         case .survival:
+            // 3 subjects per group
             return LayoutInfo(
                 headers: ["Grp A Time", "Grp A Event", "Grp B Time", "Grp B Event"],
-                rows: [["5", "1", "3", "1"], ["12", "0", "8", "1"], ["18", "1", "15", "0"]]
+                rows: [
+                    ["5", "1", "3", "1"],
+                    ["12", "0", "8", "1"],
+                    ["18", "1", "15", "0"],
+                ]
             )
         case .parts:
             return LayoutInfo(
@@ -468,24 +513,44 @@ struct NewDataTableDialog: View {
                 rows: [["Revenue", "500"], ["Cost", "-200"], ["Tax", "-75"]]
             )
         case .multipleVariables:
+            // 3 replicates (rows) across 3 variables
             return LayoutInfo(
                 headers: ["Var 1", "Var 2", "Var 3"],
-                rows: [["1.2", "3.4", "5.6"], ["2.3", "4.5", "6.7"], ["3.4", "5.6", "7.8"]]
+                rows: [
+                    ["1.2", "3.4", "5.6"],
+                    ["2.3", "4.5", "6.7"],
+                    ["3.4", "5.6", "7.8"],
+                ]
             )
         case .nested:
+            // 3 observations nested within groups
             return LayoutInfo(
                 headers: ["Group", "Subgroup", "Value"],
-                rows: [["A", "A1", "5.2"], ["A", "A2", "4.8"], ["B", "B1", "8.1"]]
+                rows: [
+                    ["A", "A1", "5.2"],
+                    ["A", "A1", "4.8"],
+                    ["A", "A1", "5.5"],
+                ]
             )
         case .twoWay:
+            // 3 replicate observations per factor combination
             return LayoutInfo(
                 headers: ["Factor A", "Factor B", "Value"],
-                rows: [["Low", "Male", "23.5"], ["Low", "Female", "28.1"], ["High", "Male", "31.2"]]
+                rows: [
+                    ["Low", "Male", "23.5"],
+                    ["Low", "Male", "25.1"],
+                    ["Low", "Male", "22.8"],
+                ]
             )
         case .comparison:
+            // 3 paired replicates
             return LayoutInfo(
                 headers: ["Method A", "Method B"],
-                rows: [["5.2", "5.8"], ["4.9", "5.3"], ["6.1", "6.5"]]
+                rows: [
+                    ["5.2", "5.8"],
+                    ["4.9", "5.3"],
+                    ["6.1", "6.5"],
+                ]
             )
         case .meta:
             return LayoutInfo(

@@ -22,7 +22,7 @@ def analyze_dot_plot(kw: dict) -> ChartSpec:
             name, values, mean, median, n, color
     """
     cfg = extract_config(kw)
-    df = read_data(cfg["excel_path"], cfg["sheet"])
+    df = read_data(cfg["excel_path"], cfg["sheet"], df=cfg.get("_df"))
 
     groups = list(df.columns)
     values = {g: df[g].dropna().astype(float).tolist() for g in groups}

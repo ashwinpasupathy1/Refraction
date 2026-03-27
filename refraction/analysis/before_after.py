@@ -26,7 +26,7 @@ def analyze_before_after(kw: dict) -> ChartSpec:
         sems: list[float] — SEM per timepoint
     """
     cfg = extract_config(kw)
-    df = read_data(cfg["excel_path"], cfg["sheet"])
+    df = read_data(cfg["excel_path"], cfg["sheet"], df=cfg.get("_df"))
 
     timepoints = [str(c) for c in df.columns]
     colors = resolve_colors(cfg["color"], len(timepoints))

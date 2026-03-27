@@ -205,6 +205,7 @@ public struct StyleSpec: Decodable {
     public let symbolBorderColor: String
     public let symbolBorderThickness: Double
     public let showBars: Bool
+    public let barFillOpacity: Double
     public let barBorderColor: String
     public let barBorderThickness: Double
     public let errorBarColor: String
@@ -240,6 +241,7 @@ public struct StyleSpec: Decodable {
         symbolBorderColor: String = "#000000",
         symbolBorderThickness: Double = 1.0,
         showBars: Bool = true,
+        barFillOpacity: Double = 0.85,
         barBorderColor: String = "#000000",
         barBorderThickness: Double = 0.8,
         errorBarColor: String = "#222222",
@@ -269,6 +271,7 @@ public struct StyleSpec: Decodable {
         self.symbolBorderColor = symbolBorderColor
         self.symbolBorderThickness = symbolBorderThickness
         self.showBars = showBars
+        self.barFillOpacity = barFillOpacity
         self.barBorderColor = barBorderColor
         self.barBorderThickness = barBorderThickness
         self.errorBarColor = errorBarColor
@@ -300,6 +303,7 @@ public struct StyleSpec: Decodable {
         case symbolBorderColor = "symbol_border_color"
         case symbolBorderThickness = "symbol_border_thickness"
         case showBars = "show_bars"
+        case barFillOpacity = "bar_fill_opacity"
         case barBorderColor = "bar_border_color"
         case barBorderThickness = "bar_border_thickness"
         case errorBarColor = "error_bar_color"
@@ -332,6 +336,7 @@ public struct StyleSpec: Decodable {
         symbolBorderColor = (try? c.decode(String.self, forKey: .symbolBorderColor)) ?? "#000000"
         symbolBorderThickness = (try? c.decode(Double.self, forKey: .symbolBorderThickness)) ?? 1.0
         showBars = (try? c.decode(Bool.self, forKey: .showBars)) ?? true
+        barFillOpacity = (try? c.decode(Double.self, forKey: .barFillOpacity)) ?? 0.85
         barBorderColor = (try? c.decode(String.self, forKey: .barBorderColor)) ?? "#000000"
         barBorderThickness = (try? c.decode(Double.self, forKey: .barBorderThickness)) ?? 0.8
         errorBarColor = (try? c.decode(String.self, forKey: .errorBarColor)) ?? "#222222"

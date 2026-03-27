@@ -28,7 +28,14 @@ def analyze_xy(kw: dict[str, Any]) -> ChartSpec:
     chart_type = kw.get("_chart_type", "scatter")
 
     # Read without headers to handle replicate sub-columns
-    if excel_path.endswith(".csv"):
+    if "_df" in cfg:
+        # Inline data — re-read without header interpretation
+        inline = cfg["_df"]
+        # Reconstruct with header row as first data row
+        import io
+        csv_str = inline.to_csv(index=False)
+        df = pd.read_csv(io.StringIO(csv_str), header=None)
+    elif excel_path.endswith(".csv"):
         df = pd.read_csv(excel_path, header=None)
     else:
         df = pd.read_excel(excel_path, sheet_name=sheet, header=None)

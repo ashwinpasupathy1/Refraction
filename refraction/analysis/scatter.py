@@ -21,7 +21,7 @@ def analyze_scatter(kw: dict) -> ChartSpec:
             y: list[float] — Y values
     """
     cfg = extract_config(kw)
-    df = read_data(cfg["excel_path"], cfg["sheet"])
+    df = read_data(cfg["excel_path"], cfg["sheet"], df=cfg.get("_df"))
 
     if df.shape[1] < 2:
         raise ValueError("Scatter plot requires at least 2 columns (X, Y)")

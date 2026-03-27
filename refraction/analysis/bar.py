@@ -57,7 +57,7 @@ def analyze_bar(kw_or_path=None, **kwargs) -> ChartSpec:
         kw = dict(kw_or_path)
         kw.update(kwargs)
     cfg = extract_config(kw)
-    df = read_data(cfg["excel_path"], cfg["sheet"])
+    df = read_data(cfg["excel_path"], cfg["sheet"], df=cfg.get("_df"))
 
     groups = list(df.columns)
     values = {g: df[g].dropna().astype(float).tolist() for g in groups}

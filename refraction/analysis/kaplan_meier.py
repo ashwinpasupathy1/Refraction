@@ -63,7 +63,7 @@ def analyze_kaplan_meier(kw: dict) -> ChartSpec:
             name, times, survival, censored_times, censored_survival, n
     """
     cfg = extract_config(kw)
-    df = read_data(cfg["excel_path"], cfg["sheet"], header=None)
+    df = read_data(cfg["excel_path"], cfg["sheet"], header=None, df=cfg.get("_df"))
 
     # Parse KM layout: Row 0 = group names (each spans 2 cols),
     # Row 1 = "Time", "Event" headers, Rows 2+ = data

@@ -12,18 +12,24 @@ public enum BarRenderer {
         in context: GraphicsContext,
         plotRect: CGRect,
         groups: [GroupData],
-        style: StyleSpec
+        style: StyleSpec,
+        yRangeOverride: (min: Double, max: Double)? = nil
     ) {
         guard !groups.isEmpty else { return }
 
-        let yRange = computeYRange(groups: groups, errorType: style.errorType)
-        let groupWidth = plotRect.width / CGFloat(groups.count)
+        let yRange = yRangeOverride ?? computeYRange(groups: groups, errorType: style.errorType)
         let barFraction = CGFloat(style.barWidth)
+
+        // Use the same groupWidth as AxisRenderer (plotRect.width / count)
+        // so bars are always centered on their x-axis label.
+        // Cap the actual bar pixel width for Prism-like appearance.
+        let groupWidth = plotRect.width / CGFloat(groups.count)
+        let maxBarWidth: CGFloat = 50.0
+        let barW = min(groupWidth * barFraction, maxBarWidth)
 
         for (i, group) in groups.enumerated() {
             let color = Color(hex: colorForIndex(i, style: style))
             let centerX = plotRect.minX + (CGFloat(i) + 0.5) * groupWidth
-            let barW = groupWidth * barFraction
 
             guard let mean = group.values.mean else { continue }
 
@@ -32,18 +38,33 @@ public enum BarRenderer {
                 let barTop = yToCanvas(mean, plotRect: plotRect, yRange: yRange)
                 let barBottom = yToCanvas(max(yRange.min, 0), plotRect: plotRect, yRange: yRange)
 
-                let barRect = CGRect(
+                // Clip bar to plot area so it doesn't draw over axis lines
+                let rawBarRect = CGRect(
                     x: centerX - barW / 2,
                     y: min(barTop, barBottom),
                     width: barW,
                     height: abs(barBottom - barTop)
                 )
-                context.fill(Path(barRect), with: .color(color.opacity(0.85)))
+                let barRect = rawBarRect.intersection(plotRect)
+                guard !barRect.isNull else { continue }
 
-                // Bar border
-                let borderColor = Color(hex: style.barBorderColor)
-                context.stroke(Path(barRect), with: .color(borderColor),
-                               lineWidth: CGFloat(style.barBorderThickness))
+                context.fill(Path(barRect), with: .color(color.opacity(style.barFillOpacity)))
+
+                // Bar border ("auto" = use group color at full opacity)
+                // Only draw the 3 visible sides (left, top, right) — not the bottom which sits on the axis
+                let borderColor = style.barBorderColor == "auto" ? color : Color(hex: style.barBorderColor)
+                if style.barBorderThickness > 0 {
+                    var borderPath = Path()
+                    // Left side
+                    borderPath.move(to: CGPoint(x: barRect.minX, y: barRect.maxY))
+                    borderPath.addLine(to: CGPoint(x: barRect.minX, y: barRect.minY))
+                    // Top side
+                    borderPath.addLine(to: CGPoint(x: barRect.maxX, y: barRect.minY))
+                    // Right side
+                    borderPath.addLine(to: CGPoint(x: barRect.maxX, y: barRect.maxY))
+                    context.stroke(borderPath, with: .color(borderColor),
+                                   lineWidth: CGFloat(style.barBorderThickness))
+                }
             }
 
             // Error bars (only if errorType != "none")

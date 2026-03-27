@@ -7,11 +7,14 @@ import pandas as pd
 from refraction.core.config import PRISM_PALETTE
 
 
-def read_data(excel_path: str, sheet=0, *, header=0) -> pd.DataFrame:
+def read_data(excel_path: str, sheet=0, *, header=0, df: pd.DataFrame | None = None) -> pd.DataFrame:
     """Read an Excel/CSV file and return a DataFrame.
 
+    If *df* is provided, return it directly (for inline data from the Swift app).
     Raises FileNotFoundError or ValueError on failure.
     """
+    if df is not None:
+        return df
     path = str(excel_path)
     if path.endswith(".csv"):
         return pd.read_csv(path, header=header)
@@ -39,7 +42,7 @@ def extract_config(kw: dict) -> dict:
     Returns a flat dict with normalised keys that every analyzer needs.
     """
     ytitle_val = kw.get("ytitle", kw.get("ylabel", ""))
-    return {
+    result = {
         "excel_path": kw.get("excel_path", ""),
         "sheet": kw.get("sheet", 0),
         "title": kw.get("title", ""),
@@ -64,3 +67,7 @@ def extract_config(kw: dict) -> dict:
         "posthoc": kw.get("posthoc", ""),
         "correction": kw.get("correction", ""),
     }
+    # Pass through inline DataFrame if provided
+    if "_df" in kw:
+        result["_df"] = kw["_df"]
+    return result

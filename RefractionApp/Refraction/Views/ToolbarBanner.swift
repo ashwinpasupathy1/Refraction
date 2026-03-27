@@ -20,6 +20,9 @@ struct ToolbarBanner: View {
     @State private var showArchitectureGuide = false
     @State private var showFormatGraph = false
     @State private var showFormatAxes = false
+    @State private var showDataSettings = false
+    @State private var showStatsSettings = false
+    @State private var showStyleSettings = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -86,6 +89,18 @@ struct ToolbarBanner: View {
                 FormatAxesDialog(settings: graph.formatAxesSettings)
             }
         }
+        .sheet(isPresented: $showDataSettings) {
+            DataSettingsDialog()
+                .environment(appState)
+        }
+        .sheet(isPresented: $showStatsSettings) {
+            StatsSettingsDialog()
+                .environment(appState)
+        }
+        .sheet(isPresented: $showStyleSettings) {
+            StyleSettingsDialog()
+                .environment(appState)
+        }
         .alert("Delete Selected Item?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 deleteSelectedItem()
@@ -102,7 +117,7 @@ struct ToolbarBanner: View {
         VStack(spacing: 1) {
             HStack(spacing: 6) {
                 activeButton(icon: "doc.badge.plus", label: "New", color: .blue) {
-                    appState.newProject()
+                    appState.requestNewProject()
                 }
                 Menu {
                     Button("Open File...") {
@@ -160,14 +175,17 @@ struct ToolbarBanner: View {
             HStack(spacing: 6) {
                 activeButton(icon: "tablecells.badge.ellipsis", label: "Table", color: hasExperiment ? .teal : .gray) {
                     guard appState.activeExperiment != nil else { return }
+                    DebugLog.shared.logUI("open NewDataTableDialog")
                     showNewDataTableDialog = true
                 }
                 activeButton(icon: "chart.bar.fill", label: "Graph", color: hasData ? .indigo : .gray) {
                     guard appState.activeExperiment?.hasData == true else { return }
+                    DebugLog.shared.logUI("open NewGraphDialog")
                     showNewGraphDialog = true
                 }
                 activeButton(icon: "trash", label: "Delete", color: hasSelection ? .red : .gray) {
                     guard appState.activeItemID != nil else { return }
+                    DebugLog.shared.logUI("delete \(appState.activeItemKind?.rawValue ?? "item")")
                     showDeleteConfirm = true
                 }
             }
@@ -183,14 +201,21 @@ struct ToolbarBanner: View {
             HStack(spacing: 6) {
                 activeButton(icon: "arrow.uturn.backward", label: "Undo",
                              color: appState.canUndo ? .blue : .gray) {
+                    let desc = appState.undoManager.undoActionName
                     appState.undoManager.undo()
-                    DebugLog.shared.logAppEvent("undo()")
+                    appState.refreshUndoState()
+                    DebugLog.shared.logUI("undo: \(desc.isEmpty ? "(empty)" : desc)")
                 }
+                .disabled(!appState.canUndo)
+
                 activeButton(icon: "arrow.uturn.forward", label: "Redo",
                              color: appState.canRedo ? .blue : .gray) {
+                    let desc = appState.undoManager.redoActionName
                     appState.undoManager.redo()
-                    DebugLog.shared.logAppEvent("redo()")
+                    appState.refreshUndoState()
+                    DebugLog.shared.logUI("redo: \(desc.isEmpty ? "(empty)" : desc)")
                 }
+                .disabled(!appState.canRedo)
             }
             groupLabel("Undo")
         }
@@ -222,6 +247,7 @@ struct ToolbarBanner: View {
             HStack(spacing: 6) {
                 activeButton(icon: "function", label: "Analyze", color: hasData ? .purple : .gray) {
                     guard appState.activeExperiment?.hasData == true else { return }
+                    DebugLog.shared.logUI("open AnalyzeDataDialog")
                     showAnalyzeDialog = true
                 }
             }
@@ -237,23 +263,30 @@ struct ToolbarBanner: View {
 
         return VStack(spacing: 1) {
             HStack(spacing: 6) {
+                activeButton(icon: "doc.fill", label: "Data", color: hasGraph ? .teal : .gray) {
+                    guard appState.activeGraph != nil else { return }
+                    DebugLog.shared.logUI("open DataSettingsDialog")
+                    showDataSettings = true
+                }
                 activeButton(icon: "paintbrush", label: "Format", color: hasGraph ? .orange : .gray) {
                     guard appState.activeGraph != nil else { return }
+                    DebugLog.shared.logUI("open FormatGraphDialog")
                     showFormatGraph = true
                 }
                 activeButton(icon: "ruler", label: "Axes", color: hasGraph ? .brown : .gray) {
                     guard appState.activeGraph != nil else { return }
+                    DebugLog.shared.logUI("open FormatAxesDialog")
                     showFormatAxes = true
                 }
                 activeButton(icon: "paintpalette", label: "Style", color: hasGraph ? .yellow : .gray) {
-                    // Cycle render style on click
-                    guard let graph = appState.activeGraph else { return }
-                    let styles = RenderStyle.allCases
-                    if let idx = styles.firstIndex(of: graph.renderStyle) {
-                        let next = styles[(idx + 1) % styles.count]
-                        graph.applyRenderStyle(next)
-                        DebugLog.shared.logAppEvent("cycleRenderStyle(\(next.rawValue))")
-                    }
+                    guard appState.activeGraph != nil else { return }
+                    DebugLog.shared.logUI("open StyleSettingsDialog")
+                    showStyleSettings = true
+                }
+                activeButton(icon: "function", label: "Stats", color: hasGraph ? .purple : .gray) {
+                    guard appState.activeGraph != nil else { return }
+                    DebugLog.shared.logUI("open StatsSettingsDialog")
+                    showStatsSettings = true
                 }
             }
             groupLabel("Format")
@@ -297,9 +330,11 @@ struct ToolbarBanner: View {
         VStack(spacing: 1) {
             HStack(spacing: 6) {
                 activeButton(icon: "book.fill", label: "Wiki", color: .cyan) {
+                    DebugLog.shared.logUI("open StatsWiki")
                     showStatsWiki = true
                 }
                 activeButton(icon: "text.book.closed", label: "Guide", color: .indigo) {
+                    DebugLog.shared.logUI("open ArchitectureGuide")
                     showArchitectureGuide = true
                 }
             }
@@ -317,6 +352,7 @@ struct ToolbarBanner: View {
             HStack(spacing: 6) {
                 activeButton(icon: "square.and.arrow.up", label: "Export", color: hasChart ? .pink : .gray) {
                     guard appState.activeGraph?.chartSpec != nil else { return }
+                    DebugLog.shared.logUI("open ExportDialog")
                     showExportDialog = true
                 }
             }

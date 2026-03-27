@@ -1,6 +1,6 @@
-// GraphSheetView.swift — Graph view with chart canvas + config panel sidebar.
+// GraphSheetView.swift — Graph view with chart canvas + zoom strip.
 // Auto-generates the chart when the graph appears or data changes.
-// Double-click the chart to open the Format Graph dialog.
+// Format dialogs are opened from the main toolbar ribbon, not from here.
 
 import SwiftUI
 import RefractionRenderer
@@ -10,65 +10,26 @@ struct GraphSheetView: View {
     @Environment(AppState.self) private var appState
     let graph: Graph
 
-    @State private var showFormatDialog = false
-    @State private var showFormatAxesDialog = false
-    @State private var showConfigPanel = true
-    @State private var configPanelWidth: CGFloat = 260
-
     var body: some View {
         VStack(spacing: 0) {
-            // Minimal toolbar (chart type label + format button)
+            // Minimal toolbar (chart type label)
             graphToolbar
             Divider()
 
-            // Main content: chart canvas + optional config panel
-            HStack(spacing: 0) {
-                // Chart canvas + zoom strip
-                VStack(spacing: 0) {
-                    chartArea
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    Divider()
-                    zoomControlStrip
-                }
-
-                if showConfigPanel {
-                    // Draggable divider
-                    Rectangle()
-                        .fill(Color(nsColor: .separatorColor))
-                        .frame(width: 1)
-                        .onHover { hovering in
-                            if hovering {
-                                NSCursor.resizeLeftRight.push()
-                            } else {
-                                NSCursor.pop()
-                            }
-                        }
-                        .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    let newWidth = configPanelWidth - value.translation.width
-                                    configPanelWidth = min(max(newWidth, 200), 400)
-                                }
-                        )
-
-                    // Config panel
-                    ConfigTabView()
-                        .frame(width: configPanelWidth)
-                        .background(Color(nsColor: .controlBackgroundColor))
-                }
+            // Main content: chart canvas + zoom strip
+            VStack(spacing: 0) {
+                chartArea
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Divider()
+                zoomControlStrip
             }
         }
         // Auto-generate only when this graph has no spec and data is available.
-        .task(id: "\(graph.id)_\(appState.activeGraphDataTable?.dataFilePath ?? "")") {
+        .task(id: "\(graph.id)_\(appState.activeGraphDataTable?.columns.count ?? 0)_\(appState.activeGraphDataTable?.rows.count ?? 0)") {
             guard graph.chartSpec == nil,
                   appState.activeGraphDataTable?.hasData == true else { return }
+            DebugLog.shared.logVerbose("auto-generate chart: \(graph.chartType.rawValue)")
             await appState.generatePlot()
-        }
-        .sheet(isPresented: $showFormatDialog) {
-            FormatGraphDialog(settings: graph.formatSettings)
-        }
-        .sheet(isPresented: $showFormatAxesDialog) {
-            FormatAxesDialog(settings: graph.formatAxesSettings)
         }
     }
 
@@ -81,7 +42,8 @@ struct GraphSheetView: View {
         return applyFormatSettings(
             spec: baseSpec,
             graphSettings: graph.formatSettings,
-            axesSettings: graph.formatAxesSettings
+            axesSettings: graph.formatAxesSettings,
+            renderStyle: graph.renderStyle
         )
     }
 
@@ -96,18 +58,10 @@ struct GraphSheetView: View {
                 let zoom = graph.zoomLevel
                 let scaledWidth = geo.size.width * zoom
                 let scaledHeight = geo.size.height * zoom
-                let needsScroll = zoom > 1.0
 
-                Group {
-                    if needsScroll {
-                        ScrollView([.horizontal, .vertical]) {
-                            chartCanvas(spec: spec)
-                                .frame(width: scaledWidth, height: scaledHeight)
-                        }
-                    } else {
-                        chartCanvas(spec: spec)
-                            .frame(width: geo.size.width, height: geo.size.height)
-                    }
+                ScrollView([.horizontal, .vertical]) {
+                    chartCanvas(spec: spec)
+                        .frame(width: scaledWidth, height: scaledHeight)
                 }
             }
         } else if appState.activeGraphDataTable?.hasData == true {
@@ -124,14 +78,6 @@ struct GraphSheetView: View {
     @ViewBuilder
     private func chartCanvas(spec: ChartSpec) -> some View {
         ChartCanvasView(spec: spec)
-            .contextMenu {
-                Button("Format Graph...") {
-                    showFormatDialog = true
-                }
-                Button("Format Axes...") {
-                    showFormatAxesDialog = true
-                }
-            }
     }
 
     // MARK: - Zoom Control Strip
@@ -195,33 +141,6 @@ struct GraphSheetView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    showConfigPanel.toggle()
-                }
-            } label: {
-                Image(systemName: showConfigPanel ? "sidebar.trailing" : "sidebar.right")
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .help(showConfigPanel ? "Hide Config Panel" : "Show Config Panel")
-
-            Button {
-                showFormatDialog = true
-            } label: {
-                Label("Format", systemImage: "paintbrush")
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-
-            Button {
-                showFormatAxesDialog = true
-            } label: {
-                Label("Axes", systemImage: "axis.horizontal.and.vertical")
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)

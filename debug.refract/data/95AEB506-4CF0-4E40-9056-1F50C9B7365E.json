@@ -1,0 +1,32 @@
+{
+  "columns": [
+    "Category",
+    "Value"
+  ],
+  "rows": [
+    [
+      "Alpha",
+      67.1
+    ],
+    [
+      "Beta",
+      43.0
+    ],
+    [
+      "Gamma",
+      60.2
+    ],
+    [
+      "Delta",
+      80.8
+    ],
+    [
+      "Epsilon",
+      34.4
+    ],
+    [
+      "Zeta",
+      48.5
+    ]
+  ]
+}

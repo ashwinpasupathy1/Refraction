@@ -27,22 +27,18 @@ struct DataTabView: View {
                             }
                             .labelsHidden()
                             .frame(maxWidth: .infinity)
-                            .onChange(of: graph.dataTableID) { _, newID in
-                                // Sync the excel path when the user picks a different data table
-                                if let table = experiment.dataTables.first(where: { $0.id == newID }) {
-                                    config.excelPath = table.dataFilePath ?? ""
-                                }
+                            .onChange(of: graph.dataTableID) { _, _ in
+                                // Data table switch handled — data is now in-memory
                             }
                         }
 
                         HStack {
                             let table = appState.activeExperiment?.dataTable(for: graph)
-                            let displayName = table?.originalFileName ?? fileDisplayName(for: config)
-                            Text(displayName)
+                            Text(table?.originalFileName ?? table?.label ?? "No data")
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .foregroundStyle(config.excelPath.isEmpty ? .secondary : .primary)
+                                .foregroundStyle(table?.hasData == true ? .primary : .secondary)
                         }
 
                         LabeledContent("Sheet") {
@@ -133,7 +129,7 @@ struct DataTabView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                    .disabled(appState.isLoading || config.excelPath.isEmpty)
+                    .disabled(appState.isLoading || !(appState.activeExperiment?.dataTable(for: graph)?.hasData ?? false))
 
                     Spacer()
                 }
@@ -146,13 +142,6 @@ struct DataTabView: View {
     }
 
     // MARK: - Helpers
-
-    private func fileDisplayName(for config: ChartConfig) -> String {
-        if config.excelPath.isEmpty {
-            return "No file selected"
-        }
-        return URL(fileURLWithPath: config.excelPath).lastPathComponent
-    }
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title)

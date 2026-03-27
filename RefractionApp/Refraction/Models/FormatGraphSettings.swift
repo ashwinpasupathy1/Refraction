@@ -22,6 +22,7 @@ final class FormatGraphSettings: Codable {
     var showBars: Bool = true
     var barColor: String = "#000000"    // "auto" = use group color
     var barWidth: Double = 0.6
+    var barFillOpacity: Double = 0.85
     var barBorderColor: String = "#000000"
     var barBorderThickness: Double = 0.8
     var barPattern: BarPattern = .solid

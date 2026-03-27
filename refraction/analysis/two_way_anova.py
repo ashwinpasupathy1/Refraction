@@ -22,7 +22,9 @@ def analyze_two_way_anova(kw: dict[str, Any]) -> ChartSpec:
     excel_path = cfg["excel_path"]
     sheet = cfg["sheet"]
 
-    if excel_path.endswith(".csv"):
+    if "_df" in cfg:
+        df = cfg["_df"]
+    elif excel_path.endswith(".csv"):
         df = pd.read_csv(excel_path)
     else:
         df = pd.read_excel(excel_path, sheet_name=sheet)

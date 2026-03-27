@@ -809,3 +809,107 @@ class TestTwowayPosthoc:
             g2 = df[(df["B"] == b_val) & (df["A"] == row["group2"])]["Y"].values
             _, p_scipy = sp_stats.ttest_ind(g1, g2, equal_var=False)
             assert row["p_raw"] == pytest.approx(p_scipy, abs=1e-12)
+
+
+# ============================================================================
+# Additional control-group and correction tests (merged from test_stats.py)
+# ============================================================================
+
+class TestControlGroupAdvanced:
+    """Advanced control-group filtering and correction tests."""
+
+    def test_pair_filter_symmetric(self):
+        """Control filtering works regardless of control group position in dict."""
+        rng = np.random.default_rng(7)
+        base = rng.normal(0, 1, 12)
+        for ctrl_pos, group_order in enumerate([
+            ["Control", "Drug A", "Drug B"],
+            ["Drug A", "Control", "Drug B"],
+            ["Drug A", "Drug B", "Control"],
+        ]):
+            groups = {g: base + rng.normal(i * 3, 0.5, 12)
+                      for i, g in enumerate(group_order)}
+            results = _run_stats(groups, test_type="parametric",
+                                 posthoc="Tukey HSD", control="Control")
+            assert len(results) == 2
+            pairs = {frozenset([r[0], r[1]]) for r in results}
+            assert frozenset(["Drug A", "Drug B"]) not in pairs
+
+    def test_control_none_all_pairs_nonparametric(self):
+        """With 4 groups and no control, nonparametric returns C(4,2)=6 pairs."""
+        rng = np.random.default_rng(7)
+        groups = {"A": rng.normal(5, 1, 10),
+                  "B": rng.normal(7, 1, 10),
+                  "C": rng.normal(9, 1, 10),
+                  "D": rng.normal(11, 1, 10)}
+        results = _run_stats(groups, test_type="nonparametric", control=None)
+        assert len(results) == 6
+
+    def test_dunnett_no_double_mc_correction(self):
+        """Dunnett p-values match scipy exactly (no double correction)."""
+        from scipy.stats import dunnett as _dunnett
+        rng = np.random.default_rng(7)
+        ctrl = rng.normal(5, 1, 20)
+        trt_a = rng.normal(8, 1, 20)
+        trt_b = rng.normal(11, 1, 20)
+        groups = {"Ctrl": ctrl, "A": trt_a, "B": trt_b}
+
+        scipy_res = _dunnett(trt_a, trt_b, control=ctrl)
+        our_res = _run_stats(groups, test_type="parametric",
+                             posthoc="Dunnett (vs control)", control="Ctrl")
+
+        scipy_p = sorted(float(p) for p in scipy_res.pvalue)
+        our_p = sorted(r[2] for r in our_res)
+        for sp, op in zip(scipy_p, our_p):
+            assert sp == pytest.approx(op, abs=1e-10)
+
+    def test_tukey_ms_within_uses_all_groups(self):
+        """Tukey MS_within uses all groups even in control-only mode."""
+        rng = np.random.default_rng(99)
+        groups = {
+            "Ctrl": rng.normal(5, 1, 10),
+            "A": rng.normal(7, 1, 10),
+            "B": rng.normal(9, 1, 10),
+        }
+        results_ctrl = _run_stats(groups, test_type="parametric",
+                                  posthoc="Tukey HSD", control="Ctrl")
+        results_all = _run_stats(groups, test_type="parametric",
+                                 posthoc="Tukey HSD", control=None)
+
+        def _find(res, a, b):
+            for g1, g2, p, _ in res:
+                if {g1, g2} == {a, b}:
+                    return p
+            return None
+
+        p_ctrl = _find(results_ctrl, "Ctrl", "A")
+        p_all = _find(results_all, "Ctrl", "A")
+        assert p_ctrl is not None
+        assert p_all is not None
+        assert p_ctrl == pytest.approx(p_all, abs=1e-10)
+
+    def test_all_posthoc_with_control(self):
+        """Multiple posthoc methods correctly filter to control-only pairs."""
+        rng = np.random.default_rng(7)
+        groups = {"Ctrl": rng.normal(5, 1, 10),
+                  "A": rng.normal(8, 1, 10),
+                  "B": rng.normal(11, 1, 10)}
+        for posthoc in ("Tukey HSD", "Bonferroni", "Sidak", "Fisher LSD"):
+            results = _run_stats(groups, test_type="parametric",
+                                 posthoc=posthoc, control="Ctrl")
+            assert len(results) == 2
+            pairs = {frozenset([r[0], r[1]]) for r in results}
+            assert frozenset(["A", "B"]) not in pairs
+
+    def test_mc_correction_increases_p(self):
+        """Holm-Bonferroni correction should produce p >= raw p."""
+        rng = np.random.default_rng(7)
+        groups = {"A": rng.normal(5, 0.5, 8),
+                  "B": rng.normal(6, 0.5, 8),
+                  "C": rng.normal(7, 0.5, 8)}
+        raw_res = _run_stats(groups, "parametric", mc_correction="None (uncorrected)")
+        holm_res = _run_stats(groups, "parametric", mc_correction="Holm-Bonferroni")
+        raw_p = sorted(r[2] for r in raw_res)
+        holm_p = sorted(r[2] for r in holm_res)
+        for rp, hp in zip(raw_p, holm_p):
+            assert hp >= rp - 1e-12

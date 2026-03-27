@@ -21,8 +21,9 @@ struct ProjectState: Codable {
         var id: String
         var label: String
         var tableType: String
-        var dataFilePath: String?
         var originalFileName: String?
+        var columns: [String]?
+        var rows: [[CellValue]]?
     }
 
     struct GraphState: Codable {

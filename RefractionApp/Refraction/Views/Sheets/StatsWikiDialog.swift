@@ -653,12 +653,16 @@ struct StatsWikiDialog: View {
     // MARK: - Load Data
 
     private func loadRecommendation() async {
-        guard let path = table?.dataFilePath, !path.isEmpty else {
+        guard let table, table.hasData else {
             isLoading = false
             return
         }
         do {
-            recommendation = try await APIClient.shared.recommendTest(excelPath: path)
+            recommendation = try await APIClient.shared.recommendTest(
+                inlineData: table.toAnalyzePayload(),
+                paired: table.tableType == .comparison,
+                tableType: table.tableType.rawValue
+            )
         } catch {
             recommendation = nil
         }

@@ -9,6 +9,7 @@ struct DebugConsolePanel: View {
     @Environment(AppState.self) private var appState
     @State private var selectedEntry: DebugLog.Entry?
     @State private var filterErrors = false
+    @State private var showVerbose = false
     @State private var searchText = ""
     @State private var autoScroll = true
 
@@ -16,6 +17,9 @@ struct DebugConsolePanel: View {
 
     private var filteredEntries: [DebugLog.Entry] {
         var entries = log.entries
+        if !showVerbose {
+            entries = entries.filter { !$0.isVerbose }
+        }
         if filterErrors {
             entries = entries.filter { $0.isError }
         }
@@ -72,6 +76,12 @@ struct DebugConsolePanel: View {
                 .toggleStyle(.checkbox)
                 .controlSize(.mini)
                 .font(.system(size: 10))
+
+            Toggle("Verbose", isOn: $showVerbose)
+                .toggleStyle(.checkbox)
+                .controlSize(.mini)
+                .font(.system(size: 10))
+                .help("Show high-frequency events (cell edits, format changes, re-renders)")
 
             TextField("Filter", text: $searchText)
                 .textFieldStyle(.roundedBorder)
@@ -165,6 +175,8 @@ struct DebugConsolePanel: View {
         case .error:    return .red
         case .app:      return .purple
         case .engine:   return .orange
+        case .ui:       return .teal
+        case .verbose:  return .gray
         }
     }
 

@@ -17,7 +17,12 @@ struct RefractionApp: App {
                 .environment(pythonServer)
                 .onAppear {
                     pythonServer.start()
-                    appState.loadProjectIfExists()
+                    // Maximize the window on launch
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        if let window = NSApplication.shared.mainWindow {
+                            window.zoom(nil)
+                        }
+                    }
                 }
                 .onDisappear {
                     appState.saveProject()
@@ -48,7 +53,7 @@ struct RefractionApp: App {
             // File menu: New, Open, Save, Save As
             CommandGroup(replacing: .newItem) {
                 Button("New Project") {
-                    appState.newProject()
+                    appState.requestNewProject()
                 }
                 .keyboardShortcut("n", modifiers: .command)
 
@@ -86,6 +91,25 @@ struct RefractionApp: App {
                     Task { await appState.saveProjectFileAs() }
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
+            }
+
+            // Edit menu: Undo/Redo
+            CommandGroup(replacing: .undoRedo) {
+                Button("Undo \(appState.undoManager.undoActionName)") {
+                    appState.undoManager.undo()
+                    appState.refreshUndoState()
+                    DebugLog.shared.logUI("undo (Cmd+Z)")
+                }
+                .keyboardShortcut("z", modifiers: .command)
+                .disabled(!appState.canUndo)
+
+                Button("Redo \(appState.undoManager.redoActionName)") {
+                    appState.undoManager.redo()
+                    appState.refreshUndoState()
+                    DebugLog.shared.logUI("redo (Cmd+Shift+Z)")
+                }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+                .disabled(!appState.canRedo)
             }
 
             // Replace the default About menu item

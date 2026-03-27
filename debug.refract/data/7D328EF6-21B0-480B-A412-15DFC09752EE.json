@@ -1,0 +1,19 @@
+{
+  "columns": [
+    "",
+    "Outcome Positive",
+    "Outcome Negative"
+  ],
+  "rows": [
+    [
+      "Treatment",
+      45,
+      15
+    ],
+    [
+      "Placebo",
+      30,
+      30
+    ]
+  ]
+}

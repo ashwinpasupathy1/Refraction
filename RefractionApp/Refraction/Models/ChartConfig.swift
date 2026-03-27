@@ -10,7 +10,6 @@ final class ChartConfig {
 
     // MARK: - Data tab
 
-    var excelPath: String = ""
     var sheet: Int = 0
 
     // MARK: - Labels tab
@@ -153,7 +152,7 @@ final class ChartConfig {
     /// Produces the flat kwargs dict expected by the Python /render endpoint.
     func toDict() -> [String: Any] {
         var d: [String: Any] = [
-            "excel_path": excelPath,
+            "excel_path": "",
             "sheet": sheet,
 
             // Labels
@@ -221,7 +220,7 @@ final class ChartConfig {
 
     /// Populate from a dict (inverse of toDict, used when loading .refract files).
     func loadFromDict(_ d: [String: Any]) {
-        excelPath = d["excel_path"] as? String ?? excelPath
+        // excel_path no longer used — data is inline
         sheet = d["sheet"] as? Int ?? sheet
         title = d["title"] as? String ?? title
         xlabel = d["xlabel"] as? String ?? xlabel
@@ -280,7 +279,7 @@ final class ChartConfig {
 
     /// Reset all config values to defaults.
     func resetToDefaults() {
-        excelPath = ""
+        // excelPath removed — data is inline
         sheet = 0
         title = ""
         xlabel = ""

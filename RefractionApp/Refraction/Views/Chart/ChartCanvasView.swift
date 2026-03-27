@@ -11,32 +11,57 @@ struct ChartCanvasView: View {
     /// Insets from the canvas edge to the plot area (axes region).
     private let plotInsets = EdgeInsets(top: 40, leading: 60, bottom: 50, trailing: 20)
 
+    /// Ideal plot width per group slot for bar-like charts (Prism-style fixed bar sizing).
+    private static let idealSlotWidth: CGFloat = 90.0
+
+    /// Whether this chart type uses fixed-width bar slots (vs filling the plot area).
+    private var usesFixedBarSlots: Bool {
+        ["bar", "column_stats", "waterfall", "pyramid", "box", "violin",
+         "dot_plot", "raincloud", "histogram", "before_after", "lollipop"].contains(spec.chartType)
+    }
+
     var body: some View {
         GeometryReader { geometry in
             Canvas { context, size in
+                // For bar-like charts, compute a fixed plot width from group count
+                // so bars don't stretch. Center the plot area horizontally.
+                let maxPlotWidth = size.width - plotInsets.leading - plotInsets.trailing
+                let plotWidth: CGFloat
+                let plotX: CGFloat
+
+                if usesFixedBarSlots && !spec.groups.isEmpty {
+                    let idealWidth = Self.idealSlotWidth * CGFloat(spec.groups.count)
+                    plotWidth = min(idealWidth, maxPlotWidth)
+                    plotX = plotInsets.leading + (maxPlotWidth - plotWidth) / 2
+                } else {
+                    plotWidth = maxPlotWidth
+                    plotX = plotInsets.leading
+                }
+
                 let plotRect = CGRect(
-                    x: plotInsets.leading,
+                    x: plotX,
                     y: plotInsets.top,
-                    width: size.width - plotInsets.leading - plotInsets.trailing,
+                    width: plotWidth,
                     height: size.height - plotInsets.top - plotInsets.bottom
                 )
 
-                // Use engine-provided Y range, fall back to data-computed
+                // Compute Y range that accounts for both engine range and raw data points.
+                // The engine may only consider mean±error; raw scatter points can exceed that.
+                let dataRange = RefractionRenderer.computeYRange(groups: spec.groups, errorType: spec.style.errorType)
                 let yRange: (min: Double, max: Double)
                 if let r = spec.axes.yRange, r.count == 2 {
-                    yRange = (min: r[0], max: r[1])
+                    // Expand engine range if raw data points exceed it
+                    yRange = (min: Swift.min(r[0], dataRange.min), max: Swift.max(r[1], dataRange.max))
                 } else {
-                    yRange = computeYRange(groups: spec.groups)
+                    yRange = dataRange
                 }
 
-                // 1. Draw axes (spines, ticks, labels) with engine-provided ticks
-                AxisRenderer.draw(
+                // 1. Draw axis background and grid (behind chart data)
+                AxisRenderer.drawBackground(
                     in: context,
                     plotRect: plotRect,
-                    canvasSize: size,
                     spec: spec.axes,
                     style: spec.style,
-                    groups: spec.groups.map(\.name),
                     yRange: yRange
                 )
 
@@ -50,7 +75,8 @@ struct ChartCanvasView: View {
                         in: context,
                         plotRect: plotRect,
                         groups: spec.groups,
-                        style: spec.style
+                        style: spec.style,
+                        yRangeOverride: yRange
                     )
 
                 case "grouped_bar":
@@ -155,7 +181,8 @@ struct ChartCanvasView: View {
                             in: context,
                             plotRect: plotRect,
                             groups: spec.groups,
-                            style: spec.style
+                            style: spec.style,
+                            yRangeOverride: yRange
                         )
                     } else {
                         drawPlaceholder(in: context, size: size, chartType: spec.chartType)
@@ -177,6 +204,17 @@ struct ChartCanvasView: View {
                 if let refLine = spec.referenceLine {
                     drawReferenceLine(in: context, plotRect: plotRect, refLine: refLine, spec: spec)
                 }
+
+                // 5. Draw axis spines, ticks, and labels ON TOP of chart data
+                AxisRenderer.drawForeground(
+                    in: context,
+                    plotRect: plotRect,
+                    canvasSize: size,
+                    spec: spec.axes,
+                    style: spec.style,
+                    groups: spec.groups.map(\.name),
+                    yRange: yRange
+                )
             }
             .background(pageBackgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: 4))

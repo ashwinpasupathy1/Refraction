@@ -222,7 +222,8 @@ def _make_app():
     # ------------------------------------------------------------------
     class AnalyzeRequest(BaseModel):
         chart_type: str
-        excel_path: str
+        excel_path: str = ""
+        data: dict[str, Any] | None = None  # {"columns": [...], "rows": [[...]]}
         config: dict[str, Any] = {}
 
     # ------------------------------------------------------------------
@@ -275,22 +276,40 @@ def _make_app():
 
     @api.post("/analyze")
     def analyze_endpoint(req: AnalyzeRequest):
-        """Run renderer-independent analysis on uploaded data."""
+        """Run renderer-independent analysis on uploaded data.
+
+        Accepts either:
+        - ``excel_path``: path to a file on disk (legacy)
+        - ``data``: inline JSON with ``columns`` and ``rows`` keys
+        """
         try:
-            path_err = _validate_data_path(req.excel_path)
-            if path_err:
+            df = None
+            if req.data:
+                # Inline data — convert to DataFrame directly
+                import pandas as _pd
+                columns = req.data.get("columns", [])
+                rows = req.data.get("rows", [])
+                df = _pd.DataFrame(rows, columns=columns)
+            elif req.excel_path:
+                path_err = _validate_data_path(req.excel_path)
+                if path_err:
+                    return JSONResponse(
+                        {"ok": False, "error": path_err}, status_code=400
+                    )
+            else:
                 return JSONResponse(
-                    {"ok": False, "error": path_err}, status_code=400
+                    {"ok": False, "error": "Either excel_path or data must be provided"},
+                    status_code=400,
                 )
             from refraction.analysis import analyze
-            result = analyze(req.chart_type, req.excel_path, req.config)
+            result = analyze(req.chart_type, req.excel_path or "", req.config, df=df)
             if not result.get("ok"):
                 return JSONResponse(result, status_code=400)
             return result
         except Exception as exc:
             _log.exception("Analyze failed for chart_type=%s", req.chart_type)
             return JSONResponse(
-                {"ok": False, "error": str(exc)}, status_code=500
+                {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}, status_code=500
             )
 
     # ------------------------------------------------------------------
@@ -315,12 +334,22 @@ def _make_app():
             kw = dict(req.kw)
             debug_mode = kw.pop("_debug", False) or req.debug
             excel_path = kw.pop("excel_path", "")
-            path_err = _validate_data_path(excel_path)
-            if path_err:
-                return JSONResponse(
-                    {"ok": False, "error": path_err},
-                    status_code=400,
-                )
+            inline_data = kw.pop("data", None)
+
+            # Build DataFrame from inline data if provided
+            df = None
+            if inline_data:
+                import pandas as _pd
+                columns = inline_data.get("columns", [])
+                rows = inline_data.get("rows", [])
+                df = _pd.DataFrame(rows, columns=columns)
+            elif excel_path:
+                path_err = _validate_data_path(excel_path)
+                if path_err:
+                    return JSONResponse(
+                        {"ok": False, "error": path_err},
+                        status_code=400,
+                    )
 
             # Map Swift config keys to engine config keys
             config = dict(kw)
@@ -333,10 +362,10 @@ def _make_app():
 
             # Collect engine trace
             trace = []
-            trace.append(f"analyze(chart_type={req.chart_type!r}, path={os.path.basename(excel_path)!r})")
+            trace.append(f"analyze(chart_type={req.chart_type!r}, path={os.path.basename(excel_path)!r}, inline={'yes' if df is not None else 'no'})")
             trace.append(f"config keys: {sorted(config.keys())}")
 
-            result = analyze(req.chart_type, excel_path, config)
+            result = analyze(req.chart_type, excel_path, config, df=df)
 
             if not result.get("ok"):
                 return JSONResponse(
@@ -386,14 +415,8 @@ def _make_app():
     # ------------------------------------------------------------------
     # File upload
     # ------------------------------------------------------------------
-    UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "refraction-uploads")
+    UPLOAD_DIR = os.path.join(os.path.expanduser("~"), ".refraction", "data")
     os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-    def _cleanup_uploads():
-        if os.path.isdir(UPLOAD_DIR):
-            shutil.rmtree(UPLOAD_DIR, ignore_errors=True)
-
-    atexit.register(_cleanup_uploads)
 
     @api.post("/upload")
     async def upload_file(file: UploadFile = FastAPIFile(...)):
@@ -440,7 +463,7 @@ def _make_app():
             return {"ok": True, "sheets": sheets}
         except Exception as exc:
             return JSONResponse(
-                {"ok": False, "error": str(exc)}, status_code=400
+                {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}, status_code=400
             )
 
     # ── Validate table data ──────────────────────────────────────
@@ -505,7 +528,7 @@ def _make_app():
             }
         except Exception as exc:
             return JSONResponse(
-                {"ok": False, "error": str(exc)}, status_code=400
+                {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}, status_code=400
             )
 
     # ── LaTeX rendering ─────────────────────────────────────────
@@ -562,17 +585,35 @@ def _make_app():
             return {"ok": True, "png_base64": base64.b64encode(png_bytes).decode()}
         except Exception as exc:
             _log.exception("LaTeX render failed")
-            return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+            return JSONResponse({"ok": False, "error": str(exc), "traceback": traceback.format_exc()}, status_code=400)
 
     # ── Data preview ──────────────────────────────────────────────
     class DataPreviewRequest(BaseModel):
-        excel_path: str
+        excel_path: str = ""
+        data: dict[str, Any] | None = None
         sheet: int | str = 0
 
     @api.post("/data-preview")
     def data_preview(req: DataPreviewRequest):
         """Return raw contents of an Excel/CSV file as JSON for read-only display."""
         try:
+            if req.data:
+                # Inline data — return it directly
+                columns = req.data.get("columns", [])
+                rows = req.data.get("rows", [])
+                return {
+                    "ok": True,
+                    "columns": columns,
+                    "rows": rows,
+                    "shape": [len(rows), len(columns)],
+                }
+
+            if not req.excel_path:
+                return JSONResponse(
+                    {"ok": False, "error": "Either excel_path or data must be provided"},
+                    status_code=400,
+                )
+
             path_err = _validate_data_path(req.excel_path)
             if path_err:
                 return JSONResponse(
@@ -595,51 +636,209 @@ def _make_app():
             }
         except Exception as exc:
             return JSONResponse(
-                {"ok": False, "error": str(exc)}, status_code=400
+                {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}, status_code=400
             )
 
     # ── Recommend statistical test ──────────────────────────────────
     class RecommendTestRequest(BaseModel):
-        excel_path: str
+        excel_path: str = ""
+        data: dict[str, Any] | None = None
         sheet: int | str = 0
         paired: bool = False
+        table_type: str = "column"
 
     @api.post("/recommend-test")
     def recommend_test_endpoint(req: RecommendTestRequest):
-        """Recommend the best statistical test for the data."""
+        """Recommend the best statistical test based on data and table type."""
         try:
-            path_err = _validate_data_path(req.excel_path)
-            if path_err:
-                return JSONResponse(
-                    {"ok": False, "error": path_err}, status_code=400
-                )
+            import numpy as np
             import pandas as pd
             from refraction.core.stats import recommend_test
 
-            if req.excel_path.endswith(".csv"):
-                df = pd.read_csv(req.excel_path)
+            if req.data:
+                columns = req.data.get("columns", [])
+                rows = req.data.get("rows", [])
+                df = pd.DataFrame(rows, columns=columns)
+            elif req.excel_path:
+                path_err = _validate_data_path(req.excel_path)
+                if path_err:
+                    return JSONResponse(
+                        {"ok": False, "error": path_err}, status_code=400
+                    )
+                if req.excel_path.endswith(".csv"):
+                    df = pd.read_csv(req.excel_path)
+                else:
+                    df = pd.read_excel(req.excel_path, sheet_name=req.sheet)
             else:
-                df = pd.read_excel(req.excel_path, sheet_name=req.sheet)
+                return JSONResponse(
+                    {"ok": False, "error": "Either excel_path or data must be provided"},
+                    status_code=400,
+                )
 
+            tt = req.table_type
             groups = {}
-            for col in df.columns:
-                vals = pd.to_numeric(df[col], errors="coerce").dropna().values
-                if len(vals) > 0:
-                    groups[str(col)] = vals
+            paired = req.paired
+
+            if tt == "column" or tt == "nested":
+                # Each column is a group, rows are observations
+                for col in df.columns:
+                    vals = pd.to_numeric(df[col], errors="coerce").dropna().values
+                    if len(vals) > 0:
+                        groups[str(col)] = vals
+
+            elif tt == "comparison":
+                # Paired columns (Method A, Method B, ...)
+                paired = True
+                for col in df.columns:
+                    vals = pd.to_numeric(df[col], errors="coerce").dropna().values
+                    if len(vals) > 0:
+                        groups[str(col)] = vals
+
+            elif tt == "xy":
+                # First column = X, rest = Y series (may have replicates)
+                # Recommend correlation/regression tests
+                n_cols = len(df.columns)
+                if n_cols >= 2:
+                    x_vals = pd.to_numeric(df.iloc[:, 0], errors="coerce").dropna().values
+                    y_vals = pd.to_numeric(df.iloc[:, 1], errors="coerce").dropna().values
+                    if len(x_vals) > 0 and len(y_vals) > 0:
+                        # Check normality for correlation recommendation
+                        from scipy import stats as sp_stats
+                        _, p_x = sp_stats.shapiro(x_vals[:min(len(x_vals), 5000)])
+                        _, p_y = sp_stats.shapiro(y_vals[:min(len(y_vals), 5000)])
+                        both_normal = p_x > 0.05 and p_y > 0.05
+                        test = "pearson" if both_normal else "spearman"
+                        label = "Pearson correlation" if both_normal else "Spearman rank correlation"
+                        just = (
+                            f"XY data with {len(x_vals)} observations. "
+                            f"{'Both variables are normally distributed — ' if both_normal else 'At least one variable is non-normal — '}"
+                            f"{label} is recommended."
+                        )
+                        return {
+                            "ok": True,
+                            "test": test,
+                            "test_label": label,
+                            "posthoc": None,
+                            "justification": just,
+                            "checks": {
+                                "n_groups": n_cols - 1,
+                                "paired": False,
+                                "min_n": len(x_vals),
+                                "normality": {},
+                                "all_normal": both_normal,
+                                "equal_variance": True,
+                                "levene_p": None,
+                            },
+                        }
+                    return {"ok": False, "error": "No numeric XY data found"}
+
+            elif tt == "grouped":
+                # Row 0 = category labels, columns = subgroups
+                # Extract numeric values per subgroup column
+                for col in df.columns[1:]:
+                    vals = pd.to_numeric(df[col], errors="coerce").dropna().values
+                    if len(vals) > 0:
+                        groups[str(col)] = vals
+                if not groups:
+                    # Try two-way: recommend two_way_anova directly
+                    return {
+                        "ok": True,
+                        "test": "two_way_anova",
+                        "test_label": "Two-way ANOVA",
+                        "posthoc": "Tukey HSD",
+                        "justification": "Grouped data with two factors — two-way ANOVA tests for main effects and interactions.",
+                        "checks": {"n_groups": 0, "paired": False, "min_n": 0,
+                                   "normality": {}, "all_normal": True, "equal_variance": True, "levene_p": None},
+                    }
+
+            elif tt == "contingency":
+                # Count data — recommend chi-square or Fisher's exact
+                # Flatten numeric cells to check expected counts
+                numeric_vals = df.select_dtypes(include=[np.number]).values.flatten()
+                numeric_vals = numeric_vals[~np.isnan(numeric_vals)]
+                n_cells = len(numeric_vals)
+                min_expected = float(np.min(numeric_vals)) if n_cells > 0 else 0
+                if n_cells <= 4 or min_expected < 5:
+                    test, label = "fisher_exact", "Fisher's exact test"
+                    just = f"Contingency table with small expected counts (min = {min_expected:.0f}). Fisher's exact test is preferred."
+                else:
+                    test, label = "chi_square", "Chi-square test of independence"
+                    just = f"Contingency table with sufficient expected counts (min = {min_expected:.0f}). Chi-square test is appropriate."
+                return {
+                    "ok": True, "test": test, "test_label": label, "posthoc": None,
+                    "justification": just,
+                    "checks": {"n_groups": n_cells, "paired": False, "min_n": int(min_expected),
+                               "normality": {}, "all_normal": True, "equal_variance": True, "levene_p": None},
+                }
+
+            elif tt == "survival":
+                # Time-to-event data — recommend log-rank
+                return {
+                    "ok": True,
+                    "test": "log_rank",
+                    "test_label": "Log-rank test",
+                    "posthoc": None,
+                    "justification": "Survival data with time-to-event observations. The log-rank test compares survival distributions between groups.",
+                    "checks": {"n_groups": len(df.columns) // 2, "paired": False, "min_n": len(df),
+                               "normality": {}, "all_normal": True, "equal_variance": True, "levene_p": None},
+                }
+
+            elif tt == "twoWay":
+                # Long-format: Factor A, Factor B, Value
+                return {
+                    "ok": True,
+                    "test": "two_way_anova",
+                    "test_label": "Two-way ANOVA",
+                    "posthoc": "Tukey HSD",
+                    "justification": "Two-factor data — two-way ANOVA tests for main effects of each factor and their interaction.",
+                    "checks": {"n_groups": 0, "paired": False, "min_n": len(df),
+                               "normality": {}, "all_normal": True, "equal_variance": True, "levene_p": None},
+                }
+
+            elif tt == "meta":
+                # Forest plot data — no statistical test to recommend
+                return {
+                    "ok": True,
+                    "test": "descriptive",
+                    "test_label": "Meta-analysis summary",
+                    "posthoc": None,
+                    "justification": "Meta-analysis data with pre-computed effect sizes and confidence intervals. No additional statistical test is needed.",
+                    "checks": {"n_groups": len(df), "paired": False, "min_n": len(df),
+                               "normality": {}, "all_normal": True, "equal_variance": True, "levene_p": None},
+                }
+
+            elif tt == "parts":
+                return {
+                    "ok": True,
+                    "test": "descriptive",
+                    "test_label": "Descriptive summary",
+                    "posthoc": None,
+                    "justification": "Parts-of-whole data. Descriptive statistics are reported; no comparison test applies.",
+                    "checks": {"n_groups": len(df), "paired": False, "min_n": len(df),
+                               "normality": {}, "all_normal": True, "equal_variance": True, "levene_p": None},
+                }
+
+            else:
+                # Unknown table type — fall back to column-style extraction
+                for col in df.columns:
+                    vals = pd.to_numeric(df[col], errors="coerce").dropna().values
+                    if len(vals) > 0:
+                        groups[str(col)] = vals
 
             if not groups:
                 return {"ok": False, "error": "No numeric data found"}
 
-            result = recommend_test(groups, paired=req.paired)
+            result = recommend_test(groups, paired=paired)
             return {"ok": True, **result}
         except Exception as exc:
             return JSONResponse(
-                {"ok": False, "error": str(exc)}, status_code=400
+                {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}, status_code=400
             )
 
     # ── Analyze Stats (standalone statistical analysis) ─────────────
     class AnalyzeStatsRequest(BaseModel):
-        excel_path: str
+        excel_path: str = ""
+        data: dict[str, Any] | None = None
         sheet: int | str = 0
         analysis_type: str  # e.g. "unpaired_t", "anova", "kruskal_wallis"
         paired: bool = False
@@ -651,11 +850,6 @@ def _make_app():
     def analyze_stats_endpoint(req: AnalyzeStatsRequest):
         """Run a statistical analysis and return results as JSON."""
         try:
-            path_err = _validate_data_path(req.excel_path)
-            if path_err:
-                return JSONResponse(
-                    {"ok": False, "error": path_err}, status_code=400
-                )
             import math
             import pandas as pd
             from refraction.core.stats import (
@@ -665,10 +859,25 @@ def _make_app():
             )
 
             # Read data
-            if req.excel_path.endswith(".csv"):
-                df = pd.read_csv(req.excel_path)
+            if req.data:
+                columns = req.data.get("columns", [])
+                rows = req.data.get("rows", [])
+                df = pd.DataFrame(rows, columns=columns)
+            elif req.excel_path:
+                path_err = _validate_data_path(req.excel_path)
+                if path_err:
+                    return JSONResponse(
+                        {"ok": False, "error": path_err}, status_code=400
+                    )
+                if req.excel_path.endswith(".csv"):
+                    df = pd.read_csv(req.excel_path)
+                else:
+                    df = pd.read_excel(req.excel_path, sheet_name=req.sheet)
             else:
-                df = pd.read_excel(req.excel_path, sheet_name=req.sheet)
+                return JSONResponse(
+                    {"ok": False, "error": "Either excel_path or data must be provided"},
+                    status_code=400,
+                )
 
             # Extract numeric groups
             import numpy as np
@@ -842,7 +1051,7 @@ def _make_app():
         except Exception as exc:
             _log.exception("analyze-stats failed")
             return JSONResponse(
-                {"ok": False, "error": str(exc)}, status_code=500
+                {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}, status_code=500
             )
 
     # ── Phase 10a: Multi-panel layout ──────────────────────────────
@@ -870,7 +1079,7 @@ def _make_app():
             return result
         except Exception as e:
             _log.exception("analyze-layout failed")
-            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+            return JSONResponse({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, status_code=500)
 
     # ── Phase 10b: Curve models ──────────────────────────────────
     @api.get("/curve-models")
@@ -903,10 +1112,10 @@ def _make_app():
             )
             return {"ok": True, "fit": result.to_dict()}
         except ValueError as e:
-            return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+            return JSONResponse({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, status_code=400)
         except Exception as e:
             _log.exception("curve-fit failed")
-            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+            return JSONResponse({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, status_code=500)
 
     # ── Phase 10d: Column transforms ─────────────────────────────
     @api.get("/transforms")
@@ -945,244 +1154,9 @@ def _make_app():
             new_df.to_excel(dest, index=False)
             return {"ok": True, "path": dest, "column": f"{col_name}_{req.operation}"}
         except ValueError as e:
-            return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+            return JSONResponse({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, status_code=400)
         except Exception as e:
             _log.exception("transform failed")
-            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
-    # ── Save as .refract file ────────────────────────────────────
-    class SaveRefractRequest(BaseModel):
-        output_path: str
-        project: dict[str, Any]
-
-    @api.post("/project/save-refract")
-    def save_refract(req: SaveRefractRequest):
-        """Save the current project as a .refract ZIP file.
-
-        The project dict from Swift contains the full navigator state:
-        dataTables, activeDataTableID, activeSheetID, plus chart configs
-        and format settings embedded in each sheet.
-        """
-        import json as _json
-        import time as _time
-        import zipfile as _zipfile
-
-        try:
-            import pandas as pd
-
-            output = pathlib.Path(req.output_path).resolve()
-            # Reject path traversal
-            if ".." in output.parts:
-                return JSONResponse(
-                    {"ok": False, "error": "Invalid path"}, status_code=400
-                )
-            # Must be under user's home directory
-            home = pathlib.Path.home()
-            if not str(output).startswith(str(home)):
-                return JSONResponse(
-                    {"ok": False, "error": "Path must be within home directory"},
-                    status_code=400,
-                )
-            output_path = str(output)
-            if not output_path.endswith(".refract"):
-                output_path += ".refract"
-
-            # Parent must exist (don't create arbitrary directories)
-            parent = os.path.dirname(output_path)
-            if parent and not os.path.isdir(parent):
-                return JSONResponse(
-                    {"ok": False, "error": "Parent directory does not exist"},
-                    status_code=400,
-                )
-
-            project = req.project
-            data_tables = project.get("dataTables", [])
-
-            with _zipfile.ZipFile(output_path, "w", _zipfile.ZIP_DEFLATED) as zf:
-                # 1. manifest.json
-                manifest = {
-                    "format_version": 3,
-                    "app_version": "10.0.0",
-                    "created": _time.time(),
-                    "created_iso": _time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                }
-                zf.writestr("manifest.json", _json.dumps(manifest, indent=2))
-
-                # 2. Build sanitized project.json — strip absolute paths,
-                #    embed data refs for portable archives
-                sanitized = _json.loads(_json.dumps(project))  # deep copy
-                data_file_map: dict[str, str] = {}  # orig path -> archive name
-
-                for i, table in enumerate(sanitized.get("dataTables", [])):
-                    data_path = table.get("dataFilePath", "") or ""
-                    if data_path and os.path.exists(data_path):
-                        if data_path not in data_file_map:
-                            archive_name = f"data/table_{i}.csv"
-                            data_file_map[data_path] = archive_name
-                        table["dataRef"] = data_file_map[data_path]
-                    else:
-                        table["dataRef"] = ""
-                    # Remove absolute path from archive
-                    table.pop("dataFilePath", None)
-
-                # 3. data/ — embed data files as CSV for portability
-                for orig_path, archive_name in data_file_map.items():
-                    try:
-                        ext = os.path.splitext(orig_path)[1].lower()
-                        if ext == ".csv":
-                            with open(orig_path, "r") as f:
-                                zf.writestr(archive_name, f.read())
-                        else:
-                            df = pd.read_excel(orig_path)
-                            zf.writestr(archive_name, df.to_csv(index=False))
-                    except Exception:
-                        # Fallback: try to embed original file as-is
-                        try:
-                            zf.write(orig_path, archive_name)
-                        except Exception:
-                            _log.warning("Could not embed data file: %s", orig_path)
-
-                # 4. charts/ — save chart configs and format settings per graph sheet
-                for i, table in enumerate(data_tables):
-                    for j, sheet in enumerate(table.get("sheets", [])):
-                        if sheet.get("kind") == "graph":
-                            chart_data = {
-                                "chartType": sheet.get("chartType"),
-                                "chartConfig": sheet.get("chartConfig"),
-                                "formatSettings": sheet.get("formatSettings"),
-                                "formatAxesSettings": sheet.get("formatAxesSettings"),
-                            }
-                            zf.writestr(
-                                f"charts/table_{i}_sheet_{j}.json",
-                                _json.dumps(chart_data, indent=2),
-                            )
-
-                # 5. results/ — save analysis results per results sheet
-                for i, table in enumerate(data_tables):
-                    for j, sheet in enumerate(table.get("sheets", [])):
-                        if sheet.get("kind") == "results":
-                            results_data = {
-                                "statsResults": sheet.get("statsResults"),
-                            }
-                            zf.writestr(
-                                f"results/table_{i}_sheet_{j}.json",
-                                _json.dumps(results_data, indent=2),
-                            )
-
-                # Write project.json with dataRef pointers
-                zf.writestr("project.json", _json.dumps(sanitized, indent=2))
-
-            return {"ok": True, "path": output_path}
-
-        except Exception as e:
-            _log.exception("save-refract failed")
-            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
-    # ── Phase 10e: Project files ─────────────────────────────────
-    class ProjectSaveRequest(BaseModel):
-        panels: list[dict[str, Any]]
-        layout: dict[str, Any] = {}
-        settings: dict[str, Any] = {}
-        metadata: dict[str, Any] = {}
-
-    @api.post("/project/save")
-    def project_save(req: ProjectSaveRequest):
-        """Save a multi-panel project as .refract archive."""
-        try:
-            from refraction.io.project_v2 import save_project
-            dest = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}.refract")
-            path = save_project(
-                dest,
-                req.panels,
-                metadata=req.metadata,
-                layout=req.layout,
-                settings=req.settings,
-            )
-            return {"ok": True, "path": path}
-        except Exception as e:
-            _log.exception("project save failed")
-            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
-    @api.post("/project/load")
-    async def project_load(file: UploadFile = FastAPIFile(...)):
-        """Upload and load a .refract project file (format v2 or v3)."""
-        import json as _json
-        import zipfile as _zipfile
-
-        try:
-            ext = os.path.splitext(file.filename or "")[1].lower()
-            if ext not in (".refract",):
-                return JSONResponse(
-                    {"ok": False, "error": f"Unsupported file type: {ext}"},
-                    status_code=400,
-                )
-            contents = await file.read()
-            dest = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}.refract")
-            with open(dest, "wb") as f:
-                f.write(contents)
-
-            # Detect format version
-            with _zipfile.ZipFile(dest, "r") as zf:
-                names = zf.namelist()
-                if "manifest.json" in names:
-                    manifest = _json.loads(zf.read("manifest.json").decode())
-                    fmt_version = manifest.get("format_version", 0)
-                else:
-                    fmt_version = 2
-
-            if fmt_version >= 3:
-                result = _load_refract_v3(dest)
-            else:
-                from refraction.io.project_v2 import load_project
-                result = load_project(dest)
-                result.pop("temp_dir", None)
-
-            return {"ok": True, "project": result}
-        except Exception as e:
-            _log.exception("project load failed")
-            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
-    def _load_refract_v3(archive_path: str) -> dict:
-        """Load a format-v3 .refract archive (dataTables-based).
-
-        Extracts embedded CSV data to UPLOAD_DIR so the engine can
-        access it, then restores dataFilePath pointers in the project.
-        """
-        import json as _json
-        import zipfile as _zipfile
-
-        with _zipfile.ZipFile(archive_path, "r") as zf:
-            names = zf.namelist()
-            project = _json.loads(zf.read("project.json").decode())
-
-            # Extract embedded data files and restore dataFilePath
-            for table in project.get("dataTables", []):
-                data_ref = table.pop("dataRef", "") or ""
-                if data_ref and data_ref in names:
-                    ext = os.path.splitext(data_ref)[1] or ".csv"
-                    dest_name = f"{uuid.uuid4().hex}{ext}"
-                    dest_path = os.path.join(UPLOAD_DIR, dest_name)
-                    with zf.open(data_ref) as src, open(dest_path, "wb") as dst:
-                        dst.write(src.read())
-                    table["dataFilePath"] = dest_path
-                else:
-                    table["dataFilePath"] = ""
-
-                # Restore chart configs from charts/ entries if not inline
-                for sheet in table.get("sheets", []):
-                    if sheet.get("kind") == "graph" and "chartConfig" not in sheet:
-                        for chart_file in names:
-                            if chart_file.startswith("charts/") and chart_file.endswith(".json"):
-                                try:
-                                    chart_data = _json.loads(zf.read(chart_file).decode())
-                                    if chart_data.get("chartType") == sheet.get("chartType"):
-                                        sheet["chartConfig"] = chart_data.get("chartConfig")
-                                        sheet["formatSettings"] = chart_data.get("formatSettings")
-                                        sheet["formatAxesSettings"] = chart_data.get("formatAxesSettings")
-                                        break
-                                except Exception:
-                                    pass
-
-        return project
+            return JSONResponse({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, status_code=500)
 
     return api

@@ -75,6 +75,20 @@ struct ContentView: View {
                 }
             }
         }
+        .alert("Save Current Project?", isPresented: Bindable(appState).showNewProjectConfirm) {
+            Button("Save") {
+                Task {
+                    await appState.saveProjectFile()
+                    appState.newProject()
+                }
+            }
+            Button("Don\u{2019}t Save", role: .destructive) {
+                appState.newProject()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You have unsaved changes. Would you like to save before creating a new project?")
+        }
         .onChange(of: appState.projectDisplayName) { _, newTitle in
             NSApplication.shared.mainWindow?.title = newTitle
         }

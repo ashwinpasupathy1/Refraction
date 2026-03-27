@@ -13,7 +13,7 @@ struct LaTeXView: View {
     // In-memory cache shared across all LaTeXView instances
     private static var cache: [String: NSImage] = [:]
 
-    init(_ latex: String, fontSize: Int = 14) {
+    init(_ latex: String, fontSize: Int = 20) {
         self.latex = latex
         self.fontSize = fontSize
     }
@@ -50,7 +50,7 @@ struct LaTeXView: View {
         isLoading = true
         do {
             let pngData = try await APIClient.shared.renderLatex(
-                latex: latex, dpi: 150, fontsize: fontSize
+                latex: latex, dpi: 200, fontsize: fontSize
             )
             if let nsImage = NSImage(data: pngData) {
                 Self.cache[cacheKey] = nsImage

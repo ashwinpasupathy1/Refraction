@@ -14,25 +14,34 @@ enum ItemKind: String {
 final class Experiment: Identifiable {
     let id: UUID
     var label: String
+    var description: String
     var dataTables: [DataTable]
     var graphs: [Graph]
     var analyses: [Analysis]
     var info: String
+    var createdAt: Date
+    var lastModifiedAt: Date
 
     init(
         id: UUID = UUID(),
         label: String,
+        description: String = "",
         dataTables: [DataTable]? = nil,
         graphs: [Graph] = [],
         analyses: [Analysis] = [],
-        info: String = ""
+        info: String = "",
+        createdAt: Date = Date(),
+        lastModifiedAt: Date = Date()
     ) {
         self.id = id
         self.label = label
+        self.description = description
         self.dataTables = dataTables ?? []
         self.graphs = graphs
         self.analyses = analyses
         self.info = info
+        self.createdAt = createdAt
+        self.lastModifiedAt = lastModifiedAt
     }
 
     /// Create a new empty experiment (no default data table).
@@ -69,10 +78,6 @@ final class Experiment: Identifiable {
         // Reject duplicate names
         guard !hasGraphNamed(name) else { return nil }
         let graph = Graph(label: name, dataTableID: dataTableID, chartType: chartType)
-        // Copy data path into config
-        if let table = dataTables.first(where: { $0.id == dataTableID }) {
-            graph.chartConfig.excelPath = table.dataFilePath ?? ""
-        }
         graphs.append(graph)
         return graph
     }
@@ -92,6 +97,20 @@ final class Experiment: Identifiable {
 
     func removeAnalysis(id: UUID) {
         analyses.removeAll { $0.id == id }
+    }
+
+    // MARK: - Reorder
+
+    func moveDataTable(from source: IndexSet, to destination: Int) {
+        dataTables.move(fromOffsets: source, toOffset: destination)
+    }
+
+    func moveGraph(from source: IndexSet, to destination: Int) {
+        graphs.move(fromOffsets: source, toOffset: destination)
+    }
+
+    func moveAnalysis(from source: IndexSet, to destination: Int) {
+        analyses.move(fromOffsets: source, toOffset: destination)
     }
 
     // MARK: - Lookups

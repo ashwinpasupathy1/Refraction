@@ -74,6 +74,13 @@ class TestChartTypes:
         data = client.get("/chart-types").json()
         assert len(data["all"]) >= 8
 
+    # Merged from test_api.py
+    def test_has_29_chart_types(self, client):
+        data = client.get("/chart-types").json()
+        assert len(data["all"]) == 29, (
+            f"Expected 29 chart types, got {len(data['all'])}: {data['all']}"
+        )
+
     def test_priority_is_subset_of_all(self, client):
         data = client.get("/chart-types").json()
         for ct in data["priority"]:
@@ -227,3 +234,33 @@ class TestUpload:
         assert data["ok"] is True
         if os.path.exists(data.get("path", "")):
             os.unlink(data["path"])
+
+
+# ============================================================================
+# /analyze -- SEM accuracy (Merged from test_api.py)
+# ============================================================================
+
+class TestAnalyzeSEM:
+    def test_sem_matches_scipy(self, client, tmp_path):
+        from scipy import stats as scipy_stats
+        vals_a = np.array([2.0, 4.0, 6.0, 8.0, 10.0])
+        vals_b = np.array([1.0, 3.0, 5.0, 7.0, 9.0])
+        expected_sem_a = scipy_stats.sem(vals_a)
+        expected_sem_b = scipy_stats.sem(vals_b)
+
+        path = str(tmp_path / "sem_data.xlsx")
+        rows = [["A", "B"]] + [[float(a), float(b)] for a, b in zip(vals_a, vals_b)]
+        pd.DataFrame(rows).to_excel(path, index=False, header=False)
+
+        resp = client.post("/analyze", json={
+            "chart_type": "bar",
+            "excel_path": path,
+            "config": {"error_type": "sem"},
+        })
+        data = resp.json()
+        actual_sem_a = data["groups"][0]["sem"]
+        actual_sem_b = data["groups"][1]["sem"]
+        assert abs(actual_sem_a - expected_sem_a) < 1e-10, \
+            f"SEM mismatch: got {actual_sem_a}, expected {expected_sem_a}"
+        assert abs(actual_sem_b - expected_sem_b) < 1e-10, \
+            f"SEM mismatch: got {actual_sem_b}, expected {expected_sem_b}"

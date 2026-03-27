@@ -25,7 +25,7 @@ def analyze_forest_plot(kw: dict) -> ChartSpec:
         summary_ci: [float, float] | None — pooled CI
     """
     cfg = extract_config(kw)
-    df = read_data(cfg["excel_path"], cfg["sheet"])
+    df = read_data(cfg["excel_path"], cfg["sheet"], df=cfg.get("_df"))
 
     # Expected columns: Study, Effect, CI_lo, CI_hi, (optional Weight)
     cols = list(df.columns)

@@ -19,13 +19,14 @@ import RefractionRenderer
 func applyFormatSettings(
     spec: ChartSpec,
     graphSettings: FormatGraphSettings,
-    axesSettings: FormatAxesSettings
+    axesSettings: FormatAxesSettings,
+    renderStyle: RenderStyle = .default
 ) -> ChartSpec {
 
     // ── StyleSpec overrides ──────────────────────────────────────────
 
     let mergedStyle = StyleSpec(
-        colors: spec.style.colors,
+        colors: renderStyle.palette,
         showPoints: graphSettings.showSymbols,
         showBrackets: spec.style.showBrackets,
         pointSize: graphSettings.symbolSize,
@@ -38,6 +39,7 @@ func applyFormatSettings(
         symbolBorderColor: graphSettings.symbolBorderColor,
         symbolBorderThickness: graphSettings.symbolBorderThickness,
         showBars: graphSettings.showBars,
+        barFillOpacity: graphSettings.barFillOpacity,
         barBorderColor: graphSettings.barBorderColor,
         barBorderThickness: graphSettings.barBorderThickness,
         errorBarColor: graphSettings.errorBarColor,

@@ -27,6 +27,8 @@ def analyze(
     chart_type: str,
     excel_path: str,
     config: dict[str, Any] | None = None,
+    *,
+    df: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     """Run analysis for *chart_type* on *excel_path*.
 
@@ -77,6 +79,8 @@ def analyze(
             kw = dict(cfg)
             kw["excel_path"] = excel_path
             kw["_chart_type"] = chart_type
+            if df is not None:
+                kw["_df"] = df
             spec = _DEDICATED_ANALYZERS[chart_type](kw)
             result = spec.to_dict()
             result["ok"] = True
@@ -111,13 +115,14 @@ def analyze(
     # ------------------------------------------------------------------
     # Read data
     # ------------------------------------------------------------------
-    try:
-        if excel_path.endswith(".csv"):
-            df = pd.read_csv(excel_path)
-        else:
-            df = pd.read_excel(excel_path, sheet_name=sheet)
-    except Exception as exc:
-        return {"ok": False, "error": f"Failed to read file: {exc}"}
+    if df is None:
+        try:
+            if excel_path.endswith(".csv"):
+                df = pd.read_csv(excel_path)
+            else:
+                df = pd.read_excel(excel_path, sheet_name=sheet)
+        except Exception as exc:
+            return {"ok": False, "error": f"Failed to read file: {exc}"}
 
     # ------------------------------------------------------------------
     # Build groups (columns = groups, rows = observations)

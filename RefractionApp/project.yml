@@ -30,19 +30,45 @@ targets:
       - path: Refraction/Resources/SampleData
         type: folder
         buildPhase: resources
+      - path: Refraction/Resources/DocumentIcon.icns
+      - path: Refraction/Resources/StylePreviews
+        type: folder
+        buildPhase: resources
     dependencies:
       - package: RefractionRenderer
+    info:
+      path: Refraction/Info.plist
+      properties:
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: com.refraction.refract
+            UTTypeDescription: Refraction Project
+            UTTypeIconFiles:
+              - DocumentIcon
+            UTTypeConformsTo:
+              - com.apple.package
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - refract
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Refraction Project
+            CFBundleTypeRole: Editor
+            CFBundleTypeIconFile: DocumentIcon
+            LSHandlerRank: Owner
+            LSTypeIsPackage: true
+            LSItemContentTypes:
+              - com.refraction.refract
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.refraction.app
         PRODUCT_NAME: Refraction
-        INFOPLIST_GENERATION_MODE: GeneratedFile
         MARKETING_VERSION: "0.2.0"
         CURRENT_PROJECT_VERSION: "1"
-        GENERATE_INFOPLIST_FILE: "YES"
         SWIFT_VERSION: "5.9"
         COMBINE_HIDPI_IMAGES: "YES"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: Refraction/Refraction.entitlements
-        INFOPLIST_KEY_CFBundleDisplayName: Refraction
-        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.education"
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+        Release:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: ""

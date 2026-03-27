@@ -62,11 +62,15 @@ struct FormatAxesDialog: View {
             HStack {
                 Spacer()
                 Button("Cancel") {
+                    DebugLog.shared.logUI("FormatAxesDialog cancelled")
                     restoreSnapshot()
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
-                Button("Done") { dismiss() }
+                Button("Done") {
+                    DebugLog.shared.logUI("FormatAxesDialog applied")
+                    dismiss()
+                }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
             }

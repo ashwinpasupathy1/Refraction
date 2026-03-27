@@ -18,7 +18,7 @@ from refraction.analysis.helpers import read_data, resolve_colors, extract_confi
 def analyze_contingency(kw: dict) -> ChartSpec:
     """Analyze contingency table data and return a ChartSpec."""
     cfg = extract_config(kw)
-    df = read_data(cfg["excel_path"], cfg["sheet"])
+    df = read_data(cfg["excel_path"], cfg["sheet"], df=cfg.get("_df"))
 
     cols = list(df.columns)
     if len(cols) < 2:

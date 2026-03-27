@@ -48,10 +48,43 @@ final class AppState {
 
     let undoManager = UndoManager()
 
-    /// Whether undo is available.
-    var canUndo: Bool { undoManager.canUndo }
-    /// Whether redo is available.
-    var canRedo: Bool { undoManager.canRedo }
+    /// Manually tracked undo/redo availability.
+    /// UndoManager doesn't notify @Observable, so we update these after each action.
+    var canUndo: Bool = false
+    var canRedo: Bool = false
+
+    /// Call after any action that might change undo/redo availability.
+    func refreshUndoState() {
+        canUndo = undoManager.canUndo
+        canRedo = undoManager.canRedo
+    }
+
+    /// Register undo for a single cell edit in a data table.
+    func registerCellEdit(table: DataTable, row: Int, col: Int, oldValue: CellValue, newValue: CellValue) {
+        undoManager.registerUndo(withTarget: self) { target in
+            table.setCell(row: row, col: col, value: oldValue)
+            target.markDirty()
+            // Register redo: set newValue again
+            target.undoManager.registerUndo(withTarget: target) { t in
+                table.setCell(row: row, col: col, value: newValue)
+                t.markDirty()
+                // Re-register undo for further undo/redo cycles
+                t.registerCellEdit(table: table, row: row, col: col, oldValue: oldValue, newValue: newValue)
+            }
+            target.undoManager.setActionName("Edit Cell")
+        }
+        undoManager.setActionName("Edit Cell")
+    }
+
+    /// Find a graph by ID across all experiments.
+    func findGraph(id: UUID) -> Graph? {
+        for exp in experiments {
+            if let g = exp.graphs.first(where: { $0.id == id }) {
+                return g
+            }
+        }
+        return nil
+    }
 
     // MARK: - Experiment state
 
@@ -68,7 +101,12 @@ final class AppState {
     var activeItemKind: ItemKind?
 
     /// Developer mode: show raw JSON from the engine for debugging.
+    /// Automatically enabled in Xcode debug builds, disabled in release (.dmg).
+    #if DEBUG
+    var developerMode: Bool = true
+    #else
     var developerMode: Bool = false
+    #endif
 
     /// Current project file path (nil = never saved).
     var projectFilePath: URL?
@@ -186,6 +224,9 @@ final class AppState {
     func removeExperiment(id: UUID) {
         guard let index = experiments.firstIndex(where: { $0.id == id }) else { return }
         let removed = experiments[index]
+        let prevActiveExpID = activeExperimentID
+        let prevActiveItemID = activeItemID
+        let prevActiveItemKind = activeItemKind
         experiments.remove(at: index)
         markDirty()
         if activeExperimentID == id {
@@ -197,10 +238,42 @@ final class AppState {
         // Register undo: re-insert the experiment
         undoManager.registerUndo(withTarget: self) { target in
             target.experiments.insert(removed, at: min(index, target.experiments.count))
-            target.activeExperimentID = removed.id
+            target.activeExperimentID = prevActiveExpID
+            target.activeItemID = prevActiveItemID
+            target.activeItemKind = prevActiveItemKind
             target.markDirty()
+            // Register redo: remove again
+            target.undoManager.registerUndo(withTarget: target) { t in
+                t.removeExperiment(id: id)
+            }
+            target.undoManager.setActionName("Remove Experiment")
         }
         undoManager.setActionName("Remove Experiment")
+    }
+
+    // MARK: - Reorder
+
+    func moveExperiment(from source: IndexSet, to destination: Int) {
+        experiments.move(fromOffsets: source, toOffset: destination)
+        markDirty()
+    }
+
+    func moveDataTable(from source: IndexSet, to destination: Int, in experimentID: UUID) {
+        guard let exp = experiments.first(where: { $0.id == experimentID }) else { return }
+        exp.moveDataTable(from: source, to: destination)
+        markDirty()
+    }
+
+    func moveGraph(from source: IndexSet, to destination: Int, in experimentID: UUID) {
+        guard let exp = experiments.first(where: { $0.id == experimentID }) else { return }
+        exp.moveGraph(from: source, to: destination)
+        markDirty()
+    }
+
+    func moveAnalysis(from source: IndexSet, to destination: Int, in experimentID: UUID) {
+        guard let exp = experiments.first(where: { $0.id == experimentID }) else { return }
+        exp.moveAnalysis(from: source, to: destination)
+        markDirty()
     }
 
     // MARK: - Data Table Management
@@ -230,6 +303,8 @@ final class AppState {
         guard let experiment = activeExperiment,
               let index = experiment.dataTables.firstIndex(where: { $0.id == id }) else { return }
         let removed = experiment.dataTables[index]
+        let prevItemID = activeItemID
+        let prevItemKind = activeItemKind
         experiment.removeDataTable(id: id)
         markDirty()
         if activeItemID == id {
@@ -241,9 +316,14 @@ final class AppState {
         undoManager.registerUndo(withTarget: self) { target in
             if let exp = target.experiments.first(where: { $0.id == expID }) {
                 exp.dataTables.insert(removed, at: min(index, exp.dataTables.count))
-                target.activeItemID = removed.id
-                target.activeItemKind = .dataTable
+                target.activeItemID = prevItemID
+                target.activeItemKind = prevItemKind
                 target.markDirty()
+                // Register redo: remove again
+                target.undoManager.registerUndo(withTarget: target) { t in
+                    t.removeDataTable(id: id)
+                }
+                target.undoManager.setActionName("Remove Data Table")
             }
         }
         undoManager.setActionName("Remove Data Table")
@@ -263,6 +343,13 @@ final class AppState {
         activeItemID = graph.id
         activeItemKind = .graph
         markDirty()
+
+        let graphID = graph.id
+        undoManager.registerUndo(withTarget: self) { target in
+            target.removeGraph(id: graphID)
+        }
+        undoManager.setActionName("Add Graph")
+
         // Auto-generate the chart
         Task { @MainActor in
             await generatePlot()
@@ -275,6 +362,8 @@ final class AppState {
         guard let experiment = activeExperiment,
               let index = experiment.graphs.firstIndex(where: { $0.id == id }) else { return }
         let removed = experiment.graphs[index]
+        let prevItemID = activeItemID
+        let prevItemKind = activeItemKind
         experiment.removeGraph(id: id)
         markDirty()
         if activeItemID == id {
@@ -286,9 +375,14 @@ final class AppState {
         undoManager.registerUndo(withTarget: self) { target in
             if let exp = target.experiments.first(where: { $0.id == expID }) {
                 exp.graphs.insert(removed, at: min(index, exp.graphs.count))
-                target.activeItemID = removed.id
-                target.activeItemKind = .graph
+                target.activeItemID = prevItemID
+                target.activeItemKind = prevItemKind
                 target.markDirty()
+                // Register redo: remove again
+                target.undoManager.registerUndo(withTarget: target) { t in
+                    t.removeGraph(id: id)
+                }
+                target.undoManager.setActionName("Remove Graph")
             }
         }
         undoManager.setActionName("Remove Graph")
@@ -304,18 +398,45 @@ final class AppState {
         activeItemID = analysis.id
         activeItemKind = .analysis
         markDirty()
+
+        let analysisID = analysis.id
+        undoManager.registerUndo(withTarget: self) { target in
+            target.removeAnalysis(id: analysisID)
+        }
+        undoManager.setActionName("Add Analysis")
+
         return analysis
     }
 
     /// Remove an analysis from the active experiment.
     func removeAnalysis(id: UUID) {
-        guard let experiment = activeExperiment else { return }
+        guard let experiment = activeExperiment,
+              let index = experiment.analyses.firstIndex(where: { $0.id == id }) else { return }
+        let removed = experiment.analyses[index]
+        let prevItemID = activeItemID
+        let prevItemKind = activeItemKind
         experiment.removeAnalysis(id: id)
         markDirty()
         if activeItemID == id {
             activeItemID = experiment.dataTables.first?.id
             activeItemKind = .dataTable
         }
+
+        let expID = experiment.id
+        undoManager.registerUndo(withTarget: self) { target in
+            if let exp = target.experiments.first(where: { $0.id == expID }) {
+                exp.analyses.insert(removed, at: min(index, exp.analyses.count))
+                target.activeItemID = prevItemID
+                target.activeItemKind = prevItemKind
+                target.markDirty()
+                // Register redo: remove again
+                target.undoManager.registerUndo(withTarget: target) { t in
+                    t.removeAnalysis(id: id)
+                }
+                target.undoManager.setActionName("Remove Analysis")
+            }
+        }
+        undoManager.setActionName("Remove Analysis")
     }
 
     // MARK: - Selection
@@ -361,12 +482,19 @@ final class AppState {
 
         do {
             let serverPath = try await APIClient.shared.upload(fileURL: url)
-            table.dataFilePath = serverPath
             table.originalFileName = url.lastPathComponent
-            // Update all graphs linked to this table
-            if let experiment = activeExperiment {
-                for graph in experiment.graphs where graph.dataTableID == table.id {
-                    graph.chartConfig.excelPath = serverPath
+            // Fetch the data into memory
+            let preview = try await APIClient.shared.dataPreview(excelPath: serverPath)
+            if preview.ok, let cols = preview.columns, let rawRows = preview.rows {
+                table.columns = cols
+                table.rows = rawRows.map { row in
+                    row.map { cell -> CellValue in
+                        switch cell {
+                        case .number(let n): return .number(n)
+                        case .string(let s): return .text(s)
+                        case .null: return .empty
+                        }
+                    }
                 }
             }
         } catch let apiError as APIError {
@@ -389,22 +517,22 @@ final class AppState {
         DebugLog.shared.logAppEvent("generatePlot(\(graph.chartType.rawValue))", detail: "graph: \(graph.label), table: \(experiment.dataTable(for: graph)?.label ?? "none")")
 
         guard let table = experiment.dataTable(for: graph),
-              let dataPath = table.dataFilePath, !dataPath.isEmpty else {
+              table.hasData else {
             error = "No data file loaded. Import data into the data table first."
             return
         }
-
-        // Ensure the config has the correct data path
-        graph.chartConfig.excelPath = dataPath
 
         // Don't block UI — only set loading on the specific graph, not globally
         graph.isLoading = true
         error = nil
 
+        let inlineData = table.toAnalyzePayload()
+
         do {
             let (spec, rawJSON) = try await APIClient.shared.analyzeWithRawJSON(
                 chartType: graph.chartType,
                 config: graph.chartConfig,
+                inlineData: inlineData,
                 debug: developerMode
             )
             graph.chartSpec = spec
@@ -417,6 +545,7 @@ final class AppState {
                 let (spec, rawJSON) = try await APIClient.shared.analyzeWithRawJSON(
                     chartType: graph.chartType,
                     config: graph.chartConfig,
+                    inlineData: inlineData,
                     debug: developerMode
                 )
                 graph.chartSpec = spec
@@ -435,7 +564,7 @@ final class AppState {
 
     /// Run a standalone statistical analysis and create an Analysis item.
     @MainActor
-    func runAnalysis(analysisType: String, dataTableID: UUID? = nil, label: String? = nil) async {
+    func runAnalysis(analysisType: String, dataTableID: UUID? = nil, label: String? = nil, posthoc: String = "Tukey HSD", mcCorrection: String = "Holm-Bonferroni", control: String? = nil) async {
         guard let experiment = activeExperiment else {
             error = "No active experiment."
             return
@@ -444,7 +573,7 @@ final class AppState {
         let tableID = dataTableID ?? activeDataTable?.id ?? experiment.dataTables.first?.id
         guard let tableID,
               let table = experiment.dataTables.first(where: { $0.id == tableID }),
-              let dataPath = table.dataFilePath, !dataPath.isEmpty else {
+              table.hasData else {
             error = "No data file loaded. Import data first."
             return
         }
@@ -454,8 +583,11 @@ final class AppState {
 
         do {
             let response = try await APIClient.shared.analyzeStats(
-                excelPath: dataPath,
-                analysisType: analysisType
+                inlineData: table.toAnalyzePayload(),
+                analysisType: analysisType,
+                posthoc: posthoc,
+                mcCorrection: mcCorrection,
+                control: control
             )
 
             guard response.ok else {
@@ -514,6 +646,19 @@ final class AppState {
 
     // MARK: - New Project
 
+    /// Whether the "Save before closing?" confirmation is showing.
+    var showNewProjectConfirm = false
+
+    /// Request a new project. If there are unsaved changes, prompt to save first.
+    func requestNewProject() {
+        if hasUnsavedChanges {
+            showNewProjectConfirm = true
+        } else {
+            newProject()
+        }
+    }
+
+    /// Actually reset to a blank project (called after save confirmation).
     func newProject() {
         DebugLog.shared.logAppEvent("newProject()")
         if let n = currentUntitledNumber {
@@ -533,6 +678,17 @@ final class AppState {
         projectFilePath = nil
         hasUnsavedChanges = false
         error = nil
+        undoManager.removeAllActions()
+        refreshUndoState()
+
+        // Start with one blank experiment (like Prism's fresh launch)
+        let experiment = Experiment.new(label: "Experiment 1")
+        experiments.append(experiment)
+        activeExperimentID = experiment.id
+        if let first = experiment.dataTables.first {
+            activeItemID = first.id
+            activeItemKind = .dataTable
+        }
     }
 
     // MARK: - Open .refract File
@@ -542,7 +698,7 @@ final class AppState {
         DebugLog.shared.logAppEvent("openProjectFile()")
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [
-            .init(filenameExtension: "refract") ?? .data
+            UTType("com.refraction.refract") ?? .data
         ]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
@@ -567,93 +723,8 @@ final class AppState {
         error = nil
 
         do {
-            // Read the ZIP client-side — no server round-trip for metadata
-            let zipData = try Data(contentsOf: url)
-            let tempDir = FileManager.default.temporaryDirectory
-                .appendingPathComponent("refraction_\(UUID().uuidString)")
-            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+            try loadBundleProject(from: url)
 
-            // Unzip using Foundation (Archive utility)
-            let zipURL = tempDir.appendingPathComponent("archive.refract")
-            try zipData.write(to: zipURL)
-
-            // Use Process to unzip (Foundation has no built-in ZIP reader)
-            let unzipDir = tempDir.appendingPathComponent("contents")
-            try FileManager.default.createDirectory(at: unzipDir, withIntermediateDirectories: true)
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-            process.arguments = ["-o", zipURL.path, "-d", unzipDir.path]
-            process.standardOutput = FileHandle.nullDevice
-            process.standardError = FileHandle.nullDevice
-            try process.run()
-            process.waitUntilExit()
-
-            guard process.terminationStatus == 0 else {
-                throw NSError(domain: "Refraction", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to unzip project file"])
-            }
-
-            // Parse project.json
-            let projectURL = unzipDir.appendingPathComponent("project.json")
-            let projectData = try Data(contentsOf: projectURL)
-            guard var project = try JSONSerialization.jsonObject(with: projectData) as? [String: Any] else {
-                throw NSError(domain: "Refraction", code: 2, userInfo: [NSLocalizedDescriptionKey: "Invalid project.json"])
-            }
-
-            // Upload embedded CSV data files to the server so the engine can access them,
-            // validate each against its declared table type, and replace dataRef with server-side path
-            var validationWarnings: [String] = []
-            if var experiments = project["experiments"] as? [[String: Any]] {
-                for i in 0..<experiments.count {
-                    let expLabel = experiments[i]["label"] as? String ?? "Experiment \(i+1)"
-                    if var tables = experiments[i]["dataTables"] as? [[String: Any]] {
-                        for j in 0..<tables.count {
-                            let tableLabel = tables[j]["label"] as? String ?? "Table \(j+1)"
-                            let tableType = tables[j]["tableType"] as? String ?? "column"
-
-                            if let dataRef = tables[j]["dataRef"] as? String, !dataRef.isEmpty {
-                                let csvURL = unzipDir.appendingPathComponent(dataRef)
-                                if FileManager.default.fileExists(atPath: csvURL.path) {
-                                    DebugLog.shared.logAppEvent("uploading embedded data: \(dataRef)")
-                                    let serverPath = try await APIClient.shared.upload(fileURL: csvURL)
-                                    tables[j]["dataFilePath"] = serverPath
-
-                                    // Validate the data against the declared table type
-                                    DebugLog.shared.logAppEvent("validating \(tableLabel) as \(tableType)")
-                                    do {
-                                        let validation = try await APIClient.shared.validateTable(
-                                            excelPath: serverPath,
-                                            tableType: tableType
-                                        )
-                                        if validation.valid == false {
-                                            let errors = (validation.errors ?? []).joined(separator: "; ")
-                                            validationWarnings.append("\(expLabel) → \(tableLabel): \(errors)")
-                                            DebugLog.shared.logError(
-                                                method: "APP", path: "loadValidation",
-                                                error: "\(tableLabel) failed validation: \(errors)"
-                                            )
-                                        } else {
-                                            DebugLog.shared.logAppEvent("  \(tableLabel) validated OK")
-                                        }
-                                    } catch {
-                                        // Non-fatal: log but continue loading
-                                        DebugLog.shared.logAppEvent("  \(tableLabel) validation skipped: \(error.localizedDescription)")
-                                    }
-                                } else {
-                                    validationWarnings.append("\(expLabel) → \(tableLabel): embedded data file missing (\(dataRef))")
-                                }
-                            }
-                            tables[j].removeValue(forKey: "dataRef")
-                        }
-                        experiments[i]["dataTables"] = tables
-                    }
-                }
-                project["experiments"] = experiments
-            }
-
-            // Clean up temp files
-            try? FileManager.default.removeItem(at: tempDir)
-
-            // Restore state
             if let n = currentUntitledNumber {
                 Self.activeUntitledNumbers.remove(n)
             }
@@ -661,18 +732,12 @@ final class AppState {
                 Self.openProjectPaths.remove(oldPath.standardizedFileURL.path)
             }
 
-            restoreProjectFromDict(project)
             projectFilePath = url
             hasUnsavedChanges = false
             RecentFiles.shared.add(url)
-
             Self.openProjectPaths.insert(url.standardizedFileURL.path)
-            DebugLog.shared.logAppEvent("project loaded: \(experiments.count) experiments")
 
-            // Show validation warnings if any data tables had issues
-            if !validationWarnings.isEmpty {
-                self.error = "Project loaded with validation warnings:\n" + validationWarnings.joined(separator: "\n")
-            }
+            DebugLog.shared.logAppEvent("project loaded: \(experiments.count) experiments")
         } catch {
             self.error = "Failed to open project: \(error.localizedDescription)"
             DebugLog.shared.logError(method: "APP", path: "loadProjectFromURL", error: error.localizedDescription)
@@ -681,45 +746,48 @@ final class AppState {
         isLoading = false
     }
 
-    /// Restore project state from a loaded project dict.
-    private func restoreProjectFromDict(_ project: [String: Any]) {
-        // Try new experiment-based format first
-        if let experimentsArray = project["experiments"] as? [[String: Any]] {
-            restoreExperiments(experimentsArray)
-            activeExperimentID = (project["activeExperimentID"] as? String).flatMap { UUID(uuidString: $0) }
-                ?? experiments.first?.id
-            activeItemID = (project["activeItemID"] as? String).flatMap { UUID(uuidString: $0) }
-                ?? experiments.first?.dataTables.first?.id
-            activeItemKind = (project["activeItemKind"] as? String).flatMap { ItemKind(rawValue: $0) }
-                ?? .dataTable
-            return
+    // MARK: - Load v4 Directory Bundle
+
+    private func loadBundleProject(from bundleURL: URL) throws {
+        let projectURL = bundleURL.appendingPathComponent("project.json")
+        let projectData = try Data(contentsOf: projectURL)
+        guard let project = try JSONSerialization.jsonObject(with: projectData) as? [String: Any] else {
+            throw NSError(domain: "Refraction", code: 2, userInfo: [NSLocalizedDescriptionKey: "Invalid project.json"])
         }
 
-        // Fall back to legacy dataTables format for backward compatibility
-        if let tablesArray = project["dataTables"] as? [[String: Any]] {
-            restoreLegacyProject(tablesArray, project: project)
-            return
+        let dataDir = bundleURL.appendingPathComponent("data")
+        guard let experimentsArray = project["experiments"] as? [[String: Any]] else {
+            throw NSError(domain: "Refraction", code: 3, userInfo: [NSLocalizedDescriptionKey: "No experiments in project"])
         }
 
-        error = "Invalid project file."
-    }
-
-    private func restoreExperiments(_ experimentsArray: [[String: Any]]) {
         var restored: [Experiment] = []
         for expDict in experimentsArray {
             guard let idStr = expDict["id"] as? String,
                   let expID = UUID(uuidString: idStr) else { continue }
             let label = expDict["label"] as? String ?? "Experiment"
+            let expDescription = expDict["description"] as? String ?? ""
             let info = expDict["info"] as? String ?? ""
+            let createdAt = (expDict["createdAt"] as? Double).map { Date(timeIntervalSince1970: $0) } ?? Date()
+            let lastModifiedAt = (expDict["lastModifiedAt"] as? Double).map { Date(timeIntervalSince1970: $0) } ?? Date()
 
-            // Data tables
+            // Data tables — load data from data/{id}.json
             var tables: [DataTable] = []
             if let tablesArr = expDict["dataTables"] as? [[String: Any]] {
                 for td in tablesArr {
                     guard let tid = (td["id"] as? String).flatMap({ UUID(uuidString: $0) }),
                           let tt = (td["tableType"] as? String).flatMap({ TableType(rawValue: $0) }) else { continue }
-                    let table = DataTable(id: tid, label: td["label"] as? String ?? "", tableType: tt, dataFilePath: td["dataFilePath"] as? String, originalFileName: td["originalFileName"] as? String)
-                    tables.append(table)
+                    let tableLabel = td["label"] as? String ?? ""
+                    let origName = td["originalFileName"] as? String
+
+                    let dataFileURL = dataDir.appendingPathComponent("\(tid.uuidString).json")
+                    if FileManager.default.fileExists(atPath: dataFileURL.path) {
+                        let jsonData = try Data(contentsOf: dataFileURL)
+                        let table = try DataTable.fromJSON(jsonData, id: tid, label: tableLabel, tableType: tt, originalFileName: origName)
+                        tables.append(table)
+                    } else {
+                        // Table exists in metadata but has no data file — create empty
+                        tables.append(DataTable(id: tid, label: tableLabel, tableType: tt, originalFileName: origName))
+                    }
                 }
             }
 
@@ -747,10 +815,6 @@ final class AppState {
                     if let rs = (gd["renderStyle"] as? String).flatMap({ RenderStyle(rawValue: $0) }) {
                         graph.renderStyle = rs
                     }
-                    // Set data path from linked table
-                    if let table = tables.first(where: { $0.id == dtid }) {
-                        graph.chartConfig.excelPath = table.dataFilePath ?? ""
-                    }
                     graphs.append(graph)
                 }
             }
@@ -767,79 +831,13 @@ final class AppState {
                 }
             }
 
-            let experiment = Experiment(id: expID, label: label, dataTables: tables, graphs: graphs, analyses: analyses, info: info)
-            restored.append(experiment)
+            restored.append(Experiment(id: expID, label: label, description: expDescription, dataTables: tables, graphs: graphs, analyses: analyses, info: info, createdAt: createdAt, lastModifiedAt: lastModifiedAt))
         }
 
         experiments = restored
-    }
-
-    /// Convert legacy dataTables format into experiment format.
-    private func restoreLegacyProject(_ tablesArray: [[String: Any]], project: [String: Any]) {
-        let experiment = Experiment(label: "Experiment 1")
-        var tables: [DataTable] = []
-        var graphs: [Graph] = []
-        var analyses: [Analysis] = []
-
-        for tableDict in tablesArray {
-            guard let idStr = tableDict["id"] as? String,
-                  let tableID = UUID(uuidString: idStr),
-                  let typeStr = tableDict["tableType"] as? String,
-                  let tableType = TableType(rawValue: typeStr) else { continue }
-
-            let table = DataTable(id: tableID, label: tableDict["label"] as? String ?? "Untitled", tableType: tableType, dataFilePath: tableDict["dataFilePath"] as? String, originalFileName: tableDict["originalFileName"] as? String)
-
-            // Skip tables whose data files no longer exist
-            if let path = table.dataFilePath, !path.isEmpty,
-               !FileManager.default.fileExists(atPath: path) {
-                continue
-            }
-
-            tables.append(table)
-
-            // Convert sheets to graphs/analyses
-            if let sheetsArray = tableDict["sheets"] as? [[String: Any]] {
-                for sheetDict in sheetsArray {
-                    guard let sid = (sheetDict["id"] as? String).flatMap({ UUID(uuidString: $0) }),
-                          let kindStr = sheetDict["kind"] as? String else { continue }
-
-                    if kindStr == "graph" {
-                        guard let ct = (sheetDict["chartType"] as? String).flatMap({ ChartType(rawValue: $0) }) else { continue }
-                        let graph = Graph(id: sid, label: sheetDict["label"] as? String ?? "", dataTableID: tableID, chartType: ct)
-                        if let configDict = sheetDict["chartConfig"] as? [String: Any] {
-                            graph.chartConfig.loadFromDict(configDict)
-                        }
-                        if let path = table.dataFilePath {
-                            graph.chartConfig.excelPath = path
-                        }
-                        if let fgDict = sheetDict["formatSettings"] as? [String: Any],
-                           let fgData = try? JSONSerialization.data(withJSONObject: fgDict),
-                           let fg = try? JSONDecoder().decode(FormatGraphSettings.self, from: fgData) {
-                            graph.formatSettings = fg
-                        }
-                        if let faDict = sheetDict["formatAxesSettings"] as? [String: Any],
-                           let faData = try? JSONSerialization.data(withJSONObject: faDict),
-                           let fa = try? JSONDecoder().decode(FormatAxesSettings.self, from: faData) {
-                            graph.formatAxesSettings = fa
-                        }
-                        graphs.append(graph)
-                    } else if kindStr == "results" {
-                        let analysis = Analysis(id: sid, label: sheetDict["label"] as? String ?? "", dataTableID: tableID)
-                        analysis.notes = sheetDict["notes"] as? String ?? ""
-                        analyses.append(analysis)
-                    }
-                }
-            }
-        }
-
-        experiment.dataTables = tables
-        experiment.graphs = graphs
-        experiment.analyses = analyses
-        experiments = [experiment]
-
-        activeExperimentID = experiment.id
-        activeItemID = tables.first?.id
-        activeItemKind = .dataTable
+        activeExperimentID = (project["activeExperimentID"] as? String).flatMap { UUID(uuidString: $0) }
+        activeItemID = (project["activeItemID"] as? String).flatMap { UUID(uuidString: $0) }
+        activeItemKind = (project["activeItemKind"] as? String).flatMap { ItemKind(rawValue: $0) }
     }
 
     // MARK: - Project Persistence
@@ -855,8 +853,9 @@ final class AppState {
                             id: t.id.uuidString,
                             label: t.label,
                             tableType: t.tableType.rawValue,
-                            dataFilePath: t.dataFilePath,
-                            originalFileName: t.originalFileName
+                            originalFileName: t.originalFileName,
+                            columns: t.hasData ? t.columns : nil,
+                            rows: t.hasData ? t.rows : nil
                         )
                     },
                     graphs: exp.graphs.map { g in
@@ -905,9 +904,7 @@ final class AppState {
             for ts in es.dataTables {
                 guard let tid = UUID(uuidString: ts.id),
                       let tt = TableType(rawValue: ts.tableType) else { continue }
-                if let path = ts.dataFilePath, !path.isEmpty,
-                   !FileManager.default.fileExists(atPath: path) { continue }
-                tables.append(DataTable(id: tid, label: ts.label, tableType: tt, dataFilePath: ts.dataFilePath, originalFileName: ts.originalFileName))
+                tables.append(DataTable(id: tid, label: ts.label, tableType: tt, columns: ts.columns ?? [], rows: ts.rows ?? [], originalFileName: ts.originalFileName))
             }
             var graphs: [Graph] = []
             for gs in es.graphs {
@@ -949,7 +946,7 @@ final class AppState {
     func saveProjectFileAs() async {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [
-            .init(filenameExtension: "refract") ?? .data
+            UTType("com.refraction.refract") ?? .data
         ]
         panel.nameFieldStringValue = projectFilePath?.lastPathComponent ?? untitledName
         panel.title = "Save Project"
@@ -962,13 +959,37 @@ final class AppState {
     @MainActor
     private func saveToPath(_ url: URL) async {
         DebugLog.shared.logAppEvent("saveToPath(\(url.lastPathComponent))", detail: "path: \(url.path)")
-        let projectDict = buildFullProjectDict()
+
+        // Update lastModifiedAt on all experiments
+        let now = Date()
+        for exp in experiments { exp.lastModifiedAt = now }
 
         do {
-            let _ = try await APIClient.shared.saveProject(
-                outputPath: url.path,
-                projectState: projectDict
+            let fm = FileManager.default
+            // Create bundle directory
+            try fm.createDirectory(at: url, withIntermediateDirectories: true)
+
+            // Create data/ subdirectory
+            let dataDir = url.appendingPathComponent("data")
+            try fm.createDirectory(at: dataDir, withIntermediateDirectories: true)
+
+            // Write each DataTable's data as JSON
+            for exp in experiments {
+                for table in exp.dataTables where table.hasData {
+                    let tableData = try table.toJSON()
+                    let tableURL = dataDir.appendingPathComponent("\(table.id.uuidString).json")
+                    try tableData.write(to: tableURL)
+                }
+            }
+
+            // Build and write project.json (metadata only, no data paths)
+            let projectDict = buildProjectMetadata()
+            let projectData = try JSONSerialization.data(
+                withJSONObject: projectDict,
+                options: [.prettyPrinted, .sortedKeys]
             )
+            try projectData.write(to: url.appendingPathComponent("project.json"))
+
             if let n = currentUntitledNumber {
                 Self.activeUntitledNumbers.remove(n)
             }
@@ -983,17 +1004,19 @@ final class AppState {
 
     func markDirty() {
         hasUnsavedChanges = true
+        refreshUndoState()
     }
 
-    private func buildFullProjectDict() -> [String: Any] {
+    /// Build project metadata dict (no data values — those go in data/*.json).
+    private func buildProjectMetadata() -> [String: Any] {
         let exps: [[String: Any]] = experiments.map { exp in
             let tables: [[String: Any]] = exp.dataTables.map { t in
                 var d: [String: Any] = [
                     "id": t.id.uuidString,
                     "label": t.label,
                     "tableType": t.tableType.rawValue,
+                    "hasData": t.hasData,
                 ]
-                if let path = t.dataFilePath { d["dataFilePath"] = path }
                 if let name = t.originalFileName { d["originalFileName"] = name }
                 return d
             }
@@ -1029,7 +1052,10 @@ final class AppState {
             return [
                 "id": exp.id.uuidString,
                 "label": exp.label,
+                "description": exp.description,
                 "info": exp.info,
+                "createdAt": exp.createdAt.timeIntervalSince1970,
+                "lastModifiedAt": Date().timeIntervalSince1970,
                 "dataTables": tables,
                 "graphs": graphs,
                 "analyses": analyses,
@@ -1037,6 +1063,7 @@ final class AppState {
         }
 
         return [
+            "format_version": 4,
             "experiments": exps,
             "activeExperimentID": activeExperimentID?.uuidString ?? "",
             "activeItemID": activeItemID?.uuidString ?? "",

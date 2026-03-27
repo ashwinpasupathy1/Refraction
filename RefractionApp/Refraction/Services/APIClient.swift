@@ -40,9 +40,12 @@ actor APIClient {
     }
 
     /// Send a render request and return both the decoded ChartSpec and pretty-printed raw JSON.
-    func analyzeWithRawJSON(chartType: ChartType, config: ChartConfig, debug: Bool = false) async throws -> (ChartSpec, String) {
+    func analyzeWithRawJSON(chartType: ChartType, config: ChartConfig, inlineData: [String: Any]? = nil, debug: Bool = false) async throws -> (ChartSpec, String) {
         var kw = config.toDict()
         if debug { kw["_debug"] = true }
+        if let data = inlineData {
+            kw["data"] = data
+        }
         let body: [String: Any] = [
             "chart_type": chartType.key,
             "kw": kw
@@ -186,28 +189,27 @@ actor APIClient {
     }
 
     /// Fetch a read-only preview of the data in an Excel/CSV file.
-    func dataPreview(excelPath: String, sheet: Int = 0) async throws -> DataPreviewResponse {
-        let body: [String: Any] = [
-            "excel_path": excelPath,
-            "sheet": sheet
-        ]
+    func dataPreview(excelPath: String = "", sheet: Int = 0, inlineData: [String: Any]? = nil) async throws -> DataPreviewResponse {
+        var body: [String: Any] = ["sheet": sheet]
+        if let inlineData { body["data"] = inlineData }
+        if !excelPath.isEmpty { body["excel_path"] = excelPath }
         let data = try await post(path: "/data-preview", body: body)
         return try JSONDecoder().decode(DataPreviewResponse.self, from: data)
     }
 
     /// Recommend the best statistical test for the data.
-    func recommendTest(excelPath: String, paired: Bool = false) async throws -> RecommendTestResponse {
-        let body: [String: Any] = [
-            "excel_path": excelPath,
-            "paired": paired,
-        ]
+    func recommendTest(inlineData: [String: Any]? = nil, excelPath: String = "", paired: Bool = false, tableType: String = "column") async throws -> RecommendTestResponse {
+        var body: [String: Any] = ["paired": paired, "table_type": tableType]
+        if let inlineData { body["data"] = inlineData }
+        if !excelPath.isEmpty { body["excel_path"] = excelPath }
         let data = try await post(path: "/recommend-test", body: body)
         return try JSONDecoder().decode(RecommendTestResponse.self, from: data)
     }
 
     /// Run a standalone statistical analysis and return comprehensive results.
     func analyzeStats(
-        excelPath: String,
+        inlineData: [String: Any]? = nil,
+        excelPath: String = "",
         analysisType: String,
         paired: Bool = false,
         posthoc: String = "Tukey HSD",
@@ -215,12 +217,13 @@ actor APIClient {
         control: String? = nil
     ) async throws -> AnalyzeStatsResponse {
         var body: [String: Any] = [
-            "excel_path": excelPath,
             "analysis_type": analysisType,
             "paired": paired,
             "posthoc": posthoc,
             "mc_correction": mcCorrection,
         ]
+        if let inlineData { body["data"] = inlineData }
+        if !excelPath.isEmpty { body["excel_path"] = excelPath }
         if let control { body["control"] = control }
         let data = try await post(path: "/analyze-stats", body: body)
         let response = try JSONDecoder().decode(AnalyzeStatsResponse.self, from: data)
@@ -233,69 +236,6 @@ actor APIClient {
         }
 
         return response
-    }
-
-    /// Save the current project as a .refract file at the given path.
-    func saveProject(outputPath: String, projectState: [String: Any]) async throws -> String {
-        let body: [String: Any] = [
-            "output_path": outputPath,
-            "project": projectState
-        ]
-        let data = try await post(path: "/project/save-refract", body: body)
-
-        struct SaveResponse: Decodable {
-            let ok: Bool
-            let path: String?
-            let error: String?
-        }
-
-        let resp = try JSONDecoder().decode(SaveResponse.self, from: data)
-        guard resp.ok, let path = resp.path else {
-            throw APIError.serverError(resp.error ?? "Save failed")
-        }
-        return path
-    }
-
-    /// Upload a .refract file and return the parsed project dict.
-    func loadProject(fileURL: URL) async throws -> [String: Any] {
-        let url = URL(string: "\(baseURL)/project/load")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-
-        let boundary = UUID().uuidString
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-
-        let fileData = try Data(contentsOf: fileURL)
-        let filename = fileURL.lastPathComponent
-
-        var body = Data()
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: application/octet-stream\r\n\r\n".data(using: .utf8)!)
-        body.append(fileData)
-        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
-
-        request.httpBody = body
-
-        let (data, response) = try await session.data(for: request)
-
-        guard let http = response as? HTTPURLResponse,
-              http.statusCode == 200 else {
-            if let errorObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let errorMsg = errorObj["error"] as? String {
-                throw APIError.serverError(errorMsg)
-            }
-            throw APIError.httpError(statusCode: (response as? HTTPURLResponse)?.statusCode ?? 0)
-        }
-
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let ok = json["ok"] as? Bool, ok,
-              let project = json["project"] as? [String: Any] else {
-            let errorMsg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
-            throw APIError.serverError(errorMsg ?? "Failed to load project")
-        }
-
-        return project
     }
 
     // MARK: - Private helpers

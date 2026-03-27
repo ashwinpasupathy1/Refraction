@@ -1,4 +1,4 @@
-// DataTableView.swift — Read-only spreadsheet view of imported data.
+// DataTableView.swift — Editable spreadsheet view backed by in-memory DataTable.
 // Shows a file picker if no data is loaded.
 
 import SwiftUI
@@ -8,15 +8,9 @@ struct DataTableView: View {
 
     @Environment(AppState.self) private var appState
 
-    @State private var columns: [String] = []
-    @State private var rows: [[AnyCellValue]] = []
-    @State private var isLoadingData = false
-    @State private var dataShape: [Int] = [0, 0]
-    @State private var dataError: String?
-
     var body: some View {
         if let table = appState.activeDataTable, table.hasData {
-            dataPreview(table: table)
+            spreadsheetView(table: table)
         } else {
             filePickerPrompt
         }
@@ -41,14 +35,13 @@ struct DataTableView: View {
                 openFilePicker()
             }
             .buttonStyle(.borderedProminent)
-
         }
         .padding(40)
     }
 
-    // MARK: - Data Preview
+    // MARK: - Spreadsheet View
 
-    private func dataPreview(table: DataTable) -> some View {
+    private func spreadsheetView(table: DataTable) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             // Toolbar
             HStack {
@@ -58,151 +51,79 @@ struct DataTableView: View {
                 Text("(\(table.tableType.label))")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
-                if !dataShape.isEmpty && dataShape[0] > 0 {
-                    Text("\(dataShape[0]) rows × \(dataShape[1]) cols")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text("\(table.rowCount) rows \u{00d7} \(table.columnCount) cols")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Spacer()
+
+                Button {
+                    table.addColumn()
+                    appState.markDirty()
+                } label: {
+                    Label("Add Column", systemImage: "plus.rectangle")
+                }
+                .controlSize(.small)
+                .buttonStyle(.bordered)
+
+                Button {
+                    table.addRow()
+                    appState.markDirty()
+                } label: {
+                    Label("Add Row", systemImage: "plus.rectangle.portrait")
+                }
+                .controlSize(.small)
+                .buttonStyle(.bordered)
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
 
             Divider()
 
-            // Content area
-            if isLoadingData {
-                Spacer()
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .controlSize(.large)
-                    Spacer()
-                }
-                Spacer()
-            } else if let error = dataError {
-                Spacer()
-                HStack {
-                    Spacer()
-                    VStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.title)
-                            .foregroundStyle(.secondary)
-                        Text(error)
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    Spacer()
-                }
-                Spacer()
-            } else if columns.isEmpty {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Text("No data to display.")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-                Spacer()
-            } else {
-                spreadsheetGrid
-            }
-        }
-        .task(id: table.dataFilePath) {
-            await fetchDataPreview(path: table.dataFilePath)
-        }
-    }
-
-    // MARK: - Spreadsheet Grid
-
-    private var spreadsheetGrid: some View {
-        ScrollView([.horizontal, .vertical]) {
-            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                Section {
-                    ForEach(Array(rows.enumerated()), id: \.offset) { rowIdx, row in
-                        HStack(spacing: 0) {
-                            // Row number
-                            Text("\(rowIdx + 1)")
-                                .font(.system(.body, design: .monospaced))
-                                .frame(width: 44, alignment: .trailing)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .background(Color.gray.opacity(0.1))
-
-                            ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
-                                Text(cell.displayString)
-                                    .font(.system(.body, design: .monospaced))
-                                    .lineLimit(1)
-                                    .frame(width: 120, alignment: .leading)
-                                    .padding(.horizontal, 6)
+            // Spreadsheet grid
+            ScrollView([.horizontal, .vertical]) {
+                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    Section {
+                        ForEach(0..<table.rowCount, id: \.self) { rowIdx in
+                            HStack(spacing: 0) {
+                                // Row number
+                                Text("\(rowIdx + 1)")
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 36, alignment: .trailing)
+                                    .padding(.horizontal, 4)
                                     .padding(.vertical, 2)
+                                    .background(Color.gray.opacity(0.08))
+
+                                ForEach(0..<table.columnCount, id: \.self) { colIdx in
+                                    CellEditor(table: table, row: rowIdx, col: colIdx)
+                                }
                             }
+                            .background(rowIdx % 2 == 0 ? Color.clear : Color.gray.opacity(0.03))
+
+                            Divider()
                         }
-                        .background(rowIdx % 2 == 0 ? Color.clear : Color.gray.opacity(0.05))
-
-                        Divider()
-                    }
-                } header: {
-                    VStack(spacing: 0) {
-                        HStack(spacing: 0) {
-                            Text("#")
-                                .fontWeight(.semibold)
-                                .frame(width: 44, alignment: .trailing)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 4)
-
-                            ForEach(Array(columns.enumerated()), id: \.offset) { _, name in
-                                Text(name)
+                    } header: {
+                        VStack(spacing: 0) {
+                            HStack(spacing: 0) {
+                                Text("#")
                                     .fontWeight(.semibold)
-                                    .lineLimit(1)
-                                    .frame(width: 120, alignment: .leading)
-                                    .padding(.horizontal, 6)
+                                    .font(.caption)
+                                    .frame(width: 36, alignment: .trailing)
+                                    .padding(.horizontal, 4)
                                     .padding(.vertical, 4)
-                            }
-                        }
-                        .background(.bar)
 
-                        Divider()
+                                ForEach(0..<table.columnCount, id: \.self) { colIdx in
+                                    ColumnHeader(table: table, col: colIdx)
+                                }
+                            }
+                            .background(.bar)
+
+                            Divider()
+                        }
                     }
                 }
             }
         }
-    }
-
-    // MARK: - Data Fetching
-
-    private func fetchDataPreview(path: String?) async {
-        guard let path, !path.isEmpty else {
-            columns = []
-            rows = []
-            dataShape = [0, 0]
-            return
-        }
-
-        isLoadingData = true
-        dataError = nil
-
-        do {
-            let response = try await APIClient.shared.dataPreview(excelPath: path)
-            if response.ok {
-                columns = response.columns ?? []
-                rows = response.rows ?? []
-                dataShape = response.shape ?? [0, 0]
-                dataError = nil
-            } else {
-                dataError = response.error ?? "Unknown error"
-                columns = []
-                rows = []
-            }
-        } catch {
-            dataError = error.localizedDescription
-            columns = []
-            rows = []
-        }
-
-        isLoadingData = false
     }
 
     // MARK: - Actions
@@ -225,13 +146,118 @@ struct DataTableView: View {
             }
         }
     }
+}
 
-    private func loadSampleData() {
-        if let sampleURL = Bundle.main.url(forResource: "SampleData/drug_treatment", withExtension: "xlsx") {
-            let table = appState.activeDataTable
-            Task {
-                await appState.uploadFile(url: sampleURL, for: table)
-            }
+// MARK: - Cell Editor
+
+private struct CellEditor: View {
+    let table: DataTable
+    let row: Int
+    let col: Int
+
+    @Environment(AppState.self) private var appState
+    @State private var editText: String = ""
+    @State private var isEditing = false
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        if isEditing {
+            TextField("", text: $editText, onCommit: commit)
+                .textFieldStyle(.plain)
+                .font(.system(.body, design: .monospaced))
+                .focused($isFocused)
+                .frame(width: 120, alignment: .leading)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.accentColor.opacity(0.08))
+                .onAppear { isFocused = true }
+                .onExitCommand { cancelEdit() }
+        } else {
+            Text(table.cell(row: row, col: col).displayString)
+                .font(.system(.body, design: .monospaced))
+                .lineLimit(1)
+                .frame(width: 120, alignment: .leading)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .contentShape(Rectangle())
+                .onTapGesture(count: 2) { startEdit() }
         }
+    }
+
+    private func startEdit() {
+        editText = table.cell(row: row, col: col).displayString
+        isEditing = true
+    }
+
+    private func commit() {
+        let trimmed = editText.trimmingCharacters(in: .whitespaces)
+        let newValue: CellValue
+        if trimmed.isEmpty {
+            newValue = .empty
+        } else if let d = Double(trimmed) {
+            newValue = .number(d)
+        } else {
+            newValue = .text(trimmed)
+        }
+        let oldValue = table.cell(row: row, col: col)
+        guard oldValue != newValue else {
+            isEditing = false
+            return
+        }
+        table.setCell(row: row, col: col, value: newValue)
+        appState.registerCellEdit(table: table, row: row, col: col, oldValue: oldValue, newValue: newValue)
+        appState.markDirty()
+        isEditing = false
+        DebugLog.shared.logVerbose("cell edit [\(row),\(col)] = \(trimmed)")
+    }
+
+    private func cancelEdit() {
+        isEditing = false
+    }
+}
+
+// MARK: - Column Header
+
+private struct ColumnHeader: View {
+    let table: DataTable
+    let col: Int
+
+    @Environment(AppState.self) private var appState
+    @State private var editText: String = ""
+    @State private var isEditing = false
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        if isEditing {
+            TextField("", text: $editText, onCommit: commit)
+                .textFieldStyle(.plain)
+                .fontWeight(.semibold)
+                .focused($isFocused)
+                .frame(width: 120, alignment: .leading)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .onAppear { isFocused = true }
+        } else {
+            Text(col < table.columns.count ? table.columns[col] : "")
+                .fontWeight(.semibold)
+                .lineLimit(1)
+                .frame(width: 120, alignment: .leading)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
+                .onTapGesture(count: 2) {
+                    editText = col < table.columns.count ? table.columns[col] : ""
+                    isEditing = true
+                }
+        }
+    }
+
+    private func commit() {
+        if col < table.columns.count {
+            table.columns[col] = editText
+            appState.markDirty()
+            DebugLog.shared.logVerbose("rename column[\(col)] = \(editText)")
+        }
+        isEditing = false
     }
 }

@@ -1,0 +1,437 @@
+{
+  "version": "2.0",
+  "experiments": [
+    {
+      "id": "8A813DC1-F585-432A-B457-0AC4F8BA28BA",
+      "label": "Bar Chart",
+      "description": "Column bar chart with 3 treatment groups",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "AF49F9B5-404C-447E-AEFE-03226A92CBB8",
+          "label": "Treatment Data",
+          "tableType": "column",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "042F6874-F657-4699-A22E-4462E0391B38",
+          "label": "Bar Chart",
+          "dataTableID": "AF49F9B5-404C-447E-AEFE-03226A92CBB8",
+          "chartType": "bar",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "49E5E1A3-71DA-4C11-B607-4055F1D34A32",
+      "label": "Box Plot",
+      "description": "Box plot with 3 treatment groups",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "993019BE-1050-4184-9866-863CC3E9639D",
+          "label": "Treatment Data",
+          "tableType": "column",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "ACDD1045-2175-44A8-93C6-CF50CE933A58",
+          "label": "Box Plot",
+          "dataTableID": "993019BE-1050-4184-9866-863CC3E9639D",
+          "chartType": "box",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "34483E87-EED9-4CF2-80FF-6514AD0711FE",
+      "label": "Violin Plot",
+      "description": "Violin plot with 3 treatment groups",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "51F22AF3-0980-411B-B896-21134AED52C8",
+          "label": "Treatment Data",
+          "tableType": "column",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "6FC82580-99F6-49DD-BE98-E240A13E9243",
+          "label": "Violin Plot",
+          "dataTableID": "51F22AF3-0980-411B-B896-21134AED52C8",
+          "chartType": "violin",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "6090C85D-1B2A-44F0-9ED6-05AEC4CC7F72",
+      "label": "Histogram",
+      "description": "Distribution of 30 normally distributed values",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "61591459-6565-4C1A-B748-4215D06A9FF0",
+          "label": "Distribution Data",
+          "tableType": "column",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "DC66CF5F-F88E-4EDC-A744-C12E70F01BD7",
+          "label": "Histogram",
+          "dataTableID": "61591459-6565-4C1A-B748-4215D06A9FF0",
+          "chartType": "histogram",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "4923B1E5-0F3C-4832-8BDB-72B9D3D97F2B",
+      "label": "Dot Plot",
+      "description": "Dot plot with 3 groups of 10 values",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "87B5AC9A-2E84-49B5-A273-F49ADAEBF759",
+          "label": "Group Data",
+          "tableType": "column",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "D5FBF487-EA60-4276-8279-89E9CCF10EF0",
+          "label": "Dot Plot",
+          "dataTableID": "87B5AC9A-2E84-49B5-A273-F49ADAEBF759",
+          "chartType": "dot_plot",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "DCEC1AE8-6740-4176-84EA-8BDDD43EB530",
+      "label": "Scatter Plot",
+      "description": "XY scatter with 20 data points",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "9179D2BC-70A6-43AD-A4B7-96E5B57C8D8E",
+          "label": "XY Data",
+          "tableType": "xy",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "720BDFF2-D592-41BF-9BAA-87E48F83FEBB",
+          "label": "Scatter Plot",
+          "dataTableID": "9179D2BC-70A6-43AD-A4B7-96E5B57C8D8E",
+          "chartType": "scatter",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "54D6EE83-B3EB-40C6-BEEC-C3A4C5F95AD8",
+      "label": "Line Graph",
+      "description": "Time series with 2 series over 10 timepoints",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "A79E4D45-60F9-40DF-9E23-A8E626D3FB33",
+          "label": "Time Series Data",
+          "tableType": "xy",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "5EB43D1F-4A7D-472E-98E2-E7F6E4F1C5D8",
+          "label": "Line Graph",
+          "dataTableID": "A79E4D45-60F9-40DF-9E23-A8E626D3FB33",
+          "chartType": "line",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "09F1F1CE-ED8D-4EB5-ABA0-0C5C3C944AF0",
+      "label": "Grouped Bar",
+      "description": "Grouped bar chart with 4 categories and 2 groups",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "879AE5E3-482D-41D2-9782-D8A02E8F2DBF",
+          "label": "Quarterly Data",
+          "tableType": "grouped",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "807AB360-B02C-4E5D-8C81-FFA02527E2E6",
+          "label": "Grouped Bar",
+          "dataTableID": "879AE5E3-482D-41D2-9782-D8A02E8F2DBF",
+          "chartType": "grouped_bar",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "5D9B50C2-F430-41A8-A3E5-308DED503061",
+      "label": "Survival Curve",
+      "description": "Kaplan-Meier survival curves for treatment vs placebo",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "E0CF56AA-C076-49B6-B71E-F5E9F2707E93",
+          "label": "Survival Data",
+          "tableType": "survival",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "6597E2A2-CF71-4B05-AC1A-A9DB077553DC",
+          "label": "Survival Curve",
+          "dataTableID": "E0CF56AA-C076-49B6-B71E-F5E9F2707E93",
+          "chartType": "kaplan_meier",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "578C7CA1-599C-4E0D-BEEA-D0EFE045792F",
+      "label": "Before / After",
+      "description": "Paired before/after measurements for 12 subjects",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "94177624-1AC6-44B6-8145-73E82B20D057",
+          "label": "Paired Data",
+          "tableType": "column",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "1115B717-2E1A-461C-86A0-F5CA0F174FF8",
+          "label": "Before / After",
+          "dataTableID": "94177624-1AC6-44B6-8145-73E82B20D057",
+          "chartType": "before_after",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "1E828AD6-F76F-48DD-98D3-1E82C773C0D4",
+      "label": "Raincloud",
+      "description": "Raincloud plot with 3 conditions",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "00384C91-D260-4D2C-B0BA-1A74A231FDB5",
+          "label": "Condition Data",
+          "tableType": "column",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "99F0ACDC-1722-47A9-A710-871D6A84B470",
+          "label": "Raincloud",
+          "dataTableID": "00384C91-D260-4D2C-B0BA-1A74A231FDB5",
+          "chartType": "raincloud",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "336EB248-24C5-4C71-9E2A-83B8D43BA83F",
+      "label": "Lollipop",
+      "description": "Lollipop chart with 6 categories",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "95AEB506-4CF0-4E40-9056-1F50C9B7365E",
+          "label": "Category Data",
+          "tableType": "column",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "DA742756-6F9B-4EAA-9430-56E590CCB2CC",
+          "label": "Lollipop",
+          "dataTableID": "95AEB506-4CF0-4E40-9056-1F50C9B7365E",
+          "chartType": "lollipop",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "A3046B90-4323-49F3-9359-3AD49186B790",
+      "label": "Stacked Bar",
+      "description": "Stacked bar chart with 4 categories and 3 parts",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "FFE65A20-1ADC-4BF5-ADFD-19EDB194A4A3",
+          "label": "Regional Data",
+          "tableType": "grouped",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "1C2077D4-74EC-4662-9873-397C32E343AE",
+          "label": "Stacked Bar",
+          "dataTableID": "FFE65A20-1ADC-4BF5-ADFD-19EDB194A4A3",
+          "chartType": "stacked_bar",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "374BC3CB-094A-47AF-9B75-79E44547B703",
+      "label": "Contingency",
+      "description": "2x2 contingency table for treatment vs placebo",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "7D328EF6-21B0-480B-A412-15DFC09752EE",
+          "label": "Contingency Table",
+          "tableType": "contingency",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "83379985-EFA0-48AA-8938-38BAA7CA49F5",
+          "label": "Contingency",
+          "dataTableID": "7D328EF6-21B0-480B-A412-15DFC09752EE",
+          "chartType": "contingency",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "CAC922AA-1D0F-4267-AF6B-D0AEDC09DC49",
+      "label": "Forest Plot",
+      "description": "Forest plot of 6 studies with effect sizes and confidence intervals",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "B17DD20A-A711-4F0C-AA40-DB57499A0440",
+          "label": "Meta-Analysis Data",
+          "tableType": "xy",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "8FBE7637-557E-4CDC-BC49-933AEAED3FEB",
+          "label": "Forest Plot",
+          "dataTableID": "B17DD20A-A711-4F0C-AA40-DB57499A0440",
+          "chartType": "forest_plot",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    },
+    {
+      "id": "3B82E287-D4B2-4A6F-81F2-CA7D26C1F948",
+      "label": "Bland-Altman",
+      "description": "Bland-Altman comparison of two measurement methods",
+      "createdAt": "2026-03-26T18:37:17",
+      "lastModifiedAt": "2026-03-26T18:37:17",
+      "dataTables": [
+        {
+          "id": "B804F769-F309-4AC6-9BAB-9B99EE99A599",
+          "label": "Method Comparison",
+          "tableType": "xy",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "graphs": [
+        {
+          "id": "0DD4B193-D4A9-4883-BBD3-55A2B5F33DDD",
+          "label": "Bland-Altman",
+          "dataTableID": "B804F769-F309-4AC6-9BAB-9B99EE99A599",
+          "chartType": "bland_altman",
+          "createdAt": "2026-03-26T18:37:17",
+          "lastModifiedAt": "2026-03-26T18:37:17"
+        }
+      ],
+      "analyses": []
+    }
+  ]
+}

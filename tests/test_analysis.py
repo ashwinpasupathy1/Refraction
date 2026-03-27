@@ -452,4 +452,209 @@ def test_extract_config_defaults():
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Merged from test_phase6_qa.py — Analysis parity, stats annotator, config audit
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import tempfile
+import pandas as pd
+from scipy import stats as sp_stats
+
+
+def _tmp_bar_excel_qa(groups: dict) -> str:
+    """Create a temp bar-layout Excel file. Merged from test_phase6_qa.py."""
+    path = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False).name
+    names = list(groups.keys())
+    max_n = max(len(v) for v in groups.values())
+    rows = [names]
+    for i in range(max_n):
+        rows.append([
+            float(groups[n][i]) if i < len(groups[n]) else None
+            for n in names
+        ])
+    pd.DataFrame(rows).to_excel(path, index=False, header=False)
+    return path
+
+
+# Merged from test_phase6_qa.py
+class TestBarAnalysisParity:
+    """Compare analyzer output against expected values."""
+
+    @staticmethod
+    def _setup_data():
+        data = {
+            "Control": [2.0, 3.0, 4.0, 5.0, 6.0],
+            "Drug": [5.0, 6.0, 7.0, 8.0, 9.0],
+        }
+        path = _tmp_bar_excel_qa(data)
+        return data, path
+
+    def test_means_match(self):
+        data, path = self._setup_data()
+        try:
+            result = analyze("bar", path)
+            groups = result["groups"]
+            expected_control_mean = np.mean(data["Control"])
+            expected_drug_mean = np.mean(data["Drug"])
+            assert abs(groups[0]["mean"] - expected_control_mean) < 1e-10
+            assert abs(groups[1]["mean"] - expected_drug_mean) < 1e-10
+        finally:
+            import os; os.unlink(path)
+
+    def test_sem_uses_ddof1(self):
+        data, path = self._setup_data()
+        try:
+            result = analyze("bar", path, config={"error_type": "sem"})
+            groups = result["groups"]
+            for i, name in enumerate(["Control", "Drug"]):
+                vals = np.array(data[name])
+                expected_sem = float(np.std(vals, ddof=1) / np.sqrt(len(vals)))
+                assert abs(groups[i]["sem"] - expected_sem) < 1e-10, \
+                    f"SEM mismatch for {name}: got {groups[i]['sem']}, expected {expected_sem}"
+        finally:
+            import os; os.unlink(path)
+
+    def test_sd_matches(self):
+        data, path = self._setup_data()
+        try:
+            result = analyze("bar", path, config={"error_type": "sd"})
+            groups = result["groups"]
+            for i, name in enumerate(["Control", "Drug"]):
+                vals = np.array(data[name])
+                expected_sd = float(np.std(vals, ddof=1))
+                assert abs(groups[i]["sd"] - expected_sd) < 1e-10
+        finally:
+            import os; os.unlink(path)
+
+    def test_ci95_matches(self):
+        data, path = self._setup_data()
+        try:
+            result = analyze("bar", path, config={"error_type": "ci95"})
+            groups = result["groups"]
+            for i, name in enumerate(["Control", "Drug"]):
+                vals = np.array(data[name])
+                se = float(np.std(vals, ddof=1) / np.sqrt(len(vals)))
+                t_crit = float(sp_stats.t.ppf(0.975, df=len(vals) - 1))
+                expected_ci = se * t_crit
+                assert abs(groups[i]["ci95"] - expected_ci) < 1e-10
+        finally:
+            import os; os.unlink(path)
+
+    def test_colors_resolved(self):
+        _, path = self._setup_data()
+        try:
+            result = analyze("bar", path)
+            groups = result["groups"]
+            assert len(groups) == 2
+            assert all(g["color"].startswith("#") for g in groups)
+        finally:
+            import os; os.unlink(path)
+
+
+# Merged from test_phase6_qa.py
+class TestStatsAnnotatorQA:
+    """Verify p-values match direct scipy calls; brackets have stacking_order."""
+
+    def setup_method(self):
+        from refraction.analysis.stats_annotator import build_stats_brackets
+        self._build_brackets = build_stats_brackets
+        rng = np.random.default_rng(42)
+        self.groups_3 = {
+            "Control": rng.normal(5.0, 1.0, 20).tolist(),
+            "Drug A": rng.normal(8.0, 1.0, 20).tolist(),
+            "Drug B": rng.normal(11.0, 1.0, 20).tolist(),
+        }
+        self.groups_2 = {
+            "A": [1.0, 2.0, 3.0, 4.0, 5.0],
+            "B": [3.0, 4.0, 5.0, 6.0, 7.0],
+        }
+
+    def test_ttest_pvalues_match_scipy(self):
+        brackets = self._build_brackets(self.groups_2, "t-test")
+        assert len(brackets) == 1
+        _, expected_p = sp_stats.ttest_ind(self.groups_2["A"], self.groups_2["B"])
+        assert abs(brackets[0].p_value - expected_p) < 1e-10
+
+    def test_anova_posthoc_brackets(self):
+        brackets = self._build_brackets(self.groups_3, "anova", "tukey")
+        _, p_omnibus = sp_stats.f_oneway(
+            self.groups_3["Control"],
+            self.groups_3["Drug A"],
+            self.groups_3["Drug B"],
+        )
+        if p_omnibus <= 0.05:
+            assert len(brackets) == 3
+
+    def test_brackets_have_stacking_order(self):
+        brackets = self._build_brackets(self.groups_3, "anova", "tukey")
+        if brackets:
+            orders = [b.stacking_order for b in brackets]
+            assert orders == sorted(orders), "Brackets must be ordered by stacking_order"
+            assert len(set(orders)) == len(orders), "Each bracket needs unique stacking_order"
+
+    def test_mannwhitney_pvalues_match(self):
+        brackets = self._build_brackets(self.groups_2, "mann-whitney")
+        assert len(brackets) == 1
+        _, expected_p = sp_stats.mannwhitneyu(
+            self.groups_2["A"], self.groups_2["B"], alternative="two-sided"
+        )
+        assert abs(brackets[0].p_value - expected_p) < 1e-10
+
+    def test_no_stats_returns_empty(self):
+        brackets = self._build_brackets(self.groups_2, "")
+        assert brackets == []
+
+    def test_single_group_returns_empty(self):
+        brackets = self._build_brackets({"A": [1, 2, 3]}, "t-test")
+        assert brackets == []
+
+
+# Merged from test_phase6_qa.py
+class TestConfigOptionAudit:
+    """Check which Swift keys Python analyzers accept, and flag mismatches."""
+
+    SWIFT_KEYS = {
+        "excel_path", "sheet", "title", "xlabel", "ytitle",
+        "error", "show_points", "jitter", "point_size", "point_alpha",
+        "axis_style", "tick_dir", "minor_ticks", "spine_width",
+        "figsize", "font_size", "bar_width", "line_width", "marker_style",
+        "marker_size", "fig_bg", "grid_style", "alpha", "cap_size",
+        "yscale", "ytick_interval", "xtick_interval",
+        "stats_test", "posthoc", "mc_correction", "control",
+        "show_ns", "show_p_values", "show_effect_size", "show_test_name",
+        "show_normality_warning", "p_sig_threshold", "bracket_style",
+        "ylim", "ref_line", "ref_line_label",
+    }
+
+    PYTHON_KEYS = {
+        "excel_path", "sheet", "title", "xlabel", "ytitle", "ylabel",
+        "color", "yscale", "ylim", "figsize", "font_size",
+        "axis_style", "gridlines", "error_type", "show_points",
+        "point_size", "point_alpha", "bar_width", "alpha",
+        "line_width", "stats_test", "posthoc", "correction",
+    }
+
+    def test_swift_sends_keys_python_ignores(self):
+        ignored = self.SWIFT_KEYS - self.PYTHON_KEYS
+        known_gaps = {
+            "error", "jitter", "tick_dir", "minor_ticks", "spine_width",
+            "marker_style", "marker_size", "fig_bg", "grid_style",
+            "cap_size", "ytick_interval", "xtick_interval",
+            "mc_correction", "control", "show_ns", "show_p_values",
+            "show_effect_size", "show_test_name", "show_normality_warning",
+            "p_sig_threshold", "bracket_style", "ref_line", "ref_line_label",
+        }
+        unexpected = ignored - known_gaps
+        assert unexpected == set(), (
+            f"Swift sends keys Python unexpectedly ignores: {unexpected}"
+        )
+
+    def test_python_reads_keys_swift_does_not_send(self):
+        python_only = self.PYTHON_KEYS - self.SWIFT_KEYS
+        known_python_only = {
+            "color", "ylabel", "gridlines", "error_type", "correction",
+        }
+        unexpected = python_only - known_python_only
+        assert unexpected == set(), (
+            f"Python reads keys Swift unexpectedly doesn't send: {unexpected}"
+        )
 

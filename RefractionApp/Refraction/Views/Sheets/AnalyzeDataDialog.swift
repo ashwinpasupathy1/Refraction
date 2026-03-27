@@ -58,6 +58,9 @@ struct AnalyzeDataDialog: View {
     @State private var isRunning = false
     @State private var errorMessage: String?
     @State private var showStatsWiki = false
+    @State private var posthocMethod: String = "Tukey HSD"
+    @State private var mcCorrection: String = "Holm-Bonferroni"
+    @State private var controlGroup: String = ""
 
     private var tablesWithData: [DataTable] {
         appState.activeExperiment?.dataTables.filter { $0.hasData } ?? []
@@ -156,6 +159,18 @@ struct AnalyzeDataDialog: View {
                     Label("Statistics Guide", systemImage: "book.fill")
                 }
 
+                Button {
+                    // Auto-analyze: pick the recommended test and run
+                    if let rec = recommendation?.test {
+                        selectedAnalysis = rec
+                        runAnalysis()
+                    }
+                } label: {
+                    Label("Auto", systemImage: "wand.and.stars")
+                }
+                .disabled(recommendation?.test == nil || isRunning)
+                .help("Automatically run the recommended analysis")
+
                 if let errorMessage {
                     Text(errorMessage)
                         .font(.caption)
@@ -237,6 +252,10 @@ struct AnalyzeDataDialog: View {
             if selectedAnalysis == nil, let rec = newValue {
                 selectedAnalysis = rec
             }
+            // Auto-set posthoc from recommendation
+            if let ph = recommendation?.posthoc, !ph.isEmpty {
+                posthocMethod = ph
+            }
         }
     }
 
@@ -285,37 +304,21 @@ struct AnalyzeDataDialog: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                // Selected analysis info
-                if let sel = selectedAnalysis,
-                   let option = allAnalyses.first(where: { $0.id == sel }) {
-                    if sel != rec.test {
-                        GroupBox {
-                            VStack(alignment: .leading, spacing: 4) {
-                                let reason = disableReason(for: option)
-                                if reason != nil {
-                                    Label("Not applicable", systemImage: "exclamationmark.triangle")
-                                        .font(.caption)
-                                        .foregroundStyle(.orange)
-                                } else {
-                                    Text("Selected")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Text(option.label)
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(reason != nil ? .secondary : .primary)
-                                if let reason {
-                                    Text(reason)
-                                        .font(.callout)
-                                        .foregroundStyle(.orange)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
+                // Multiple comparison options
+                comparisonOptions
+
+                // Test details from catalog
+                if let sel = selectedAnalysis {
+                    testInfoPanel(for: sel)
                 }
 
+                Spacer()
+            } else if let sel = selectedAnalysis {
+                // Multiple comparison options
+                comparisonOptions
+
+                // Show test info from catalog even without recommendation
+                testInfoPanel(for: sel)
                 Spacer()
             } else {
                 Spacer()
@@ -331,6 +334,103 @@ struct AnalyzeDataDialog: View {
             }
         }
         .padding(16)
+    }
+
+    // MARK: - Test Info from Catalog
+
+    /// Map AnalysisOption IDs to StatsTestCatalog IDs (they differ slightly).
+    private func catalogID(for analysisID: String) -> String {
+        switch analysisID {
+        case "one_sample": return "one_sample_t"
+        case "repeated_measures": return "repeated_measures_anova"
+        default: return analysisID
+        }
+    }
+
+    @ViewBuilder
+    private func testInfoPanel(for analysisID: String) -> some View {
+        let catID = catalogID(for: analysisID)
+        if let detail = StatsTestCatalog.detail(for: catID) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(detail.name)
+                        .font(.title3)
+                        .fontWeight(.semibold)
+
+                    if !detail.aliases.isEmpty {
+                        Text("Also known as: \(detail.aliases.joined(separator: ", "))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Divider()
+
+                    // When to use
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("When to use", systemImage: "checkmark.circle")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.green)
+                        Text(detail.whenToUse)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    // When not to use
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("When NOT to use", systemImage: "xmark.circle")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.red)
+                        Text(detail.whenNotToUse)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    // Assumptions
+                    if !detail.assumptions.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("Assumptions", systemImage: "list.bullet")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            ForEach(detail.assumptions, id: \.self) { assumption in
+                                HStack(alignment: .top, spacing: 4) {
+                                    Text("\u{2022}")
+                                        .font(.caption)
+                                    Text(assumption)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+
+                    // Distribution
+                    if !detail.distribution.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Distribution")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            Text(detail.distribution)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        } else {
+            let option = allAnalyses.first { $0.id == analysisID }
+            VStack(alignment: .leading, spacing: 8) {
+                Text(option?.label ?? analysisID)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                Text("No detailed description available for this analysis.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 
     // MARK: - Disable Reason
@@ -369,10 +469,14 @@ struct AnalyzeDataDialog: View {
     // MARK: - Actions
 
     private func loadRecommendation() async {
-        guard let path = table?.dataFilePath, !path.isEmpty else { return }
+        guard let table, table.hasData else { return }
         isLoadingRecommendation = true
         do {
-            recommendation = try await APIClient.shared.recommendTest(excelPath: path)
+            recommendation = try await APIClient.shared.recommendTest(
+                inlineData: table.toAnalyzePayload(),
+                paired: table.tableType == .comparison,
+                tableType: table.tableType.rawValue
+            )
         } catch {
             // Non-fatal: just don't show a recommendation
             recommendation = nil
@@ -403,10 +507,84 @@ struct AnalyzeDataDialog: View {
         isRunning = true
         errorMessage = nil
         Task { @MainActor in
-            await appState.runAnalysis(analysisType: analysisType, dataTableID: table?.id, label: effectiveAnalysisName)
+            await appState.runAnalysis(
+                analysisType: analysisType,
+                dataTableID: table?.id,
+                label: effectiveAnalysisName,
+                posthoc: posthocMethod,
+                mcCorrection: mcCorrection,
+                control: controlGroup.isEmpty ? nil : controlGroup
+            )
             isRunning = false
             dismiss()
         }
+    }
+
+    // MARK: - Comparison Options
+
+    private var nGroups: Int {
+        recommendation?.checks?.nGroups ?? 0
+    }
+
+    private var groupNames: [String] {
+        table?.columns ?? []
+    }
+
+    @ViewBuilder
+    private var comparisonOptions: some View {
+        let needsPosthoc = nGroups >= 3 || selectedAnalysisNeedsPosthoc
+
+        if needsPosthoc {
+            GroupBox {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Multiple Comparison Correction", systemImage: "slider.horizontal.3")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+
+                    LabeledContent("Posthoc") {
+                        Picker("", selection: $posthocMethod) {
+                            Text("Tukey HSD").tag("Tukey HSD")
+                            Text("Dunn").tag("Dunn")
+                            Text("Games-Howell").tag("Games-Howell")
+                            Text("Dunnett").tag("Dunnett")
+                        }
+                        .labelsHidden()
+                        .frame(width: 140)
+                    }
+
+                    LabeledContent("Correction") {
+                        Picker("", selection: $mcCorrection) {
+                            Text("Holm-Bonferroni").tag("Holm-Bonferroni")
+                            Text("Bonferroni").tag("Bonferroni")
+                            Text("Benjamini-Hochberg").tag("Benjamini-Hochberg")
+                            Text("None").tag("None")
+                        }
+                        .labelsHidden()
+                        .frame(width: 160)
+                    }
+
+                    if !groupNames.isEmpty && posthocMethod == "Dunnett" {
+                        LabeledContent("Control") {
+                            Picker("", selection: $controlGroup) {
+                                Text("None").tag("")
+                                ForEach(groupNames, id: \.self) { name in
+                                    Text(name).tag(name)
+                                }
+                            }
+                            .labelsHidden()
+                            .frame(width: 140)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Whether the selected analysis benefits from posthoc/correction options.
+    private var selectedAnalysisNeedsPosthoc: Bool {
+        guard let sel = selectedAnalysis else { return false }
+        return ["anova", "welch_anova", "kruskal_wallis", "two_way_anova",
+                "repeated_measures", "friedman", "multiple_t"].contains(sel)
     }
 
     // MARK: - Complete analysis catalogue (all types, all table types)

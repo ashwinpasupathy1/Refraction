@@ -66,7 +66,7 @@ def _collapse_contingency_to_gof(df: pd.DataFrame):
 def analyze_chi_square_gof(kw: dict) -> ChartSpec:
     """Analyze chi-square goodness-of-fit data and return a ChartSpec."""
     cfg = extract_config(kw)
-    df = read_data(cfg["excel_path"], cfg["sheet"], header=None)
+    df = read_data(cfg["excel_path"], cfg["sheet"], header=None, df=cfg.get("_df"))
 
     if len(df) < 2:
         return ChartSpec(

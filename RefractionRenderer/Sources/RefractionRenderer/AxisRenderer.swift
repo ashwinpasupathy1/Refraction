@@ -7,7 +7,58 @@ import SwiftUI
 public enum AxisRenderer {
 
     /// Draw axes (spines, ticks, labels, title) into the canvas context.
+    /// Call `draw` for the full axis pass, or use `drawBackground` + `drawForeground` separately
+    /// to render chart data between them (so spines draw on top of bars).
     public static func draw(
+        in context: GraphicsContext,
+        plotRect: CGRect,
+        canvasSize: CGSize,
+        spec: AxisSpec,
+        style: StyleSpec,
+        groups: [String],
+        yRange: (min: Double, max: Double)? = nil
+    ) {
+        drawBackground(in: context, plotRect: plotRect, spec: spec, style: style, yRange: yRange)
+        drawForeground(in: context, plotRect: plotRect, canvasSize: canvasSize, spec: spec,
+                       style: style, groups: groups, yRange: yRange)
+    }
+
+    /// Phase 1: Draw plot area background and grid lines (call BEFORE chart data).
+    public static func drawBackground(
+        in context: GraphicsContext,
+        plotRect: CGRect,
+        spec: AxisSpec,
+        style: StyleSpec,
+        yRange: (min: Double, max: Double)? = nil
+    ) {
+        // MARK: - Plot area background
+
+        if spec.plotAreaColor != "clear" {
+            let bgRect = Path(plotRect)
+            context.fill(bgRect, with: .color(Color(hex: spec.plotAreaColor)))
+        }
+
+        // MARK: - Grid lines (drawn before data, behind everything)
+
+        let yR = resolveYRange(spec: spec, yRange: yRange)
+        let ticks = resolveTicks(spec: spec, yRange: yR)
+
+        drawGridLines(
+            in: context,
+            plotRect: plotRect,
+            ticks: ticks.values,
+            yRange: yR,
+            majorGrid: spec.majorGrid,
+            majorGridColor: spec.majorGridColor,
+            majorGridThickness: spec.majorGridThickness,
+            minorGrid: spec.minorGrid,
+            minorGridColor: spec.minorGridColor,
+            minorGridThickness: spec.minorGridThickness
+        )
+    }
+
+    /// Phase 2: Draw spines, ticks, labels, and titles (call AFTER chart data).
+    public static func drawForeground(
         in context: GraphicsContext,
         plotRect: CGRect,
         canvasSize: CGSize,
@@ -22,48 +73,10 @@ public enum AxisRenderer {
         let hideX = spec.hideAxes == "hide_x" || spec.hideAxes == "hide_both"
         let hideY = spec.hideAxes == "hide_y" || spec.hideAxes == "hide_both"
 
-        // MARK: - Plot area background
-
-        if spec.plotAreaColor != "clear" {
-            let bgRect = Path(plotRect)
-            context.fill(bgRect, with: .color(Color(hex: spec.plotAreaColor)))
-        }
-
-        // MARK: - Grid lines (drawn before data, behind everything)
-
-        let yR: (min: Double, max: Double)
-        if let range = spec.yRange, range.count == 2 {
-            yR = (min: range[0], max: range[1])
-        } else if let yr = yRange {
-            yR = yr
-        } else {
-            yR = (min: 0, max: 10)
-        }
-
-        let ticks: [Double]
-        let tickLabels: [String]
-        if !spec.yTicks.isEmpty {
-            ticks = spec.yTicks
-            tickLabels = spec.yTickLabels.isEmpty
-                ? spec.yTicks.map { formatTickValue($0) }
-                : spec.yTickLabels
-        } else {
-            ticks = prettyTicks(lo: yR.min, hi: yR.max)
-            tickLabels = ticks.map { formatTickValue($0) }
-        }
-
-        drawGridLines(
-            in: context,
-            plotRect: plotRect,
-            ticks: ticks,
-            yRange: yR,
-            majorGrid: spec.majorGrid,
-            majorGridColor: spec.majorGridColor,
-            majorGridThickness: spec.majorGridThickness,
-            minorGrid: spec.minorGrid,
-            minorGridColor: spec.minorGridColor,
-            minorGridThickness: spec.minorGridThickness
-        )
+        let yR = resolveYRange(spec: spec, yRange: yRange)
+        let resolved = resolveTicks(spec: spec, yRange: yR)
+        let ticks = resolved.values
+        let tickLabels = resolved.labels
 
         // MARK: - Spines
 
@@ -223,6 +236,35 @@ public enum AxisRenderer {
                 .font(.system(size: CGFloat(spec.titleFontSize), weight: .semibold))
                 .foregroundStyle(Color(hex: spec.axisColor))
             context.draw(titleText, at: CGPoint(x: plotRect.midX, y: 16), anchor: .top)
+        }
+    }
+
+    // MARK: - Helpers for resolving Y range and ticks
+
+    private static func resolveYRange(
+        spec: AxisSpec,
+        yRange: (min: Double, max: Double)? = nil
+    ) -> (min: Double, max: Double) {
+        if let range = spec.yRange, range.count == 2 {
+            return (min: range[0], max: range[1])
+        } else if let yr = yRange {
+            return yr
+        }
+        return (min: 0, max: 10)
+    }
+
+    private static func resolveTicks(
+        spec: AxisSpec,
+        yRange: (min: Double, max: Double)
+    ) -> (values: [Double], labels: [String]) {
+        if !spec.yTicks.isEmpty {
+            let labels = spec.yTickLabels.isEmpty
+                ? spec.yTicks.map { formatTickValue($0) }
+                : spec.yTickLabels
+            return (values: spec.yTicks, labels: labels)
+        } else {
+            let t = prettyTicks(lo: yRange.min, hi: yRange.max)
+            return (values: t, labels: t.map { formatTickValue($0) })
         }
     }
 

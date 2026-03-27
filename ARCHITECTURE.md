@@ -2,6 +2,8 @@
 
 > A hands-on technical reference for the Refraction codebase.
 > Written for someone with Python experience who is new to Swift/SwiftUI.
+>
+> For the comprehensive SwiftUI client architecture, see **SWIFT_UI.md**.
 
 ---
 

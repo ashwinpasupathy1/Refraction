@@ -24,7 +24,12 @@ final class DebugLog {
             case error    = "ERR"
             case app      = "APP"
             case engine   = "ENG"
+            case ui       = "UI"
+            case verbose  = "VRB"
         }
+
+        /// Whether this is a verbose (high-frequency) entry that can be filtered out.
+        var isVerbose: Bool { kind == .verbose }
 
         var timestampString: String {
             Self.formatter.string(from: timestamp)
@@ -85,6 +90,33 @@ final class DebugLog {
             kind: .app,
             method: "APP",
             summary: "● \(message)",
+            detail: detail.isEmpty ? message : detail,
+            durationMs: nil,
+            isError: false
+        ))
+    }
+
+    /// Log a UI interaction event (low frequency: clicks, selection, dialog open/close).
+    func logUI(_ message: String, detail: String = "") {
+        append(Entry(
+            timestamp: Date(),
+            kind: .ui,
+            method: "UI",
+            summary: "◆ \(message)",
+            detail: detail.isEmpty ? message : detail,
+            durationMs: nil,
+            isError: false
+        ))
+    }
+
+    /// Log a verbose/high-frequency event (cell edits, format slider changes, re-renders).
+    /// Hidden by default in the console unless "Verbose" filter is enabled.
+    func logVerbose(_ message: String, detail: String = "") {
+        append(Entry(
+            timestamp: Date(),
+            kind: .verbose,
+            method: "VRB",
+            summary: "· \(message)",
             detail: detail.isEmpty ? message : detail,
             durationMs: nil,
             isError: false

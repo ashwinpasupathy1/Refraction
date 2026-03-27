@@ -23,7 +23,7 @@ def analyze_grouped_bar(kw: dict) -> ChartSpec:
         error_type: str
     """
     cfg = extract_config(kw)
-    df = read_data(cfg["excel_path"], cfg["sheet"], header=[0, 1])
+    df = read_data(cfg["excel_path"], cfg["sheet"], header=[0, 1], df=cfg.get("_df"))
 
     categories = list(df.columns.get_level_values(0).unique())
     subgroups = list(df.columns.get_level_values(1).unique())

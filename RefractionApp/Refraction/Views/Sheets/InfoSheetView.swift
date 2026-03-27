@@ -17,10 +17,13 @@ struct InfoSheetView: View {
                 }
 
                 Section("Data") {
-                    if let path = table.dataFilePath, !path.isEmpty {
-                        LabeledContent("File path", value: path)
+                    if table.hasData {
+                        LabeledContent("Data", value: "\(table.rowCount) rows x \(table.columnCount) cols")
+                        if let name = table.originalFileName {
+                            LabeledContent("Source file", value: name)
+                        }
                     } else {
-                        LabeledContent("File path", value: "No data loaded")
+                        LabeledContent("Data", value: "No data loaded")
                     }
                 }
 

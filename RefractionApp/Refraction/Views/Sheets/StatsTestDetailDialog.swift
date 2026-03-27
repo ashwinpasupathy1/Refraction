@@ -154,8 +154,8 @@ struct StatsTestDetailDialog: View {
                     if trimmed.hasPrefix("$") && trimmed.hasSuffix("$") && trimmed.count > 2 {
                         // Explicit LaTeX: $...$
                         let latex = String(trimmed.dropFirst().dropLast())
-                        LaTeXView(latex, fontSize: 14)
-                            .frame(height: 28)
+                        LaTeXView(latex)
+                            .frame(height: 36)
                     } else if trimmed.hasPrefix("#") {
                         // Explanatory text in italic
                         Text(String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces))
@@ -164,8 +164,8 @@ struct StatsTestDetailDialog: View {
                             .foregroundStyle(.secondary)
                     } else if containsMathSymbols(trimmed) {
                         // Auto-detect lines with Unicode math and render as LaTeX
-                        LaTeXView(unicodeToLatex(trimmed), fontSize: 14)
-                            .frame(height: 28)
+                        LaTeXView(unicodeToLatex(trimmed))
+                            .frame(height: 36)
                     } else {
                         Text(trimmed)
                             .font(.system(.callout, design: .monospaced))
