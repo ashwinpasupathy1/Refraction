@@ -100,34 +100,35 @@ struct ChartOverlayView: View {
     // MARK: - Compute Hit Regions (dispatches to renderer)
 
     private func computeHitRegions(plotRect: CGRect) -> [ChartHitRegion] {
+        var regions: [ChartHitRegion]
         switch spec.chartType {
         case "bar", "column_stats", "waterfall", "pyramid":
-            return BarRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
+            regions = BarRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
         case "box":
-            return BoxRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
+            regions = BoxRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
         case "violin":
-            return ViolinRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
+            regions = ViolinRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
         case "scatter":
-            return ScatterRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
+            regions = ScatterRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
         case "line":
-            return LineRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
+            regions = LineRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
         case "histogram":
-            return HistogramRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
+            regions = HistogramRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
         case "before_after":
-            return BeforeAfterRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
+            regions = BeforeAfterRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
         case "dot_plot", "subcolumn_scatter":
-            return DotPlotRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
+            regions = DotPlotRenderer.hitRegions(plotRect: plotRect, groups: spec.groups, style: spec.style)
         case "grouped_bar":
-            return GroupedBarRenderer.hitRegions(plotRect: plotRect, spec: spec, style: spec.style)
+            regions = GroupedBarRenderer.hitRegions(plotRect: plotRect, spec: spec, style: spec.style)
         case "stacked_bar":
-            return StackedBarRenderer.hitRegions(plotRect: plotRect, spec: spec, style: spec.style)
+            regions = StackedBarRenderer.hitRegions(plotRect: plotRect, spec: spec, style: spec.style)
         case "kaplan_meier":
-            return KaplanMeierRenderer.hitRegions(plotRect: plotRect, spec: spec, style: spec.style)
+            regions = KaplanMeierRenderer.hitRegions(plotRect: plotRect, spec: spec, style: spec.style)
         default:
             // Fallback: column regions for any chart with groups
             guard !spec.groups.isEmpty else { return [] }
             let w = plotRect.width / CGFloat(spec.groups.count)
-            return spec.groups.enumerated().map { i, g in
+            regions = spec.groups.enumerated().map { i, g in
                 ChartHitRegion(
                     kind: .bar,
                     rect: CGRect(x: plotRect.minX + w * CGFloat(i), y: plotRect.minY, width: w, height: plotRect.height),
@@ -136,6 +137,19 @@ struct ChartOverlayView: View {
                 )
             }
         }
+
+        // Append bracket hit regions if brackets are visible
+        if spec.style.showBrackets && !spec.brackets.isEmpty {
+            regions += BracketRenderer.hitRegions(
+                plotRect: plotRect,
+                brackets: spec.brackets,
+                groupCount: spec.groups.count,
+                style: spec.style,
+                groups: spec.groups
+            )
+        }
+
+        return regions
     }
 
     // MARK: - Tooltip

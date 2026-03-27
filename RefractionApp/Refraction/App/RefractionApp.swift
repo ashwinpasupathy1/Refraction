@@ -9,9 +9,10 @@ struct RefractionApp: App {
 
     @State private var appState = AppState()
     @State private var pythonServer = PythonServer()
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             ContentView()
                 .environment(appState)
                 .environment(pythonServer)
@@ -53,7 +54,7 @@ struct RefractionApp: App {
             // File menu: New, Open, Save, Save As
             CommandGroup(replacing: .newItem) {
                 Button("New Project") {
-                    appState.requestNewProject()
+                    openWindow(id: "main")
                 }
                 .keyboardShortcut("n", modifiers: .command)
 

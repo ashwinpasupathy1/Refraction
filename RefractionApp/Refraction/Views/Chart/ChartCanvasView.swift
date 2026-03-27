@@ -166,14 +166,89 @@ struct ChartCanvasView: View {
                         style: spec.style
                     )
 
-                case "area_chart", "curve_fit", "bubble",
-                     "lollipop", "ecdf", "qq_plot",
-                     "raincloud",
-                     "forest_plot",
-                     "bland_altman", "contingency", "chi_square_gof",
-                     "heatmap", "two_way_anova",
-                     "repeated_measures":
-                    drawPlaceholder(in: context, size: size, chartType: spec.chartType)
+                case "area_chart":
+                    AreaChartRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style, data: spec.data
+                    )
+
+                case "curve_fit":
+                    CurveFitRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style, data: spec.data
+                    )
+
+                case "bubble":
+                    BubbleRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style, data: spec.data
+                    )
+
+                case "lollipop":
+                    LollipopRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style
+                    )
+
+                case "ecdf":
+                    ECDFRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style, data: spec.data
+                    )
+
+                case "qq_plot":
+                    QQPlotRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style, data: spec.data
+                    )
+
+                case "raincloud":
+                    RaincloudRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style, data: spec.data
+                    )
+
+                case "forest_plot":
+                    ForestPlotRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style, data: spec.data
+                    )
+
+                case "bland_altman":
+                    BlandAltmanRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style, data: spec.data
+                    )
+
+                case "contingency":
+                    ContingencyRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style, data: spec.data
+                    )
+
+                case "chi_square_gof":
+                    ChiSquareGoFRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style, data: spec.data
+                    )
+
+                case "heatmap":
+                    HeatmapRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style, data: spec.data
+                    )
+
+                case "two_way_anova":
+                    TwoWayAnovaRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style, data: spec.data
+                    )
+
+                case "repeated_measures":
+                    RepeatedMeasuresRenderer.draw(
+                        in: context, plotRect: plotRect,
+                        groups: spec.groups, style: spec.style, data: spec.data
+                    )
 
                 default:
                     if !spec.groups.isEmpty {
@@ -196,7 +271,8 @@ struct ChartCanvasView: View {
                         plotRect: plotRect,
                         brackets: spec.brackets,
                         groupCount: spec.groups.count,
-                        style: spec.style
+                        style: spec.style,
+                        groups: spec.groups
                     )
                 }
 

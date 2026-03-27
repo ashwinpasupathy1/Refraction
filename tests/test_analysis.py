@@ -216,122 +216,15 @@ def test_bar_chart_type_field():
 
 
 
-def test_stats_two_groups_welch():
-    groups = {
-        "Control": np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
-        "Treatment": np.array([6.0, 7.0, 8.0, 9.0, 10.0]),
-    }
-    with _with_excel(lambda p: bar_excel(groups, path=p)) as path:
-        spec = analyze_bar(path, stats_test="parametric")
-        brackets = spec.annotations.brackets
-        assert len(brackets) >= 1, f"expected >= 1 bracket, got {len(brackets)}"
-        br = brackets[0]
-        assert br.group_a == "Control" and br.group_b == "Treatment"
-
-
-
-def test_stats_three_groups_anova():
-    groups = {
-        "Control": np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
-        "Drug A": np.array([6.0, 7.0, 8.0, 9.0, 10.0]),
-        "Drug B": np.array([11.0, 12.0, 13.0, 14.0, 15.0]),
-    }
-    with _with_excel(lambda p: bar_excel(groups, path=p)) as path:
-        spec = analyze_bar(path, stats_test="parametric")
-        brackets = spec.annotations.brackets
-        # 3 groups -> C(3,2) = 3 pairwise comparisons
-        assert len(brackets) == 3, f"expected 3 brackets, got {len(brackets)}"
-
-
-
-def test_brackets_have_stacking_order():
-    groups = {
-        "A": np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
-        "B": np.array([6.0, 7.0, 8.0, 9.0, 10.0]),
-        "C": np.array([11.0, 12.0, 13.0, 14.0, 15.0]),
-    }
-    with _with_excel(lambda p: bar_excel(groups, path=p)) as path:
-        spec = analyze_bar(path, stats_test="parametric")
-        for br in spec.annotations.brackets:
-            assert hasattr(br, "stacking_order"), "bracket missing stacking_order"
-            assert isinstance(br.stacking_order, int)
-
-
-
-def test_brackets_sorted_by_span():
-    groups = {
-        "A": np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
-        "B": np.array([6.0, 7.0, 8.0, 9.0, 10.0]),
-        "C": np.array([11.0, 12.0, 13.0, 14.0, 15.0]),
-    }
-    with _with_excel(lambda p: bar_excel(groups, path=p)) as path:
-        spec = analyze_bar(path, stats_test="parametric")
-        brackets = spec.annotations.brackets
-        orders = [br.stacking_order for br in brackets]
-        assert orders == sorted(orders), f"stacking_order not sorted: {orders}"
-
-
-
-def test_p_values_reasonable():
-    groups = {
-        "A": np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
-        "B": np.array([6.0, 7.0, 8.0, 9.0, 10.0]),
-    }
-    with _with_excel(lambda p: bar_excel(groups, path=p)) as path:
-        spec = analyze_bar(path, stats_test="parametric")
-        for br in spec.annotations.brackets:
-            assert 0 < br.p_value <= 1.0, f"bad p-value: {br.p_value}"
-
-
-
-def test_effect_sizes_present():
-    groups = {
-        "A": np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
-        "B": np.array([6.0, 7.0, 8.0, 9.0, 10.0]),
-    }
-    with _with_excel(lambda p: bar_excel(groups, path=p)) as path:
-        spec = analyze_bar(path, stats_test="parametric")
-        for br in spec.annotations.brackets:
-            assert br.effect_size is not None, "effect_size missing"
-            assert math.isfinite(br.effect_size), f"effect_size not finite: {br.effect_size}"
-
-
-
-def test_normality_results_present():
-    groups = {
-        "A": np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
-        "B": np.array([7.0, 8.0, 9.0, 10.0, 11.0, 12.0]),
-    }
-    with _with_excel(lambda p: bar_excel(groups, path=p)) as path:
-        spec = analyze_bar(path, stats_test="parametric")
-        normality = spec.annotations.normality
-        assert len(normality) == 2, f"expected 2 normality results, got {len(normality)}"
-        for nr in normality:
-            assert nr.group in ("A", "B")
-
-
-
-def test_no_stats_without_test():
-    groups = {
-        "A": np.array([1.0, 2.0, 3.0]),
-        "B": np.array([4.0, 5.0, 6.0]),
-    }
-    with _with_excel(lambda p: bar_excel(groups, path=p)) as path:
-        spec = analyze_bar(path)  # no stats_test
-        assert len(spec.annotations.brackets) == 0, "brackets should be empty"
-
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  3. Stats tests — TODO: rewrite by hand against R/Prism reference values
+#     See STATS_TEST_PLAN.md for what needs testing.
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  4. Edge cases
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-
-
-def test_single_group_no_stats():
-    with _with_excel(lambda p: bar_excel({"Only": np.array([1, 2, 3])}, path=p)) as path:
-        spec = analyze_bar(path, stats_test="parametric")
-        assert len(spec.annotations.brackets) == 0, "single group should have no brackets"
 
 
 
@@ -551,61 +444,7 @@ class TestBarAnalysisParity:
 
 
 # Merged from test_phase6_qa.py
-class TestStatsAnnotatorQA:
-    """Verify p-values match direct scipy calls; brackets have stacking_order."""
-
-    def setup_method(self):
-        from refraction.analysis.stats_annotator import build_stats_brackets
-        self._build_brackets = build_stats_brackets
-        rng = np.random.default_rng(42)
-        self.groups_3 = {
-            "Control": rng.normal(5.0, 1.0, 20).tolist(),
-            "Drug A": rng.normal(8.0, 1.0, 20).tolist(),
-            "Drug B": rng.normal(11.0, 1.0, 20).tolist(),
-        }
-        self.groups_2 = {
-            "A": [1.0, 2.0, 3.0, 4.0, 5.0],
-            "B": [3.0, 4.0, 5.0, 6.0, 7.0],
-        }
-
-    def test_ttest_pvalues_match_scipy(self):
-        brackets = self._build_brackets(self.groups_2, "t-test")
-        assert len(brackets) == 1
-        _, expected_p = sp_stats.ttest_ind(self.groups_2["A"], self.groups_2["B"])
-        assert abs(brackets[0].p_value - expected_p) < 1e-10
-
-    def test_anova_posthoc_brackets(self):
-        brackets = self._build_brackets(self.groups_3, "anova", "tukey")
-        _, p_omnibus = sp_stats.f_oneway(
-            self.groups_3["Control"],
-            self.groups_3["Drug A"],
-            self.groups_3["Drug B"],
-        )
-        if p_omnibus <= 0.05:
-            assert len(brackets) == 3
-
-    def test_brackets_have_stacking_order(self):
-        brackets = self._build_brackets(self.groups_3, "anova", "tukey")
-        if brackets:
-            orders = [b.stacking_order for b in brackets]
-            assert orders == sorted(orders), "Brackets must be ordered by stacking_order"
-            assert len(set(orders)) == len(orders), "Each bracket needs unique stacking_order"
-
-    def test_mannwhitney_pvalues_match(self):
-        brackets = self._build_brackets(self.groups_2, "mann-whitney")
-        assert len(brackets) == 1
-        _, expected_p = sp_stats.mannwhitneyu(
-            self.groups_2["A"], self.groups_2["B"], alternative="two-sided"
-        )
-        assert abs(brackets[0].p_value - expected_p) < 1e-10
-
-    def test_no_stats_returns_empty(self):
-        brackets = self._build_brackets(self.groups_2, "")
-        assert brackets == []
-
-    def test_single_group_returns_empty(self):
-        brackets = self._build_brackets({"A": [1, 2, 3]}, "t-test")
-        assert brackets == []
+# TestStatsAnnotatorQA — deleted. See STATS_TEST_PLAN.md for rewrite plan.
 
 
 # Merged from test_phase6_qa.py

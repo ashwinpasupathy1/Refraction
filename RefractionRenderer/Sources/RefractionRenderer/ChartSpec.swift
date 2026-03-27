@@ -171,12 +171,23 @@ public struct Bracket: Decodable {
     public let rightIndex: Int
     public let label: String
     public let stackingOrder: Int
+    public let pValue: Double?
 
     enum CodingKeys: String, CodingKey {
         case leftIndex = "left_index"
         case rightIndex = "right_index"
         case label
         case stackingOrder = "stacking_order"
+        case pValue = "p_value"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        leftIndex = try c.decode(Int.self, forKey: .leftIndex)
+        rightIndex = try c.decode(Int.self, forKey: .rightIndex)
+        label = try c.decode(String.self, forKey: .label)
+        stackingOrder = (try? c.decode(Int.self, forKey: .stackingOrder)) ?? 0
+        pValue = try? c.decode(Double.self, forKey: .pValue)
     }
 }
 
@@ -222,6 +233,13 @@ public struct StyleSpec: Decodable {
     public let areaFillAlpha: Double
     public let showLegend: Bool
 
+    // Bracket style overrides
+    public let bracketStyle: String       // "capped", "uncapped", "line"
+    public let bracketColor: String       // hex color, "auto" = #222222
+    public let bracketThickness: Double
+    public let bracketCapWidth: Double    // width of end caps in points
+    public let bracketLabelStyle: String  // "stars", "p_value", "both"
+
     public static let defaultColors = [
         "#E8453C", "#2274A5", "#32936F", "#F18F01", "#A846A0",
         "#6B4226", "#048A81", "#D4AC0D", "#3B1F2B", "#44BBA4",
@@ -256,7 +274,12 @@ public struct StyleSpec: Decodable {
         areaFillColor: String = "#000000",
         areaFillPosition: String = "below",
         areaFillAlpha: Double = 0.2,
-        showLegend: Bool = true
+        showLegend: Bool = true,
+        bracketStyle: String = "capped",
+        bracketColor: String = "#222222",
+        bracketThickness: Double = 0.8,
+        bracketCapWidth: Double = 6.0,
+        bracketLabelStyle: String = "stars"
     ) {
         self.colors = colors
         self.showPoints = showPoints
@@ -287,6 +310,11 @@ public struct StyleSpec: Decodable {
         self.areaFillPosition = areaFillPosition
         self.areaFillAlpha = areaFillAlpha
         self.showLegend = showLegend
+        self.bracketStyle = bracketStyle
+        self.bracketColor = bracketColor
+        self.bracketThickness = bracketThickness
+        self.bracketCapWidth = bracketCapWidth
+        self.bracketLabelStyle = bracketLabelStyle
     }
 
     enum CodingKeys: String, CodingKey {
@@ -319,6 +347,11 @@ public struct StyleSpec: Decodable {
         case areaFillPosition = "area_fill_position"
         case areaFillAlpha = "area_fill_alpha"
         case showLegend = "show_legend"
+        case bracketStyle = "bracket_style"
+        case bracketColor = "bracket_color"
+        case bracketThickness = "bracket_thickness"
+        case bracketCapWidth = "bracket_cap_width"
+        case bracketLabelStyle = "bracket_label_style"
     }
 
     public init(from decoder: Decoder) throws {
@@ -352,6 +385,11 @@ public struct StyleSpec: Decodable {
         areaFillPosition = (try? c.decode(String.self, forKey: .areaFillPosition)) ?? "below"
         areaFillAlpha = (try? c.decode(Double.self, forKey: .areaFillAlpha)) ?? 0.2
         showLegend = (try? c.decode(Bool.self, forKey: .showLegend)) ?? true
+        bracketStyle = (try? c.decode(String.self, forKey: .bracketStyle)) ?? "capped"
+        bracketColor = (try? c.decode(String.self, forKey: .bracketColor)) ?? "#222222"
+        bracketThickness = (try? c.decode(Double.self, forKey: .bracketThickness)) ?? 0.8
+        bracketCapWidth = (try? c.decode(Double.self, forKey: .bracketCapWidth)) ?? 6.0
+        bracketLabelStyle = (try? c.decode(String.self, forKey: .bracketLabelStyle)) ?? "stars"
     }
 }
 

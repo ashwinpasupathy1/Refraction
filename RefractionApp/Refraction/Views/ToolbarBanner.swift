@@ -9,6 +9,7 @@ import RefractionRenderer
 struct ToolbarBanner: View {
 
     @Environment(AppState.self) private var appState
+    @Environment(\.openWindow) private var openWindow
 
     // Dialog state
     @State private var showNewDataTableDialog = false
@@ -82,11 +83,13 @@ struct ToolbarBanner: View {
         .sheet(isPresented: $showFormatGraph) {
             if let graph = appState.activeGraph {
                 FormatGraphDialog(settings: graph.formatSettings)
+                    .environment(appState)
             }
         }
         .sheet(isPresented: $showFormatAxes) {
             if let graph = appState.activeGraph {
                 FormatAxesDialog(settings: graph.formatAxesSettings)
+                    .environment(appState)
             }
         }
         .sheet(isPresented: $showDataSettings) {
@@ -117,7 +120,7 @@ struct ToolbarBanner: View {
         VStack(spacing: 1) {
             HStack(spacing: 6) {
                 activeButton(icon: "doc.badge.plus", label: "New", color: .blue) {
-                    appState.requestNewProject()
+                    openWindow(id: "main")
                 }
                 Menu {
                     Button("Open File...") {

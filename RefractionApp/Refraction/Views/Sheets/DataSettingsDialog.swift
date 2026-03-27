@@ -7,6 +7,7 @@ struct DataSettingsDialog: View {
 
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+    @State private var isApplying = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -98,19 +99,6 @@ struct DataSettingsDialog: View {
                             Divider()
                         }
 
-                        // MARK: - Generate
-                        Button {
-                            Task { await appState.generatePlot() }
-                        } label: {
-                            HStack {
-                                Image(systemName: "play.fill")
-                                Text("Generate Plot")
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
-                        .disabled(appState.isLoading || !(appState.activeExperiment?.dataTable(for: graph)?.hasData ?? false))
                     }
                     .padding()
                 }
@@ -125,7 +113,19 @@ struct DataSettingsDialog: View {
 
             // Bottom buttons
             HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
                 Spacer()
+                Button("Apply") {
+                    DebugLog.shared.logUI("DataSettingsDialog apply clicked")
+                    isApplying = true
+                    Task {
+                        _ = try? await APIClient.shared.health()
+                        DebugLog.shared.logAppEvent("DataSettingsDialog apply — dummy server call completed")
+                        isApplying = false
+                    }
+                }
+                .disabled(isApplying)
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)

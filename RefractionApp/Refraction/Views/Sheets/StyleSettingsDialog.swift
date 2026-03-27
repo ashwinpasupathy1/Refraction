@@ -8,6 +8,7 @@ struct StyleSettingsDialog: View {
 
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+    @State private var isApplying = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -56,7 +57,19 @@ struct StyleSettingsDialog: View {
 
             // Bottom buttons
             HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
                 Spacer()
+                Button("Apply") {
+                    DebugLog.shared.logUI("StyleSettingsDialog apply clicked")
+                    isApplying = true
+                    Task {
+                        _ = try? await APIClient.shared.health()
+                        DebugLog.shared.logAppEvent("StyleSettingsDialog apply — dummy server call completed")
+                        isApplying = false
+                    }
+                }
+                .disabled(isApplying)
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)

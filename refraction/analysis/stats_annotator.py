@@ -1,23 +1,126 @@
 """Build StatsBracket annotations from group data.
 
-Runs the requested statistical test (t-test, ANOVA, etc.) and returns
-a list of StatsBracket dataclass instances ready to attach to a ChartSpec.
+Thin wrapper around ``refraction.core.stats._run_stats`` — the canonical
+statistical computation layer.  This module converts the raw
+(group_a, group_b, p_value, stars) tuples into StatsBracket dataclass
+instances that the chart renderers consume.
+
+Architecture
+------------
+::
+
+    Analyzer (bar.py, box.py, etc.)
+        │
+        ▼
+    stats_annotator.build_stats_brackets()
+        │  maps test names → _run_stats conventions
+        ▼
+    core.stats._run_stats()          ← all math lives here
+        │
+        ▼
+    List[StatsBracket]               ← for rendering
+
+All statistical math (t-tests, ANOVA, Tukey HSD, Dunnett, Dunn, Mann-
+Whitney, corrections, etc.) lives in ``refraction/core/stats.py``.  This
+module does **no math** — it only translates between the analyzer config
+vocabulary and the core stats API.
+
+Test name mapping
+-----------------
+Analyzers / the Swift UI send short test names.  This module normalises
+them into the ``test_type`` + ``posthoc`` arguments that ``_run_stats``
+expects:
+
+    ============== ======================== ========================
+    Input          _run_stats test_type      _run_stats posthoc
+    ============== ======================== ========================
+    auto           parametric               Tukey HSD
+    parametric     parametric               <from config>
+    t-test         parametric (2 groups)    —
+    welch_t-test   parametric (2 groups)    —
+    anova          parametric               <from config>
+    welch_anova    parametric               <from config>
+    paired         paired                   —
+    nonparametric  nonparametric            —
+    mann-whitney   nonparametric (2 grp)    —
+    kruskal-wallis nonparametric            —
+    none / ""      (skip)                   —
+    ============== ======================== ========================
+
+Post-hoc mapping:
+
+    ============ ========================
+    Input        _run_stats posthoc
+    ============ ========================
+    tukey        Tukey HSD
+    games_howell Tukey HSD  (*)
+    dunn         Tukey HSD  (nonparametric path handles this)
+    dunnett      Dunnett (vs control)
+    bonferroni   Bonferroni
+    sidak        Sidak
+    fisher_lsd   Fisher LSD
+    ============ ========================
+
+    (*) Games-Howell is not yet in core/stats.py.  Welch-based pairwise
+        comparisons with Tukey HSD correction are used as the closest
+        approximation.  See ASHWIN_TODO.md for the full stats rewrite plan.
+
+Correction mapping:
+
+    ============ ========================
+    Input        _run_stats mc_correction
+    ============ ========================
+    holm         Holm-Bonferroni
+    bonferroni   Bonferroni
+    fdr_bh       Benjamini-Hochberg (FDR)
+    none / ""    None (uncorrected)
+    ============ ========================
 """
 
 from __future__ import annotations
 
+import numpy as np
+
 from refraction.analysis.schema import StatsBracket
+from refraction.core.stats import (
+    _run_stats,
+    _cohens_d as _core_cohens_d,
+    _p_to_stars,
+    check_normality as _core_check_normality,
+)
 
 
-def _p_to_label(p: float) -> str:
-    """Convert a p-value to a significance label."""
-    if p <= 0.001:
-        return "***"
-    if p <= 0.01:
-        return "**"
-    if p <= 0.05:
-        return "*"
-    return "ns"
+# ── Name mapping tables ──────────────────────────────────────────────────
+
+_POSTHOC_MAP = {
+    "tukey": "Tukey HSD",
+    "tukeyhsd": "Tukey HSD",
+    "games_howell": "Tukey HSD",   # closest approx until core supports it
+    "gameshowell": "Tukey HSD",
+    "dunn": "Tukey HSD",           # nonparametric path ignores posthoc
+    "dunnett": "Dunnett (vs control)",
+    "bonferroni": "Bonferroni",
+    "sidak": "Sidak",
+    "fisher_lsd": "Fisher LSD",
+    "fisherlsd": "Fisher LSD",
+}
+
+_CORRECTION_MAP = {
+    "holm": "Holm-Bonferroni",
+    "holmbonferroni": "Holm-Bonferroni",
+    "bonferroni": "Bonferroni",
+    "fdr_bh": "Benjamini-Hochberg (FDR)",
+    "fdrbh": "Benjamini-Hochberg (FDR)",
+    "fdr": "Benjamini-Hochberg (FDR)",
+    "benjaminihochberg": "Benjamini-Hochberg (FDR)",
+    "none": "None (uncorrected)",
+    "": "Holm-Bonferroni",  # default
+}
+
+
+def _normalise(s: str) -> str:
+    """Lowercase, strip hyphens/underscores/spaces."""
+    return s.lower().replace("-", "").replace("_", "").replace(" ", "")
 
 
 def build_stats_brackets(
@@ -28,172 +131,118 @@ def build_stats_brackets(
 ) -> list[StatsBracket]:
     """Compute pairwise comparisons and return StatsBracket list.
 
-    Args:
-        groups: Mapping of group name -> list of numeric values.
-        stats_test: Name of the test (e.g. "t-test", "anova", "mann-whitney").
-        posthoc: Post-hoc test name (for ANOVA).
-        correction: Multiple-comparison correction method.
+    This is the **only** stats entry point for dedicated analyzers.
 
-    Returns:
-        List of StatsBracket instances, sorted by stacking_order.
+    Parameters
+    ----------
+    groups : dict[str, list[float]]
+        Mapping of group name → list of numeric values.
+    stats_test : str
+        Test name from the UI (see mapping table in module docstring).
+    posthoc : str, optional
+        Post-hoc method name (e.g. "tukey", "dunnett", "bonferroni").
+    correction : str, optional
+        Multiple-comparison correction (e.g. "holm", "bonferroni", "fdr_bh").
+
+    Returns
+    -------
+    list[StatsBracket]
+        Brackets sorted by stacking_order, ready for rendering.
     """
-    if not stats_test:
+    if not stats_test or stats_test.lower() == "none":
         return []
 
     group_names = list(groups.keys())
     if len(group_names) < 2:
         return []
 
-    brackets: list[StatsBracket] = []
+    # Convert list values to numpy arrays (what _run_stats expects)
+    np_groups = {k: np.array(v, dtype=float) for k, v in groups.items()}
 
-    try:
-        from scipy import stats as sp_stats
-    except ImportError:
-        return []
+    # Resolve test_type for _run_stats
+    test_type = _resolve_test_type(stats_test, len(group_names))
 
-    test = stats_test.lower().replace("-", "").replace("_", "").replace(" ", "")
+    # Resolve posthoc and correction
+    ph_norm = _normalise(posthoc)
+    core_posthoc = _POSTHOC_MAP.get(ph_norm, "Tukey HSD")
 
-    # Map high-level test types to specific tests
-    if test == "parametric":
-        test = "ttest" if len(group_names) == 2 else "anova"
-    elif test == "nonparametric":
-        test = "mannwhitney" if len(group_names) == 2 else "kruskalwallis"
+    corr_norm = _normalise(correction)
+    core_correction = _CORRECTION_MAP.get(corr_norm, "Holm-Bonferroni")
 
-    if test in ("ttest", "unpairedttest", "studentttest"):
-        # Pairwise t-tests between all pairs
-        order = 0
-        for i in range(len(group_names)):
-            for j in range(i + 1, len(group_names)):
-                a_vals = groups[group_names[i]]
-                b_vals = groups[group_names[j]]
-                if len(a_vals) < 2 or len(b_vals) < 2:
-                    continue
-                _, p = sp_stats.ttest_ind(a_vals, b_vals)
-                brackets.append(StatsBracket(
-                    group_a=group_names[i],
-                    group_b=group_names[j],
-                    p_value=p,
-                    label=_p_to_label(p),
-                    stacking_order=order,
-                ))
-                order += 1
+    # Call the canonical stats engine
+    raw_results = _run_stats(
+        np_groups,
+        test_type=test_type,
+        posthoc=core_posthoc,
+        mc_correction=core_correction,
+    )
 
-    elif test in ("mannwhitney", "mannwhitneyutest", "mannwhitneyu"):
-        order = 0
-        for i in range(len(group_names)):
-            for j in range(i + 1, len(group_names)):
-                a_vals = groups[group_names[i]]
-                b_vals = groups[group_names[j]]
-                if len(a_vals) < 1 or len(b_vals) < 1:
-                    continue
-                _, p = sp_stats.mannwhitneyu(a_vals, b_vals, alternative="two-sided")
-                brackets.append(StatsBracket(
-                    group_a=group_names[i],
-                    group_b=group_names[j],
-                    p_value=p,
-                    label=_p_to_label(p),
-                    stacking_order=order,
-                ))
-                order += 1
-
-    elif test in ("anova", "onewayanova"):
-        all_vals = [groups[g] for g in group_names if len(groups[g]) >= 2]
-        if len(all_vals) >= 2:
-            _, p_omnibus = sp_stats.f_oneway(*all_vals)
-            if p_omnibus <= 0.05:
-                # Pairwise post-hoc (Tukey-like using t-tests as fallback)
-                order = 0
-                for i in range(len(group_names)):
-                    for j in range(i + 1, len(group_names)):
-                        a_vals = groups[group_names[i]]
-                        b_vals = groups[group_names[j]]
-                        if len(a_vals) < 2 or len(b_vals) < 2:
-                            continue
-                        _, p = sp_stats.ttest_ind(a_vals, b_vals)
-                        brackets.append(StatsBracket(
-                            group_a=group_names[i],
-                            group_b=group_names[j],
-                            p_value=p,
-                            label=_p_to_label(p),
-                            stacking_order=order,
-                        ))
-                        order += 1
-
-    elif test in ("pairedttest", "pairedt"):
-        # Only works for exactly 2 groups with matched observations
-        if len(group_names) == 2:
-            a_vals = groups[group_names[0]]
-            b_vals = groups[group_names[1]]
-            n = min(len(a_vals), len(b_vals))
-            if n >= 2:
-                _, p = sp_stats.ttest_rel(a_vals[:n], b_vals[:n])
-                brackets.append(StatsBracket(
-                    group_a=group_names[0],
-                    group_b=group_names[1],
-                    p_value=p,
-                    label=_p_to_label(p),
-                    stacking_order=0,
-                ))
-
-    elif test in ("kruskalwallis", "kruskal"):
-        all_vals = [groups[g] for g in group_names if len(groups[g]) >= 1]
-        if len(all_vals) >= 2:
-            _, p_omnibus = sp_stats.kruskal(*all_vals)
-            if p_omnibus <= 0.05:
-                order = 0
-                for i in range(len(group_names)):
-                    for j in range(i + 1, len(group_names)):
-                        a_vals = groups[group_names[i]]
-                        b_vals = groups[group_names[j]]
-                        if len(a_vals) < 1 or len(b_vals) < 1:
-                            continue
-                        _, p = sp_stats.mannwhitneyu(
-                            a_vals, b_vals, alternative="two-sided"
-                        )
-                        brackets.append(StatsBracket(
-                            group_a=group_names[i],
-                            group_b=group_names[j],
-                            p_value=p,
-                            label=_p_to_label(p),
-                            stacking_order=order,
-                        ))
-                        order += 1
+    # Convert (group_a, group_b, p_value, stars) → StatsBracket
+    brackets = []
+    for order, (ga, gb, p, stars) in enumerate(raw_results):
+        brackets.append(StatsBracket(
+            group_a=str(ga),
+            group_b=str(gb),
+            p_value=float(p),
+            label=stars,
+            stacking_order=order,
+        ))
 
     return brackets
 
 
-# ── Aliases & convenience helpers ────────────────────────────────────────────
+def _resolve_test_type(stats_test: str, n_groups: int) -> str:
+    """Map a UI test name to a core _run_stats test_type string."""
+    t = _normalise(stats_test)
 
-# Alias for backward compatibility with tests
-annotate = build_stats_brackets
+    # Direct parametric tests
+    if t in ("ttest", "unpairedttest", "studentttest", "welchttest", "welcht"):
+        return "parametric"
+    if t in ("anova", "onewayanova", "welchanova", "welchsanova"):
+        return "parametric"
+    if t in ("parametric", "auto"):
+        return "parametric"
 
+    # Paired
+    if t in ("paired", "pairedttest", "pairedt"):
+        return "paired"
+
+    # Non-parametric
+    if t in ("nonparametric", "mannwhitney", "mannwhitneyutest",
+             "mannwhitneyu", "kruskalwallis", "kruskal"):
+        return "nonparametric"
+
+    # Permutation
+    if t in ("permutation",):
+        return "permutation"
+
+    # One-sample
+    if t in ("onesample",):
+        return "one_sample"
+
+    # Fallback
+    return "parametric"
+
+
+# ── Re-exported helpers (used by analyzers) ──────────────────────────────
 
 def check_normality(values: list[float]) -> tuple[bool, float]:
-    """Check if values follow a normal distribution using Shapiro-Wilk test.
+    """Check if values follow a normal distribution (Shapiro-Wilk).
 
-    Returns (is_normal, p_value). is_normal is True when p > 0.05.
+    Returns (is_normal, p_value).  Wraps ``core.stats.check_normality``
+    with the simpler single-group signature that analyzers expect.
     """
     if len(values) < 3:
         return True, 1.0
-    try:
-        from scipy import stats as sp_stats
-        stat, p = sp_stats.shapiro(values)
-        return p > 0.05, p
-    except ImportError:
-        return True, 1.0
+    result = _core_check_normality({"_": np.array(values, dtype=float)})
+    stat, p, is_normal, _ = result["_"]
+    return is_normal, p
 
 
 def _cohens_d(group_a: list[float], group_b: list[float]) -> float:
-    """Compute Cohen's d effect size between two groups."""
-    import math
-    n_a, n_b = len(group_a), len(group_b)
-    if n_a < 2 or n_b < 2:
-        return 0.0
-    mean_a = sum(group_a) / n_a
-    mean_b = sum(group_b) / n_b
-    var_a = sum((x - mean_a) ** 2 for x in group_a) / (n_a - 1)
-    var_b = sum((x - mean_b) ** 2 for x in group_b) / (n_b - 1)
-    pooled_std = math.sqrt(((n_a - 1) * var_a + (n_b - 1) * var_b) / (n_a + n_b - 2))
-    if pooled_std == 0:
-        return 0.0
-    return (mean_a - mean_b) / pooled_std
+    """Cohen's d effect size.  Wraps ``core.stats._cohens_d``."""
+    return float(_core_cohens_d(np.array(group_a), np.array(group_b)))
+
+
+# Backward compatibility alias
+annotate = build_stats_brackets

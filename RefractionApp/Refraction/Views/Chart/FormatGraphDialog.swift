@@ -1,18 +1,21 @@
 // FormatGraphDialog.swift — Prism-style "Format Graph" dialog.
-// Controls renderer-only visual settings — nothing here calls the engine.
+// Edits a local copy of settings. Done commits changes and re-renders.
 
 import SwiftUI
 import RefractionRenderer
 
 struct FormatGraphDialog: View {
 
-    @Bindable var settings: FormatGraphSettings
+    /// The real settings on the Graph — only written to on Done.
+    var settings: FormatGraphSettings
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
 
     @State private var selectedTab: Tab = .appearance
+    @State private var isApplying = false
 
-    // Snapshot for cancel — restored if user clicks Cancel
-    @State private var snapshot: Data?
+    /// Local working copy — all controls bind to this, not the real settings.
+    @State private var draft = FormatGraphSettings()
 
     enum Tab: String, CaseIterable {
         case appearance = "Appearance"
@@ -55,66 +58,80 @@ struct FormatGraphDialog: View {
 
             // Bottom buttons
             HStack {
-                Spacer()
                 Button("Cancel") {
                     DebugLog.shared.logUI("FormatGraphDialog cancelled")
-                    restoreSnapshot()
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
+                Spacer()
                 Button("Done") {
-                    DebugLog.shared.logUI("FormatGraphDialog applied")
-                    dismiss()
+                    commitAndRender()
                 }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
+                    .disabled(isApplying)
             }
             .padding(12)
         }
         .frame(width: 520)
-        .onAppear { takeSnapshot() }
+        .onAppear { loadDraft() }
     }
 
-    // MARK: - Snapshot / Restore
+    // MARK: - Draft management
 
-    private func takeSnapshot() {
-        snapshot = try? JSONEncoder().encode(settings)
+    /// Copy real settings into the local draft for editing.
+    private func loadDraft() {
+        guard let data = try? JSONEncoder().encode(settings),
+              let copy = try? JSONDecoder().decode(FormatGraphSettings.self, from: data) else { return }
+        draft = copy
     }
 
-    private func restoreSnapshot() {
-        guard let data = snapshot,
-              let restored = try? JSONDecoder().decode(FormatGraphSettings.self, from: data) else { return }
-        settings.showSymbols = restored.showSymbols
-        settings.symbolColor = restored.symbolColor
-        settings.symbolShape = restored.symbolShape
-        settings.symbolSize = restored.symbolSize
-        settings.symbolBorderColor = restored.symbolBorderColor
-        settings.symbolBorderThickness = restored.symbolBorderThickness
-        settings.showBars = restored.showBars
-        settings.barColor = restored.barColor
-        settings.barWidth = restored.barWidth
-        settings.barFillOpacity = restored.barFillOpacity
-        settings.barBorderColor = restored.barBorderColor
-        settings.barBorderThickness = restored.barBorderThickness
-        settings.barPattern = restored.barPattern
-        settings.barsBeginAtY = restored.barsBeginAtY
-        settings.showErrorBars = restored.showErrorBars
-        settings.errorBarColor = restored.errorBarColor
-        settings.errorBarDirection = restored.errorBarDirection
-        settings.errorBarStyle = restored.errorBarStyle
-        settings.errorBarThickness = restored.errorBarThickness
-        settings.showConnectingLine = restored.showConnectingLine
-        settings.lineColor = restored.lineColor
-        settings.lineThickness = restored.lineThickness
-        settings.lineStyle = restored.lineStyle
-        settings.connectMeans = restored.connectMeans
-        settings.startAtOrigin = restored.startAtOrigin
-        settings.showAreaFill = restored.showAreaFill
-        settings.areaFillColor = restored.areaFillColor
-        settings.areaFillPosition = restored.areaFillPosition
-        settings.areaFillAlpha = restored.areaFillAlpha
-        settings.showLegend = restored.showLegend
-        settings.labelPoints = restored.labelPoints
+    /// Write draft back to the real settings and trigger a re-render.
+    private func commitAndRender() {
+        DebugLog.shared.logUI("FormatGraphDialog done — committing changes")
+        isApplying = true
+
+        // Copy every property from draft → real settings
+        settings.showSymbols = draft.showSymbols
+        settings.symbolColor = draft.symbolColor
+        settings.symbolShape = draft.symbolShape
+        settings.symbolSize = draft.symbolSize
+        settings.symbolBorderColor = draft.symbolBorderColor
+        settings.symbolBorderThickness = draft.symbolBorderThickness
+        settings.showBars = draft.showBars
+        settings.barColor = draft.barColor
+        settings.barWidth = draft.barWidth
+        settings.barFillOpacity = draft.barFillOpacity
+        settings.barBorderColor = draft.barBorderColor
+        settings.barBorderThickness = draft.barBorderThickness
+        settings.barPattern = draft.barPattern
+        settings.barsBeginAtY = draft.barsBeginAtY
+        settings.showErrorBars = draft.showErrorBars
+        settings.errorBarColor = draft.errorBarColor
+        settings.errorBarDirection = draft.errorBarDirection
+        settings.errorBarStyle = draft.errorBarStyle
+        settings.errorBarThickness = draft.errorBarThickness
+        settings.showConnectingLine = draft.showConnectingLine
+        settings.lineColor = draft.lineColor
+        settings.lineThickness = draft.lineThickness
+        settings.lineStyle = draft.lineStyle
+        settings.connectMeans = draft.connectMeans
+        settings.startAtOrigin = draft.startAtOrigin
+        settings.showAreaFill = draft.showAreaFill
+        settings.areaFillColor = draft.areaFillColor
+        settings.areaFillPosition = draft.areaFillPosition
+        settings.areaFillAlpha = draft.areaFillAlpha
+        settings.showLegend = draft.showLegend
+        settings.labelPoints = draft.labelPoints
+
+        appState.hasUnsavedChanges = true
+
+        Task {
+            await appState.generatePlot()
+            DebugLog.shared.logAppEvent("FormatGraphDialog done — re-render complete")
+            isApplying = false
+            dismiss()
+        }
     }
 
     // MARK: - Appearance Tab
@@ -125,17 +142,17 @@ struct FormatGraphDialog: View {
             // Show symbols
             GroupBox {
                 VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Show symbols", isOn: $settings.showSymbols)
+                    Toggle("Show symbols", isOn: $draft.showSymbols)
                         .fontWeight(.semibold)
 
-                    if settings.showSymbols {
+                    if draft.showSymbols {
                         HStack {
                             Text("Color:")
-                            ColorPicker("", selection: hexBinding($settings.symbolColor))
+                            ColorPicker("", selection: hexBinding($draft.symbolColor))
                                 .labelsHidden()
                             Spacer()
                             Text("Shape:")
-                            Picker("", selection: $settings.symbolShape) {
+                            Picker("", selection: $draft.symbolShape) {
                                 ForEach(FormatGraphSettings.SymbolShape.allCases) {
                                     Text($0.label).tag($0)
                                 }
@@ -144,15 +161,15 @@ struct FormatGraphDialog: View {
                         }
                         HStack {
                             Text("Size:")
-                            Slider(value: $settings.symbolSize, in: 2...20, step: 1)
-                            Text("\(Int(settings.symbolSize)) pt")
+                            Slider(value: $draft.symbolSize, in: 2...20, step: 1)
+                            Text("\(Int(draft.symbolSize)) pt")
                                 .monospacedDigit()
                                 .frame(width: 40)
                             Spacer()
                             Text("Border:")
-                            Slider(value: $settings.symbolBorderThickness, in: 0...4, step: 0.5)
+                            Slider(value: $draft.symbolBorderThickness, in: 0...4, step: 0.5)
                                 .frame(width: 80)
-                            Text("\(settings.symbolBorderThickness, specifier: "%.1f") pt")
+                            Text("\(draft.symbolBorderThickness, specifier: "%.1f") pt")
                                 .monospacedDigit()
                                 .frame(width: 45)
                         }
@@ -163,19 +180,19 @@ struct FormatGraphDialog: View {
             // Show bars
             GroupBox {
                 VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Show bars/spikes/droplines", isOn: $settings.showBars)
+                    Toggle("Show bars/spikes/droplines", isOn: $draft.showBars)
                         .fontWeight(.semibold)
 
-                    if settings.showBars {
+                    if draft.showBars {
                         HStack {
                             Text("Width:")
-                            Slider(value: $settings.barWidth, in: 0.1...1.0, step: 0.05)
-                            Text("\(settings.barWidth, specifier: "%.2f")")
+                            Slider(value: $draft.barWidth, in: 0.1...1.0, step: 0.05)
+                            Text("\(draft.barWidth, specifier: "%.2f")")
                                 .monospacedDigit()
                                 .frame(width: 40)
                             Spacer()
                             Text("Pattern:")
-                            Picker("", selection: $settings.barPattern) {
+                            Picker("", selection: $draft.barPattern) {
                                 ForEach(FormatGraphSettings.BarPattern.allCases) {
                                     Text($0.label).tag($0)
                                 }
@@ -184,12 +201,12 @@ struct FormatGraphDialog: View {
                         }
                         HStack {
                             Text("Border color:")
-                            ColorPicker("", selection: hexBinding($settings.barBorderColor))
+                            ColorPicker("", selection: hexBinding($draft.barBorderColor))
                                 .labelsHidden()
                             Text("Border thickness:")
-                            Slider(value: $settings.barBorderThickness, in: 0...4, step: 0.5)
+                            Slider(value: $draft.barBorderThickness, in: 0...4, step: 0.5)
                                 .frame(width: 80)
-                            Text("\(settings.barBorderThickness, specifier: "%.1f") pt")
+                            Text("\(draft.barBorderThickness, specifier: "%.1f") pt")
                                 .monospacedDigit()
                                 .frame(width: 45)
                         }
@@ -200,17 +217,17 @@ struct FormatGraphDialog: View {
             // Show error bars
             GroupBox {
                 VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Show error bars", isOn: $settings.showErrorBars)
+                    Toggle("Show error bars", isOn: $draft.showErrorBars)
                         .fontWeight(.semibold)
 
-                    if settings.showErrorBars {
+                    if draft.showErrorBars {
                         HStack {
                             Text("Color:")
-                            ColorPicker("", selection: hexBinding($settings.errorBarColor))
+                            ColorPicker("", selection: hexBinding($draft.errorBarColor))
                                 .labelsHidden()
                             Spacer()
                             Text("Dir.:")
-                            Picker("", selection: $settings.errorBarDirection) {
+                            Picker("", selection: $draft.errorBarDirection) {
                                 ForEach(FormatGraphSettings.ErrorBarDirection.allCases) {
                                     Text($0.label).tag($0)
                                 }
@@ -218,7 +235,7 @@ struct FormatGraphDialog: View {
                             .frame(width: 80)
                             Spacer()
                             Text("Style:")
-                            Picker("", selection: $settings.errorBarStyle) {
+                            Picker("", selection: $draft.errorBarStyle) {
                                 ForEach(FormatGraphSettings.ErrorBarStyle.allCases) {
                                     Text($0.label).tag($0)
                                 }
@@ -227,8 +244,8 @@ struct FormatGraphDialog: View {
                         }
                         HStack {
                             Text("Thickness:")
-                            Slider(value: $settings.errorBarThickness, in: 0.5...4, step: 0.5)
-                            Text("\(settings.errorBarThickness, specifier: "%.1f") pt")
+                            Slider(value: $draft.errorBarThickness, in: 0.5...4, step: 0.5)
+                            Text("\(draft.errorBarThickness, specifier: "%.1f") pt")
                                 .monospacedDigit()
                                 .frame(width: 45)
                         }
@@ -239,32 +256,32 @@ struct FormatGraphDialog: View {
             // Show connecting line
             GroupBox {
                 VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Show connecting line/curve", isOn: $settings.showConnectingLine)
+                    Toggle("Show connecting line/curve", isOn: $draft.showConnectingLine)
                         .fontWeight(.semibold)
 
-                    if settings.showConnectingLine {
+                    if draft.showConnectingLine {
                         HStack {
                             Text("Color:")
-                            ColorPicker("", selection: hexBinding($settings.lineColor))
+                            ColorPicker("", selection: hexBinding($draft.lineColor))
                                 .labelsHidden()
                             Spacer()
                             Text("Thickness:")
-                            Slider(value: $settings.lineThickness, in: 0.5...6, step: 0.5)
+                            Slider(value: $draft.lineThickness, in: 0.5...6, step: 0.5)
                                 .frame(width: 100)
-                            Text("\(settings.lineThickness, specifier: "%.1f") pt")
+                            Text("\(draft.lineThickness, specifier: "%.1f") pt")
                                 .monospacedDigit()
                                 .frame(width: 45)
                         }
                         HStack {
                             Text("Style:")
-                            Picker("", selection: $settings.lineStyle) {
+                            Picker("", selection: $draft.lineStyle) {
                                 ForEach(FormatGraphSettings.LineStyle.allCases) {
                                     Text($0.label).tag($0)
                                 }
                             }
                             .frame(width: 80)
                             Spacer()
-                            Toggle("Start at origin", isOn: $settings.startAtOrigin)
+                            Toggle("Start at origin", isOn: $draft.startAtOrigin)
                         }
                     }
                 }
@@ -273,17 +290,17 @@ struct FormatGraphDialog: View {
             // Show area fill
             GroupBox {
                 VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Show area fill", isOn: $settings.showAreaFill)
+                    Toggle("Show area fill", isOn: $draft.showAreaFill)
                         .fontWeight(.semibold)
 
-                    if settings.showAreaFill {
+                    if draft.showAreaFill {
                         HStack {
                             Text("Fill color:")
-                            ColorPicker("", selection: hexBinding($settings.areaFillColor))
+                            ColorPicker("", selection: hexBinding($draft.areaFillColor))
                                 .labelsHidden()
                             Spacer()
                             Text("Position:")
-                            Picker("", selection: $settings.areaFillPosition) {
+                            Picker("", selection: $draft.areaFillPosition) {
                                 ForEach(FormatGraphSettings.AreaFillPosition.allCases) {
                                     Text($0.label).tag($0)
                                 }
@@ -292,8 +309,8 @@ struct FormatGraphDialog: View {
                         }
                         HStack {
                             Text("Opacity:")
-                            Slider(value: $settings.areaFillAlpha, in: 0.05...1.0, step: 0.05)
-                            Text("\(Int(settings.areaFillAlpha * 100))%")
+                            Slider(value: $draft.areaFillAlpha, in: 0.05...1.0, step: 0.05)
+                            Text("\(Int(draft.areaFillAlpha * 100))%")
                                 .monospacedDigit()
                                 .frame(width: 40)
                         }
@@ -309,11 +326,11 @@ struct FormatGraphDialog: View {
     private var graphSettingsTab: some View {
         VStack(alignment: .leading, spacing: 16) {
             GroupBox("Legend") {
-                Toggle("Show legend", isOn: $settings.showLegend)
+                Toggle("Show legend", isOn: $draft.showLegend)
             }
 
             GroupBox("Labels") {
-                Toggle("Label each point with its row title", isOn: $settings.labelPoints)
+                Toggle("Label each point with its row title", isOn: $draft.labelPoints)
             }
         }
         .padding()

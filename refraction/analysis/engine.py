@@ -229,6 +229,10 @@ _DEDICATED_ANALYZERS = {
     "box": _lazy_load_analyzer("box", "analyze_box"),
     "violin": _lazy_load_analyzer("violin", "analyze_violin"),
     "histogram": _lazy_load_analyzer("histogram", "analyze_histogram"),
+    "ecdf": _lazy_load_analyzer("ecdf", "analyze_ecdf"),
+    "qq_plot": _lazy_load_analyzer("qq_plot", "analyze_qq_plot"),
+    "heatmap": _lazy_load_analyzer("heatmap", "analyze_heatmap"),
+    "repeated_measures": _lazy_load_analyzer("repeated_measures", "analyze_repeated_measures"),
 }
 
 

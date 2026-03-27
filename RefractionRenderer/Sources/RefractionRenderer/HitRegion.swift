@@ -24,6 +24,7 @@ public struct ChartHitRegion: Identifiable {
         case xLabel
         case yLabel
         case legend
+        case bracket
     }
 
     public init(

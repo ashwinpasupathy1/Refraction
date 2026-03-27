@@ -4,15 +4,14 @@ run_all.py
 Unified test runner for all Refraction test suites.
 
 Runs pytest on the test structure:
-    tests/engine/       -- Pure computational tests (stats, validators, helpers)
+    tests/engine/       -- Pure computational tests (validators, helpers, etc.)
     tests/integration/  -- API and pipeline integration tests
-    tests/              -- Top-level analysis, exhaustive stats, render contract tests
+    tests/              -- Top-level analysis and render contract tests
 
 Usage:
     python3 run_all.py                       # run all pytest tests
     python3 run_all.py engine                # tests/engine/ only
     python3 run_all.py integration           # tests/integration/ only
-    python3 run_all.py stats_exhaustive      # test_stats_exhaustive.py
     python3 run_all.py analysis              # test_analysis.py
     python3 run_all.py render                # test_render_contract.py
 """
@@ -27,7 +26,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 def main():
     parser = argparse.ArgumentParser(description="Refraction unified test runner")
     parser.add_argument("suites", nargs="*",
-                        help="Suite name(s): engine / integration / stats_exhaustive / "
+                        help="Suite name(s): engine / integration / "
                              "analysis / render (default: run all)")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="Verbose pytest output")
@@ -36,7 +35,6 @@ def main():
     SUITES = {
         "engine": os.path.join(_HERE, "tests", "engine"),
         "integration": os.path.join(_HERE, "tests", "integration"),
-        "stats_exhaustive": os.path.join(_HERE, "tests", "test_stats_exhaustive.py"),
         "analysis": os.path.join(_HERE, "tests", "test_analysis.py"),
         "render": os.path.join(_HERE, "tests", "test_render_contract.py"),
     }

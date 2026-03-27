@@ -7,6 +7,7 @@ struct StatsSettingsDialog: View {
 
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+    @State private var isApplying = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,14 +31,24 @@ struct StatsSettingsDialog: View {
 
                             LabeledContent("Test") {
                                 Picker("", selection: $config.statsTest) {
-                                    Text("Auto").tag("auto")
-                                    Text("Parametric").tag("parametric")
-                                    Text("Non-parametric").tag("nonparametric")
-                                    Text("Paired").tag("paired")
-                                    Text("None").tag("none")
+                                    Section("Automatic") {
+                                        Text("Auto").tag("auto")
+                                        Text("None").tag("none")
+                                    }
+                                    Section("Parametric") {
+                                        Text("Unpaired t-test").tag("t-test")
+                                        Text("Welch's t-test").tag("welch_t-test")
+                                        Text("One-way ANOVA").tag("anova")
+                                        Text("Welch's ANOVA").tag("welch_anova")
+                                        Text("Paired t-test").tag("paired")
+                                    }
+                                    Section("Non-parametric") {
+                                        Text("Mann-Whitney U").tag("mann-whitney")
+                                        Text("Kruskal-Wallis").tag("kruskal-wallis")
+                                    }
                                 }
                                 .labelsHidden()
-                                .frame(width: 150)
+                                .frame(width: 180)
                             }
 
                             LabeledContent("Posthoc") {
@@ -120,7 +131,19 @@ struct StatsSettingsDialog: View {
 
             // Bottom buttons
             HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
                 Spacer()
+                Button("Apply") {
+                    DebugLog.shared.logUI("StatsSettingsDialog apply clicked")
+                    isApplying = true
+                    Task {
+                        _ = try? await APIClient.shared.health()
+                        DebugLog.shared.logAppEvent("StatsSettingsDialog apply — dummy server call completed")
+                        isApplying = false
+                    }
+                }
+                .disabled(isApplying)
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)

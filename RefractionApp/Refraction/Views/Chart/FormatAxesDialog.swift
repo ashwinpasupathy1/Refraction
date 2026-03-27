@@ -1,17 +1,20 @@
 // FormatAxesDialog.swift — Prism-style "Format Axes" dialog.
-// Controls renderer-only axis formatting — nothing here calls the engine.
+// Edits a local copy of settings. Done commits changes and re-renders.
 
 import SwiftUI
 
 struct FormatAxesDialog: View {
 
-    @Bindable var settings: FormatAxesSettings
+    /// The real settings on the Graph — only written to on Done.
+    var settings: FormatAxesSettings
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
 
     @State private var selectedTab: Tab = .frameAndOrigin
+    @State private var isApplying = false
 
-    // Snapshot for cancel — restored if user clicks Cancel
-    @State private var snapshot: Data?
+    /// Local working copy — all controls bind to this, not the real settings.
+    @State private var draft = FormatAxesSettings()
 
     enum Tab: String, CaseIterable {
         case frameAndOrigin = "Frame & Origin"
@@ -60,71 +63,85 @@ struct FormatAxesDialog: View {
 
             // Bottom buttons
             HStack {
-                Spacer()
                 Button("Cancel") {
                     DebugLog.shared.logUI("FormatAxesDialog cancelled")
-                    restoreSnapshot()
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
+                Spacer()
                 Button("Done") {
-                    DebugLog.shared.logUI("FormatAxesDialog applied")
-                    dismiss()
+                    commitAndRender()
                 }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
+                    .disabled(isApplying)
             }
             .padding(12)
         }
         .frame(width: 560)
-        .onAppear { takeSnapshot() }
+        .onAppear { loadDraft() }
     }
 
-    // MARK: - Snapshot / Restore
+    // MARK: - Draft management
 
-    private func takeSnapshot() {
-        snapshot = try? JSONEncoder().encode(settings)
+    /// Copy real settings into the local draft for editing.
+    private func loadDraft() {
+        guard let data = try? JSONEncoder().encode(settings),
+              let copy = try? JSONDecoder().decode(FormatAxesSettings.self, from: data) else { return }
+        draft = copy
     }
 
-    private func restoreSnapshot() {
-        guard let data = snapshot,
-              let restored = try? JSONDecoder().decode(FormatAxesSettings.self, from: data) else { return }
-        settings.originMode = restored.originMode
-        settings.yIntersectsXAt = restored.yIntersectsXAt
-        settings.xIntersectsYAt = restored.xIntersectsYAt
-        settings.chartWidth = restored.chartWidth
-        settings.chartHeight = restored.chartHeight
-        settings.axisThickness = restored.axisThickness
-        settings.axisColor = restored.axisColor
-        settings.plotAreaColor = restored.plotAreaColor
-        settings.pageBackground = restored.pageBackground
-        settings.frameStyle = restored.frameStyle
-        settings.hideAxes = restored.hideAxes
-        settings.majorGrid = restored.majorGrid
-        settings.majorGridColor = restored.majorGridColor
-        settings.majorGridThickness = restored.majorGridThickness
-        settings.minorGrid = restored.minorGrid
-        settings.minorGridColor = restored.minorGridColor
-        settings.minorGridThickness = restored.minorGridThickness
-        settings.xAxisTitle = restored.xAxisTitle
-        settings.xAxisTitleFontSize = restored.xAxisTitleFontSize
-        settings.xAxisTickDirection = restored.xAxisTickDirection
-        settings.xAxisTickLength = restored.xAxisTickLength
-        settings.xAxisLabelFontSize = restored.xAxisLabelFontSize
-        settings.xAxisLabelRotation = restored.xAxisLabelRotation
-        settings.yAxisTitle = restored.yAxisTitle
-        settings.yAxisTitleFontSize = restored.yAxisTitleFontSize
-        settings.yAxisTickDirection = restored.yAxisTickDirection
-        settings.yAxisTickLength = restored.yAxisTickLength
-        settings.yAxisLabelFontSize = restored.yAxisLabelFontSize
-        settings.yAxisAutoRange = restored.yAxisAutoRange
-        settings.yAxisMin = restored.yAxisMin
-        settings.yAxisMax = restored.yAxisMax
-        settings.yAxisTickInterval = restored.yAxisTickInterval
-        settings.yAxisScale = restored.yAxisScale
-        settings.chartTitle = restored.chartTitle
-        settings.chartTitleFontSize = restored.chartTitleFontSize
-        settings.globalFontName = restored.globalFontName
+    /// Write draft back to the real settings and trigger a re-render.
+    private func commitAndRender() {
+        DebugLog.shared.logUI("FormatAxesDialog done — committing changes")
+        isApplying = true
+
+        // Copy every property from draft → real settings
+        settings.originMode = draft.originMode
+        settings.yIntersectsXAt = draft.yIntersectsXAt
+        settings.xIntersectsYAt = draft.xIntersectsYAt
+        settings.chartWidth = draft.chartWidth
+        settings.chartHeight = draft.chartHeight
+        settings.axisThickness = draft.axisThickness
+        settings.axisColor = draft.axisColor
+        settings.plotAreaColor = draft.plotAreaColor
+        settings.pageBackground = draft.pageBackground
+        settings.frameStyle = draft.frameStyle
+        settings.hideAxes = draft.hideAxes
+        settings.majorGrid = draft.majorGrid
+        settings.majorGridColor = draft.majorGridColor
+        settings.majorGridThickness = draft.majorGridThickness
+        settings.minorGrid = draft.minorGrid
+        settings.minorGridColor = draft.minorGridColor
+        settings.minorGridThickness = draft.minorGridThickness
+        settings.xAxisTitle = draft.xAxisTitle
+        settings.xAxisTitleFontSize = draft.xAxisTitleFontSize
+        settings.xAxisTickDirection = draft.xAxisTickDirection
+        settings.xAxisTickLength = draft.xAxisTickLength
+        settings.xAxisLabelFontSize = draft.xAxisLabelFontSize
+        settings.xAxisLabelRotation = draft.xAxisLabelRotation
+        settings.yAxisTitle = draft.yAxisTitle
+        settings.yAxisTitleFontSize = draft.yAxisTitleFontSize
+        settings.yAxisTickDirection = draft.yAxisTickDirection
+        settings.yAxisTickLength = draft.yAxisTickLength
+        settings.yAxisLabelFontSize = draft.yAxisLabelFontSize
+        settings.yAxisAutoRange = draft.yAxisAutoRange
+        settings.yAxisMin = draft.yAxisMin
+        settings.yAxisMax = draft.yAxisMax
+        settings.yAxisTickInterval = draft.yAxisTickInterval
+        settings.yAxisScale = draft.yAxisScale
+        settings.chartTitle = draft.chartTitle
+        settings.chartTitleFontSize = draft.chartTitleFontSize
+        settings.globalFontName = draft.globalFontName
+
+        appState.hasUnsavedChanges = true
+
+        Task {
+            await appState.generatePlot()
+            DebugLog.shared.logAppEvent("FormatAxesDialog done — re-render complete")
+            isApplying = false
+            dismiss()
+        }
     }
 
     // MARK: - Frame & Origin Tab
@@ -135,21 +152,21 @@ struct FormatAxesDialog: View {
             // Origin
             GroupBox("Origin") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Picker("Origin mode:", selection: $settings.originMode) {
+                    Picker("Origin mode:", selection: $draft.originMode) {
                         ForEach(FormatAxesSettings.OriginMode.allCases) {
                             Text($0.label).tag($0)
                         }
                     }
                     .frame(width: 280)
 
-                    if settings.originMode == .manual {
+                    if draft.originMode == .manual {
                         HStack {
                             Text("Y intersects X at:")
-                            TextField("", value: $settings.yIntersectsXAt, format: .number)
+                            TextField("", value: $draft.yIntersectsXAt, format: .number)
                                 .frame(width: 80)
                             Spacer()
                             Text("X intersects Y at:")
-                            TextField("", value: $settings.xIntersectsYAt, format: .number)
+                            TextField("", value: $draft.xIntersectsYAt, format: .number)
                                 .frame(width: 80)
                         }
                     }
@@ -160,12 +177,12 @@ struct FormatAxesDialog: View {
             GroupBox("Shape & Size") {
                 HStack {
                     Text("Width:")
-                    TextField("", value: $settings.chartWidth, format: .number)
+                    TextField("", value: $draft.chartWidth, format: .number)
                         .frame(width: 60)
                     Text("in")
                     Spacer()
                     Text("Height:")
-                    TextField("", value: $settings.chartHeight, format: .number)
+                    TextField("", value: $draft.chartHeight, format: .number)
                         .frame(width: 60)
                     Text("in")
                 }
@@ -176,25 +193,25 @@ struct FormatAxesDialog: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("Axis thickness:")
-                        Slider(value: $settings.axisThickness, in: 0.5...4, step: 0.5)
+                        Slider(value: $draft.axisThickness, in: 0.5...4, step: 0.5)
                             .frame(width: 100)
-                        Text("\(settings.axisThickness, specifier: "%.1f") pt")
+                        Text("\(draft.axisThickness, specifier: "%.1f") pt")
                             .monospacedDigit()
                             .frame(width: 45)
                         Spacer()
                         Text("Axis color:")
-                        ColorPicker("", selection: hexBinding($settings.axisColor))
+                        ColorPicker("", selection: hexBinding($draft.axisColor))
                             .labelsHidden()
                     }
                     HStack {
-                        Picker("Hide axes:", selection: $settings.hideAxes) {
+                        Picker("Hide axes:", selection: $draft.hideAxes) {
                             ForEach(FormatAxesSettings.HideAxes.allCases) {
                                 Text($0.label).tag($0)
                             }
                         }
                         .frame(width: 240)
                         Spacer()
-                        Picker("Frame:", selection: $settings.frameStyle) {
+                        Picker("Frame:", selection: $draft.frameStyle) {
                             ForEach(FormatAxesSettings.FrameStyle.allCases) {
                                 Text($0.label).tag($0)
                             }
@@ -203,11 +220,11 @@ struct FormatAxesDialog: View {
                     }
                     HStack {
                         Text("Plot area:")
-                        ColorPicker("", selection: hexBinding($settings.plotAreaColor))
+                        ColorPicker("", selection: hexBinding($draft.plotAreaColor))
                             .labelsHidden()
                         Spacer()
                         Text("Page background:")
-                        ColorPicker("", selection: hexBinding($settings.pageBackground))
+                        ColorPicker("", selection: hexBinding($draft.pageBackground))
                             .labelsHidden()
                     }
                 }
@@ -218,38 +235,38 @@ struct FormatAxesDialog: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("Major grid:")
-                        Picker("", selection: $settings.majorGrid) {
+                        Picker("", selection: $draft.majorGrid) {
                             ForEach(FormatAxesSettings.GridLineStyle.allCases) {
                                 Text($0.label).tag($0)
                             }
                         }
                         .frame(width: 90)
-                        if settings.majorGrid != .none {
-                            ColorPicker("", selection: hexBinding($settings.majorGridColor))
+                        if draft.majorGrid != .none {
+                            ColorPicker("", selection: hexBinding($draft.majorGridColor))
                                 .labelsHidden()
                             Text("Thickness:")
-                            Slider(value: $settings.majorGridThickness, in: 0.5...4, step: 0.5)
+                            Slider(value: $draft.majorGridThickness, in: 0.5...4, step: 0.5)
                                 .frame(width: 80)
-                            Text("\(settings.majorGridThickness, specifier: "%.1f") pt")
+                            Text("\(draft.majorGridThickness, specifier: "%.1f") pt")
                                 .monospacedDigit()
                                 .frame(width: 45)
                         }
                     }
                     HStack {
                         Text("Minor grid:")
-                        Picker("", selection: $settings.minorGrid) {
+                        Picker("", selection: $draft.minorGrid) {
                             ForEach(FormatAxesSettings.GridLineStyle.allCases) {
                                 Text($0.label).tag($0)
                             }
                         }
                         .frame(width: 90)
-                        if settings.minorGrid != .none {
-                            ColorPicker("", selection: hexBinding($settings.minorGridColor))
+                        if draft.minorGrid != .none {
+                            ColorPicker("", selection: hexBinding($draft.minorGridColor))
                                 .labelsHidden()
                             Text("Thickness:")
-                            Slider(value: $settings.minorGridThickness, in: 0.25...2, step: 0.25)
+                            Slider(value: $draft.minorGridThickness, in: 0.25...2, step: 0.25)
                                 .frame(width: 80)
-                            Text("\(settings.minorGridThickness, specifier: "%.2f") pt")
+                            Text("\(draft.minorGridThickness, specifier: "%.2f") pt")
                                 .monospacedDigit()
                                 .frame(width: 50)
                         }
@@ -268,10 +285,10 @@ struct FormatAxesDialog: View {
             GroupBox("Title") {
                 HStack {
                     Text("X axis title:")
-                    TextField("", text: $settings.xAxisTitle)
+                    TextField("", text: $draft.xAxisTitle)
                     Spacer()
                     Text("Size:")
-                    TextField("", value: $settings.xAxisTitleFontSize, format: .number)
+                    TextField("", value: $draft.xAxisTitleFontSize, format: .number)
                         .frame(width: 50)
                     Text("pt")
                 }
@@ -281,7 +298,7 @@ struct FormatAxesDialog: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("Direction:")
-                        Picker("", selection: $settings.xAxisTickDirection) {
+                        Picker("", selection: $draft.xAxisTickDirection) {
                             ForEach(FormatAxesSettings.TickDir.allCases) {
                                 Text($0.label).tag($0)
                             }
@@ -289,9 +306,9 @@ struct FormatAxesDialog: View {
                         .frame(width: 90)
                         Spacer()
                         Text("Length:")
-                        Slider(value: $settings.xAxisTickLength, in: 0...15, step: 1)
+                        Slider(value: $draft.xAxisTickLength, in: 0...15, step: 1)
                             .frame(width: 100)
-                        Text("\(Int(settings.xAxisTickLength)) pt")
+                        Text("\(Int(draft.xAxisTickLength)) pt")
                             .monospacedDigit()
                             .frame(width: 40)
                     }
@@ -302,14 +319,14 @@ struct FormatAxesDialog: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("Font size:")
-                        TextField("", value: $settings.xAxisLabelFontSize, format: .number)
+                        TextField("", value: $draft.xAxisLabelFontSize, format: .number)
                             .frame(width: 50)
                         Text("pt")
                         Spacer()
                         Text("Rotation:")
-                        Slider(value: $settings.xAxisLabelRotation, in: 0...90, step: 15)
+                        Slider(value: $draft.xAxisLabelRotation, in: 0...90, step: 15)
                             .frame(width: 100)
-                        Text("\(Int(settings.xAxisLabelRotation))\u{00B0}")
+                        Text("\(Int(draft.xAxisLabelRotation))\u{00B0}")
                             .monospacedDigit()
                             .frame(width: 40)
                     }
@@ -327,10 +344,10 @@ struct FormatAxesDialog: View {
             GroupBox("Title") {
                 HStack {
                     Text("Y axis title:")
-                    TextField("", text: $settings.yAxisTitle)
+                    TextField("", text: $draft.yAxisTitle)
                     Spacer()
                     Text("Size:")
-                    TextField("", value: $settings.yAxisTitleFontSize, format: .number)
+                    TextField("", value: $draft.yAxisTitleFontSize, format: .number)
                         .frame(width: 50)
                     Text("pt")
                 }
@@ -340,7 +357,7 @@ struct FormatAxesDialog: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("Direction:")
-                        Picker("", selection: $settings.yAxisTickDirection) {
+                        Picker("", selection: $draft.yAxisTickDirection) {
                             ForEach(FormatAxesSettings.TickDir.allCases) {
                                 Text($0.label).tag($0)
                             }
@@ -348,15 +365,15 @@ struct FormatAxesDialog: View {
                         .frame(width: 90)
                         Spacer()
                         Text("Length:")
-                        Slider(value: $settings.yAxisTickLength, in: 0...15, step: 1)
+                        Slider(value: $draft.yAxisTickLength, in: 0...15, step: 1)
                             .frame(width: 100)
-                        Text("\(Int(settings.yAxisTickLength)) pt")
+                        Text("\(Int(draft.yAxisTickLength)) pt")
                             .monospacedDigit()
                             .frame(width: 40)
                     }
                     HStack {
                         Text("Label font size:")
-                        TextField("", value: $settings.yAxisLabelFontSize, format: .number)
+                        TextField("", value: $draft.yAxisLabelFontSize, format: .number)
                             .frame(width: 50)
                         Text("pt")
                     }
@@ -365,24 +382,24 @@ struct FormatAxesDialog: View {
 
             GroupBox("Range") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Auto range", isOn: $settings.yAxisAutoRange)
+                    Toggle("Auto range", isOn: $draft.yAxisAutoRange)
                         .fontWeight(.semibold)
 
-                    if !settings.yAxisAutoRange {
+                    if !draft.yAxisAutoRange {
                         HStack {
                             Text("Min:")
-                            TextField("", value: $settings.yAxisMin, format: .number)
+                            TextField("", value: $draft.yAxisMin, format: .number)
                                 .frame(width: 80)
                             Spacer()
                             Text("Max:")
-                            TextField("", value: $settings.yAxisMax, format: .number)
+                            TextField("", value: $draft.yAxisMax, format: .number)
                                 .frame(width: 80)
                         }
                     }
 
                     HStack {
                         Text("Tick interval:")
-                        TextField("", value: $settings.yAxisTickInterval, format: .number)
+                        TextField("", value: $draft.yAxisTickInterval, format: .number)
                             .frame(width: 80)
                         Text("(0 = auto)")
                             .foregroundStyle(.secondary)
@@ -392,7 +409,7 @@ struct FormatAxesDialog: View {
             }
 
             GroupBox("Scale") {
-                Picker("Scale type:", selection: $settings.yAxisScale) {
+                Picker("Scale type:", selection: $draft.yAxisScale) {
                     ForEach(FormatAxesSettings.ScaleType.allCases) {
                         Text($0.label).tag($0)
                     }
@@ -412,11 +429,11 @@ struct FormatAxesDialog: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("Title:")
-                        TextField("", text: $settings.chartTitle)
+                        TextField("", text: $draft.chartTitle)
                     }
                     HStack {
                         Text("Font size:")
-                        TextField("", value: $settings.chartTitleFontSize, format: .number)
+                        TextField("", value: $draft.chartTitleFontSize, format: .number)
                             .frame(width: 50)
                         Text("pt")
                     }
@@ -426,7 +443,7 @@ struct FormatAxesDialog: View {
             GroupBox("Global Font") {
                 HStack {
                     Text("Font name:")
-                    TextField("", text: $settings.globalFontName)
+                    TextField("", text: $draft.globalFontName)
                         .frame(width: 200)
                 }
             }

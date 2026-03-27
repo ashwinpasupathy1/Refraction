@@ -115,22 +115,6 @@ struct DataTabView: View {
                         }
                     }
 
-                    Divider()
-
-                    // MARK: - Generate (temporary — will be removed with two-tier reactivity)
-                    Button {
-                        Task { await appState.generatePlot() }
-                    } label: {
-                        HStack {
-                            Image(systemName: "play.fill")
-                            Text("Generate Plot")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(appState.isLoading || !(appState.activeExperiment?.dataTable(for: graph)?.hasData ?? false))
-
                     Spacer()
                 }
                 .padding()
