@@ -1,7 +1,7 @@
 # Refraction
 
 > GraphPad Prism-style scientific plotting and analysis for macOS.
-> Built entirely by Claude (Anthropic) with Ashwin Pasupathy.
+> Built by Ashwin Pasupathy.
 
 ![Python](https://img.shields.io/badge/python-3.12+-blue)
 ![Charts](https://img.shields.io/badge/chart%20types-29-orange)
@@ -191,4 +191,4 @@ python3 -c "from refraction.analysis import analyze; print('OK')"
 
 ## Credits
 
-Built entirely by [Claude](https://claude.ai) (Anthropic) in collaboration with Ashwin Pasupathy.
+Built by Ashwin Pasupathy.

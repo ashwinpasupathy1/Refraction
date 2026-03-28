@@ -256,7 +256,7 @@ app = BUNDLE(  # noqa: F821
         # Dock category
         "LSApplicationCategoryType": "public.app-category.graphics-design",
         # Copyright
-        "NSHumanReadableCopyright": "Built by Claude (Anthropic) with Ashwin Pasupathy",
+        "NSHumanReadableCopyright": "Built by Ashwin Pasupathy",
         # Document types handled (optional — .cplot project files)
         "CFBundleDocumentTypes": [
             {

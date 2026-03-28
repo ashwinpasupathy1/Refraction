@@ -10,7 +10,6 @@ requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
     {name = "Ashwin Pasupathy"},
-    {name = "Claude (Anthropic)"},
 ]
 
 dependencies = [

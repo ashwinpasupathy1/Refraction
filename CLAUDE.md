@@ -1,7 +1,7 @@
 # Refraction -- Project Context for Claude Code
 
 GraphPad Prism-style scientific plotting and analysis for macOS.
-Built entirely by Claude (Anthropic) with Ashwin Pasupathy.
+Built by Ashwin Pasupathy.
 
 **For the full SwiftUI client architecture, see `SWIFT_UI.md`.**
 

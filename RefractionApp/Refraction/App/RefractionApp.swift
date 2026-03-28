@@ -143,7 +143,7 @@ struct RefractionApp: App {
         let text = """
         Scientific plotting and analysis for macOS.
 
-        Built by Ashwin Pasupathy and Claude (Anthropic).
+        Built by Ashwin Pasupathy.
         """
         return NSAttributedString(
             string: text,

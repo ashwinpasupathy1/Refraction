@@ -972,7 +972,7 @@ class App(StatsTabMixin, ValidationMixin, CollectMixin, FileIOMixin,
 
         # MIT license note
         ttk.Label(left_grp,
-                  text="MIT License · Designed & implemented by Claude (Anthropic) · Ashwin Pasupathy",
+                  text="MIT License · Ashwin Pasupathy",
                   foreground="#cccccc", font=("Helvetica Neue", 9)
                   ).pack(side="top", anchor="w")
 
@@ -2891,8 +2891,7 @@ class App(StatsTabMixin, ValidationMixin, CollectMixin, FileIOMixin,
             "About Refraction",
             "Refraction\n\n"
             "A publication-quality scientific plotting application.\n\n"
-            "Designed and implemented by Claude (Anthropic).\n"
-            "Commissioned by Ashwin Pasupathy.\n\n"
+            "Ashwin Pasupathy\n\n"
             "MIT License\n\n"
             "29 chart types · Statistical tests · Publication-ready export"
         )
